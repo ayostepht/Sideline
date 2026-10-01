@@ -42,6 +42,13 @@ export default defineConfig({
           include: ["tests/harness/**/*.test.ts"],
         },
       },
+      // Unit tests for repo scripts (fixture recorder, gate, screens). Part of `test:unit`.
+      {
+        test: {
+          name: "scripts",
+          include: ["scripts/**/*.test.ts"],
+        },
+      },
     ],
     coverage: {
       provider: "v8",
