@@ -1,0 +1,164 @@
+{
+  "currentWeek": 4,
+  "draftIds": [
+    "1000000000000001001"
+  ],
+  "futureMatchupWeeks": [
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14
+  ],
+  "leagueId": "1000000000000000001",
+  "partialWeeks": [
+    4
+  ],
+  "projectionWeeks": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "recordedAt": "2026-10-01T15:44:59.451Z",
+  "sanitizerVersion": 1,
+  "season": "2026",
+  "statsWeeks": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "syntheticLeagueId": "1000000000000000999",
+  "trimming": {
+    "players": {
+      "excludedForNameCollision": 1,
+      "fields": [
+        "player_id",
+        "first_name",
+        "last_name",
+        "full_name",
+        "search_full_name",
+        "position",
+        "fantasy_positions",
+        "team",
+        "status",
+        "injury_status",
+        "injury_body_part",
+        "active",
+        "age",
+        "years_exp",
+        "depth_chart_order",
+        "depth_chart_position",
+        "search_rank",
+        "number",
+        "gsis_id",
+        "news_updated",
+        "sport"
+      ],
+      "keptCount": 1021,
+      "rule": "rostered + referenced in any fixture + top 400 by search_rank + all DEF + every player in a kept projections or stats row",
+      "sourceCount": 12229
+    },
+    "rows": {
+      "perWeek": {
+        "projections/2026/1": {
+          "dropped": 2662,
+          "inPlayerSet": 97,
+          "kept": 644,
+          "leakedPositions": 71,
+          "placeholderSample": 30,
+          "real": 446,
+          "total": 3306
+        },
+        "projections/2026/2": {
+          "dropped": 2612,
+          "inPlayerSet": 138,
+          "kept": 694,
+          "leakedPositions": 71,
+          "placeholderSample": 30,
+          "real": 455,
+          "total": 3306
+        },
+        "projections/2026/3": {
+          "dropped": 2563,
+          "inPlayerSet": 194,
+          "kept": 743,
+          "leakedPositions": 71,
+          "placeholderSample": 30,
+          "real": 448,
+          "total": 3306
+        },
+        "projections/2026/4": {
+          "dropped": 2524,
+          "inPlayerSet": 215,
+          "kept": 782,
+          "leakedPositions": 71,
+          "placeholderSample": 30,
+          "real": 466,
+          "total": 3306
+        },
+        "projections/2026/5": {
+          "dropped": 2479,
+          "inPlayerSet": 255,
+          "kept": 825,
+          "leakedPositions": 71,
+          "placeholderSample": 30,
+          "real": 469,
+          "total": 3304
+        },
+        "stats/2026/1": {
+          "dropped": 186,
+          "inPlayerSet": 56,
+          "kept": 578,
+          "leakedPositions": 2,
+          "placeholderSample": 30,
+          "real": 490,
+          "total": 764
+        },
+        "stats/2026/2": {
+          "dropped": 160,
+          "inPlayerSet": 94,
+          "kept": 616,
+          "leakedPositions": 2,
+          "placeholderSample": 30,
+          "real": 490,
+          "total": 776
+        },
+        "stats/2026/3": {
+          "dropped": 129,
+          "inPlayerSet": 128,
+          "kept": 648,
+          "leakedPositions": 2,
+          "placeholderSample": 30,
+          "real": 488,
+          "total": 777
+        },
+        "stats/2026/4": {
+          "dropped": 0,
+          "inPlayerSet": 0,
+          "kept": 0,
+          "leakedPositions": 0,
+          "placeholderSample": 0,
+          "real": 0,
+          "total": 0
+        }
+      },
+      "rule": "keep every real row (stats.gp present), every row whose player_id is in the players set, every leaked-position row (FB/P/CB/DB), plus 30 evenly spaced placeholder rows per week (sorted by player_id)"
+    },
+    "sanitizer": "ids, usernames, display names, team names, avatars, league and draft names replaced with deterministic fakes; user object reduced to user_id, username, display_name, avatar, is_bot; second league entry in the user league list is synthetic"
+  },
+  "userId": "100000000000000004",
+  "username": "manager_04",
+  "weeks": [
+    1,
+    2,
+    3
+  ]
+}

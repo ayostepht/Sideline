@@ -516,3 +516,17 @@ Counts across weeks 1 to 4: 14 waiver/complete, 10 waiver/failed, 46 free_agent/
 8. The players endpoint is 14.7 MB uncompressed. Parse it once per day and persist only a trimmed set of fields.
 9. Stat corrections: `last_modified` on stats rows can move for several days after a game. Rescore from the latest rows rather than caching final scores too early.
 10. Only one league (10 teams, no divisions, no bonuses, no trades) was examined. IDP, SUPER_FLEX, divisions and bonus scoring rely on synthetic fixtures.
+
+## 13. Recorded fixtures and extra privacy findings (2026-10-01, T0.3b)
+
+Recorder: `scripts/fixtures/record.ts` writes sanitized fixtures to `tests/fixtures/sleeper/` (layout in `tests/fixtures/README.md`). `--check` re-derives the original identifiers from the gitignored raw cache and fails if any survive. 40 GET calls, at most 40 in any 60 s window; `GET /players/nfl` was reused from the cache (the recorder never refetches it within 24 h).
+
+Fields found while sanitizing that matter for any code that stores or logs API data:
+
+- League and user-league objects carry chat state: `last_message_id`, `last_message_time`, `last_message_text_map` (free text, null here), `last_message_attachment`, `last_author_id`, `last_author_display_name`, `last_author_avatar`, `last_author_is_bot`, `last_read_id`, `last_pinned_message_id`. The last author can be a bot account (it was in this league). Do not persist these; none are needed.
+- `GET /user/{username}` has 21 keys (email, phone, token, cookies, real_name, summoner_name and others, all null for a public lookup). Persist only `user_id`, `username`, `display_name`, `avatar`, `is_bot`.
+- Draft `metadata.description` is free text (empty here); `draft_order` is keyed by user id; `creators` and every pick's `picked_by` are user ids.
+- Player records in `/players/nfl`, projections and stats carry `metadata.channel_id` (a 19 digit public chat channel id). It is not a league identifier; do not treat 19 digit strings as private when they sit under player data.
+- A manager's team name can equal a real player's name (it did here). Public player name fields (`full_name`, `first_name`, ...) are never rewritten; the leak check ignores them.
+- The `GET /user/{id}/leagues/nfl/{season}` fixture holds the primary league plus one synthetic second league (`Example League 2`, id `1000000000000000999`) so the league picker can be tested.
+- Fixture size 5.6 MB: players trimmed from 12,229 to 1,021 entries; each projections week keeps all real rows, rows for kept players, all leaked-position rows and 30 placeholder rows; stats keep real rows plus rows for kept players. Detail per week is in `manifest.json` under `trimming`.

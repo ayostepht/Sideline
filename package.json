@@ -28,7 +28,8 @@
     "db:migrate": "tsx scripts/not-implemented.ts T1.3 db:migrate",
     "db:seed:fixtures": "tsx scripts/not-implemented.ts T1.3 db:seed:fixtures",
     "gate": "tsx scripts/gate.ts",
-    "fixtures:record": "tsx scripts/not-implemented.ts T0.3b fixtures:record"
+    "fixtures:record": "tsx scripts/fixtures/record.ts",
+    "fixtures:check": "tsx scripts/fixtures/record.ts --check"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
