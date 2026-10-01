@@ -16,6 +16,7 @@ COPY packages/db/package.json packages/db/package.json
 COPY packages/providers/package.json packages/providers/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/sleeper/package.json packages/sleeper/package.json
+# TODO(T4.3): install worker deps and native toolchain for better-sqlite3 when the worker joins the image
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --filter "@sideline/web..."
 

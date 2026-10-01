@@ -10,8 +10,9 @@ describe("GET /api/health", () => {
     expect(Object.keys(body).sort()).toEqual(["status", "time", "version"]);
     expect(body.status).toBe("ok");
     expect(body.version).toBe(pkg.version);
-    expect(typeof body.time).toBe("string");
-    expect(new Date(body.time as string).toISOString()).toBe(body.time);
+    const time = body.time;
+    if (typeof time !== "string") throw new Error("time must be a string");
+    expect(new Date(time).toISOString()).toBe(time);
   });
 
   it("is never cached", () => {
