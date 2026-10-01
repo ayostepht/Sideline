@@ -68,7 +68,7 @@ Base URL `https://api.sleeper.app/v1`. Public, read-only, no auth. Docs: https:/
 | `GET /league/{league_id}/traded_picks` | keeper/dynasty context | daily |
 | `GET /league/{league_id}/winners_bracket`, `/losers_bracket` | playoff brackets | hourly in playoffs |
 | `GET /league/{league_id}/drafts`, `GET /draft/{draft_id}/picks` | draft recap (P1) | daily |
-| `GET /players/nfl` | full player database (about 5 MB). Sleeper asks for at most one call per day. | daily, off-peak |
+| `GET /players/nfl` | full player database (about 14.7 MB raw, 2.25 MB gzip; ADR-002). Sleeper asks for at most one call per day. | daily, off-peak |
 | `GET /players/nfl/trending/{add\|drop}?lookback_hours=24&limit=50` | league-wide add/drop momentum | 30 min |
 
 Avatars: `https://sleepercdn.com/avatars/thumbs/{avatar_id}`.
@@ -81,7 +81,7 @@ Widely used by community tools but not officially documented; they can change wi
 - Weekly stats: `https://api.sleeper.app/stats/nfl/{season}/{week}?season_type=regular&position[]=...` (same params)
 - Player headshots: `https://sleepercdn.com/content/nfl/players/thumb/{player_id}.jpg`
 
-Phase 0 must confirm and document: response shapes; whether stat keys align with `scoring_settings` keys (expected: keys like `pass_yd`, `rec`, `rec_yd`, `bonus_*` share names); whether opponent and game info is included; how DEF and K stats are keyed; whether future-week matchups exist (for playoff odds); the `waiver_type` codes in league settings; and any source of kickoff/lock times.
+Phase 0 findings are in `docs/sleeper-api-notes.md` and ADR-002 (projections need `season_type` and contain placeholder rows; no kickoff times in Sleeper; 2025 data available for backtests). Phase 0 had to confirm and document: response shapes; whether stat keys align with `scoring_settings` keys (expected: keys like `pass_yd`, `rec`, `rec_yd`, `bonus_*` share names); whether opponent and game info is included; how DEF and K stats are keyed; whether future-week matchups exist (for playoff odds); the `waiver_type` codes in league settings; and any source of kickoff/lock times.
 
 ### 3.3 Supplementary sources (optional, feature-flagged)
 
@@ -93,7 +93,7 @@ Phase 0 must confirm and document: response shapes; whether stat keys align with
 
 - Every page shows "Updated N min ago" from the latest successful `sync_runs` row for the data it displays.
 - Data older than 2x its refresh cadence shows a non-blocking stale banner.
-- Game windows come from schedule kickoff times (fallback: Thu 8pm to midnight, Sun 1pm to midnight, Mon 8pm to midnight Eastern; configurable). NFL logic runs in America/New_York internally; display uses `TZ`.
+- Game windows come from nflverse schedule kickoff times (Sleeper has none, ADR-002; fallback: Thu 8pm to midnight, Sun 1pm to midnight, Mon 8pm to midnight Eastern; configurable). NFL logic runs in America/New_York internally; display uses `TZ`.
 
 ## 4. Architecture
 
@@ -185,7 +185,7 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 ### 5.2 Projections and uncertainty (PROJ)
 
 - **PROJ-1** Base projection: Sleeper weekly projection rescored via SCORE-3. Missing projection means value 0 with reason `NO_PROJECTION`, flagged in the UI.
-- **PROJ-2** Weekly standard deviation per player from league-scored weekly results (this season, plus last season if available), shrunk toward the position-level coefficient of variation: `sd = w * sd_player + (1 - w) * cv_pos * proj`, with `w = n / (n + k)`. Start with `k = 6`; tune in backtest.
+- **PROJ-2** Weekly standard deviation per player from league-scored weekly results (this season, plus the 2025 season from Sleeper's stats endpoint rescored with the league's scoring, ADR-002), shrunk toward the position-level coefficient of variation: `sd = w * sd_player + (1 - w) * cv_pos * proj`, with `w = n / (n + k)`. Start with `k = 6`; tune in backtest.
 - **PROJ-3** Floor and ceiling are the 20th and 80th percentiles, using a normal approximation truncated at 0 (or empirical quantiles when `n >= 10`).
 - **PROJ-4** Rest-of-season (ROS) projection: sum of available weekly projections for remaining regular-season weeks; otherwise season PPG times games remaining times matchup multipliers, labeled as an estimate.
 
@@ -193,14 +193,14 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 
 - **MATCH-1** Defense vs position (DvP): for each NFL defense and position, league-scored points allowed per game this season, with the last 4 weeks weighted 2x, shrunk toward the league position average with `k = 4` games.
 - **MATCH-2** Multiplier `m = 1 + alpha * (DvP_opp_pos / avg_pos - 1)`, plus an optional implied-total term `beta * (implied_team_total / league_avg_total - 1)` when available. Cap `m` to [0.85, 1.15].
-- **MATCH-3** Backtest (`pnpm backtest`): for each completed week `w >= 4`, build projections using only data available before week `w`. Compare MAE and within-position Spearman rank correlation of raw versus adjusted projections. Grid-search `alpha` and `beta` in [0, 1]. Ship the best values only if MAE improves by at least 1% over raw; otherwise set both to 0 and show matchup grades as context only. Save results to `docs/backtests/{date}.md` and log the decision in DECISIONS.md. Sleeper's projections likely already include matchup effects, so double counting is the main risk; the backtest is the guard.
+- **MATCH-3** Backtest (`pnpm backtest`): over the 2025 season (rescored with this league's scoring) plus completed 2026 weeks (ADR-002), for each completed week `w >= 4`, build projections using only data available before week `w`. Compare MAE and within-position Spearman rank correlation of raw versus adjusted projections. Grid-search `alpha` and `beta` in [0, 1]. Ship the best values only if MAE improves by at least 1% over raw; otherwise set both to 0 and show matchup grades as context only. Save results to `docs/backtests/{date}.md` and log the decision in DECISIONS.md. Sleeper's projections likely already include matchup effects, so double counting is the main risk; the backtest is the guard.
 - **MATCH-4** Display grade A to F (quintiles of DvP rank), always paired with a text label and the underlying number.
 
 ### 5.4 Lineup optimizer (LINEUP)
 
 - **LINEUP-1** Slots come from `league.roster_positions`, excluding `BN`, `IR`, `TAXI`. Eligibility: QB, RB, WR, TE, K, DEF direct; `FLEX` = RB/WR/TE; `WRRB_FLEX` = RB/WR; `REC_FLEX` = WR/TE; `SUPER_FLEX` = QB/RB/WR/TE; IDP slots (`DL`, `LB`, `DB`, `IDP_FLEX`) if present. A player is eligible if any of their `fantasy_positions` fits. Unknown slot types are logged, treated as unfillable, and surfaced as a warning.
 - **LINEUP-2** Exact solve as maximum-weight bipartite assignment (Hungarian algorithm) between slots and eligible rostered players (excluding IR and taxi). Weight is the player's value under the selected mode.
-- **LINEUP-3** Locks: a starter whose game has kicked off stays in their slot; a bench player whose game has kicked off cannot be moved in.
+- **LINEUP-3** Locks: a starter whose game has kicked off stays in their slot; a bench player whose game has kicked off cannot be moved in. Kickoff comes from nflverse; without it, the ADR-002 fallback lock times apply and reasons mark the lock as approximate.
 - **LINEUP-4** Availability: Out, IR, Suspended, or bye means value 0 and never recommended. Doubtful multiplies value by 0.25; Questionable by 0.9. Constants are configurable and always shown in reasons.
 - **LINEUP-5** Modes: Projected (median), Safe (floor), Upside (ceiling). P1: Auto mode picks Upside when weekly win probability is below 35% and Safe above 65%.
 - **LINEUP-6** Output: optimal assignment, current assignment, swap list (in, out, slot), projected point delta, per-player reasons (projection, matchup grade, status, bye, lock), and an issues list (empty slot, inactive starter, unknown slot type).
@@ -225,9 +225,9 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 - **WAIVER-5 (moved to P2, ADR-003)** FAAB bid suggestion (FAAB leagues only, from `league.settings.waiver_type`; confirm codes in Phase 0): from this season's league transactions, collect winning bids as a percentage of the starting budget, grouped by Waiver Score quartile. Recommend Conservative (median), Likely to win (75th percentile), and Aggressive (90th percentile), scaled by my remaining budget fraction and weeks remaining. With fewer than 8 winning bids in history, fall back to documented default tiers and show reason `LIMITED_LEAGUE_HISTORY`. If failed bids are available in transactions, use them to sharpen the "likely to win" estimate.
 - **WAIVER-6** Rolling-priority waiver advisor (non-FAAB leagues; Steph's league uses rolling waivers, ADR-003):
   - **WAIVER-6a** Show my current waiver position (from roster settings) and the full order.
-  - **WAIVER-6b** For each candidate, flag teams ahead of me in the order with a roster need at the candidate's position (likely competing claims). "Need" means the candidate would enter that team's optimal lineup: that team's Lineup Impact for the candidate exceeds a documented, configurable threshold.
+  - **WAIVER-6b** For each candidate, flag teams ahead of me in the order with a roster need at the candidate's position (likely competing claims). "Need" means the candidate would enter that team's optimal lineup: that team's Lineup Impact for the candidate exceeds a documented, configurable threshold. Pending claims by other teams are not visible in the API; the signal may also use this season's failed-claim history (who competed for which positions), which transactions expose (ADR-002).
   - **WAIVER-6c** Claim advice: recommend whether a claim is worth dropping to the back of the order by comparing my Lineup Impact with a documented, configurable value-of-priority estimate (which depends on my position and weeks remaining). Always shown with reasons.
-  - **WAIVER-6d** Show when waivers clear (from league waiver day/hour settings) and when unclaimed players become free agents (first come, first served).
+  - **WAIVER-6d** Show when waivers clear (from `waiver_day_of_week`, 0 = Monday, runs about 03:00 ET, and `waiver_clear_days`; ADR-002) and when unclaimed players become free agents (first come, first served).
 
 ### 5.7 Matchup win probability (SIM)
 
@@ -241,7 +241,7 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 - **LEAGUE-2** Luck = actual wins minus expected wins (sum of weekly all-play win rates).
 - **LEAGUE-3** Power score = 0.4 x all-play win rate + 0.3 x recent points for (last 3 weeks, normalized) + 0.3 x roster strength (ROS optimal lineup projection, normalized). Weights shown in a tooltip.
 - **LEAGUE-4** Positional strength heatmap: each team's ROS projected starters by position versus the league median.
-- **LEAGUE-5** Playoff odds: simulate the remaining regular season 10,000 times using each team's weekly score distribution (mean from ROS optimal lineup projection, sd from season weekly scores) and the real remaining schedule (from future-week matchups if available; Phase 0 confirms). Apply league playoff settings (`playoff_teams`, divisions if present, tiebreaker per league settings, defaulting to points for). Outputs: playoff %, bye % (if byes exist), seed distribution.
+- **LEAGUE-5** Playoff odds: simulate the remaining regular season 10,000 times using each team's weekly score distribution (mean from ROS optimal lineup projection, sd from season weekly scores) and the real remaining schedule (future-week `matchups/{week}` for weeks before `playoff_week_start`; later weeks are placeholders, ADR-002). Apply league playoff settings (`playoff_teams`, divisions if present, tiebreaker per league settings, defaulting to points for). Outputs: playoff %, bye % (if byes exist), seed distribution.
 - **LEAGUE-6** Manager tendencies: transaction count, waiver claims won, trade count; FAAB spent and remaining plus average and max winning bid only in FAAB leagues.
 
 ### 5.9 Trade analyzer (TRADE, P1)

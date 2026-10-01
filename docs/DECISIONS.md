@@ -18,7 +18,7 @@ Date: 2026-10-01
 5. **Fixture output:** sleeper-data-engineer may write generated files into `tests/fixtures/sleeper/` via `scripts/fixtures/record.ts`. Hand-written test code under `tests/` stays with qa-engineer.
 6. **Tracking docs:** the orchestrator writes `docs/PROGRESS.md` and `docs/DECISIONS.md` (removed from T0.1 scope).
 7. **Dependency installs:** T0.1 pre-installs all Phase 0 dev dependencies so parallel tasks don't race on `pnpm-lock.yaml`. In a parallel batch, only one designated task may run `pnpm add`.
-8. **Fixture layout contract:** `tests/fixtures/sleeper/v1/<url path>.json`, `tests/fixtures/sleeper/projections/<season>/<week>.json`, `tests/fixtures/sleeper/stats/<season>/<week>.json`, plus `tests/fixtures/sleeper/manifest.json` (sanitized league id, weeks, which weeks are partial, recorded_at).
+8. **Fixture layout contract:** `tests/fixtures/sleeper/v1/<url path>.json`, `tests/fixtures/sleeper/projections/<season>/<week>.json`, `tests/fixtures/sleeper/stats/<season>/<week>.json`, plus `tests/fixtures/sleeper/manifest.json` (camelCase keys: `leagueId`, `season`, `weeks`, `partialWeeks`, `recordedAt`).
 9. **Partial weeks:** in-progress weeks (week 4 at recording time) are marked partial and excluded from SCORE-2 validation and all golden expectations.
 10. **Diff budget:** generated fixtures and the lockfile don't count toward the ~400-line task size.
 11. **Stub scripts** for not-yet-implemented root scripts exit non-zero with "not implemented until Tn.x". `pnpm gate` reports them as SKIPPED, never PASS.
@@ -30,6 +30,63 @@ Date: 2026-10-01
 **Alternatives considered:** running parallel agents in separate git worktrees (rejected: each needs its own install; disjoint paths in one tree are enough for Phase 0).
 
 **Consequences:** sanitization becomes a standing check on every commit. Ownership exceptions 4 and 5 end at G0.
+
+## ADR-001: Stack and pinned versions
+
+Date: 2026-10-01
+
+**Decision:** the stack from PLAN.md 4.1, pinned to exact versions (`.npmrc` sets `save-exact=true`; the lockfile is committed):
+
+| Area | Choice | Version |
+|---|---|---|
+| Runtime | Node.js LTS (local via fnm, `.nvmrc`, `engines >=24 <25`) | 24.21.0 |
+| Container base | `node:24.21.0-bookworm-slim`, tini from Debian apt, non-root `node` user | 24.21.0 |
+| Package manager | pnpm (`packageManager` field) | 12.8.1 |
+| Language | TypeScript (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, moduleResolution `bundler`) | 6.0.3 |
+| Web | Next.js App Router, `output: 'standalone'`, Turbopack builder | 16.3.8 |
+| UI runtime | React / React DOM | 19.3.0 |
+| Lint / format | ESLint (flat, type-aware via typescript-eslint 8.71.0), eslint-config-prettier 10.1.8, Prettier | 10.11.0 / 3.9.9 |
+| Unit tests | Vitest with @vitest/coverage-v8, fast-check 4.10.2 | 5.0.3 |
+| HTTP mocking | MSW | 3.0.1 |
+| E2E / a11y | @playwright/test, @axe-core/playwright 4.13.0 | 1.63.0 |
+| Lighthouse | @lhci/cli | 0.15.1 |
+| Validation | zod | 4.6.5 |
+| Logging | pino 10.3.1, pino-pretty 13.1.3 | |
+| Scripts | tsx | 4.23.15 |
+
+Still to pin when first installed (owning task records the version here): Tailwind CSS, shadcn/ui, Radix, lucide-react, Recharts, TanStack Table (T2.1); better-sqlite3, Drizzle ORM, drizzle-kit (T1.3); croner or node-cron (T1.5).
+
+**Context:** Phase 0 scaffold (T0.1, T0.2), current stable releases on 2026-10-01.
+
+**Alternatives considered:** TypeScript 7.0.2 (rejected for now: typescript-eslint 8.71.0 declares a peer range `<6.1.0`, and type-aware linting is required); Node 25 (not LTS); corepack (not shipped with Node 25+, so pnpm is installed explicitly, via Homebrew locally and `npm i -g pnpm@12.8.1` in the Dockerfile).
+
+**Consequences:**
+- Revisit TypeScript 7 when typescript-eslint supports it.
+- pnpm 12 blocks dependency build scripts unless they are listed under `allowBuilds` in `pnpm-workspace.yaml` (esbuild now, better-sqlite3 in T1.3).
+- `minimumReleaseAgeExclude` lists next@16.3.8 and its SWC binaries because that release was newer than pnpm's release-age policy at install time; remove the exclusion in T6.2.
+- msw 3 has API changes from v2; @vitest/mocker lists an optional msw ^2 peer that only matters for browser mode (unused).
+
+## ADR-002: Data source decisions from the Phase 0 spike
+
+Date: 2026-10-01
+
+**Decision**
+
+1. **Projections source: Sleeper's undocumented projections endpoint (rotowire).** It works, so the PLAN section 12 fallback (baseline model) is not needed now. The provider must: always send `season_type`; keep only real rows (`stats.gp` present, `opponent` not null); filter positions after fetching (FB, P, CB, DB leak through the filter); validate with zod and treat an empty or placeholder-only response as "projections unavailable" rather than success. The worker stores each projection fetch with `fetched_at` and keeps the last pre-kickoff snapshot per player-week, so Sideline builds its own pre-game history.
+2. **Scoring (SCORE-1):** plain `sum(stats[k] * scoring_settings[k])` over keys present in both, with missing keys as 0. The spike matched Sleeper's `players_points` for 457 of 457 player-weeks (weeks 1 to 3). No key-mapping exceptions for actual stats. Precomputed `pts_ppr`/`pts_std` fields use Sleeper defaults and are never used for league scoring.
+3. **Projection rescoring (SCORE-3) exceptions,** per `docs/sleeper-api-notes.md` section 6: `fgm_50p` is scored with the `fgm_50_59` value (60+ can't be split); `fgmiss = fga - fgm`; DEF points-allowed uses the projected `pts_allow` mapped to an expected bucket value (analytics-engineer documents the method in T3.1); missing DEF/ST return-TD keys count as 0 with a reason code.
+4. **2025 data for backtests and variance priors.** Projections and stats return data for all 18 weeks of 2025. Phase 3 MATCH-3 backtests use 2025 (rescored with this league's `scoring_settings`) plus completed 2026 weeks. PROJ-2 uses 2025 weekly league-scored results as the player-level variance prior (`n` counts 2025 games), shrunk toward the position CV as specified. Caveat recorded in every backtest report: 2025 projections are probably closing (last pre-game) values, which can be slightly more accurate than early-week projections.
+5. **Future schedule (LEAGUE-5):** future-week `matchups/{week}` returns real pairings. Read weeks from the current week through `playoff_week_start - 1` only. Weeks at or after `playoff_week_start` are placeholders, not the bracket.
+6. **Kickoff and lock times:** Sleeper has none (only a game `date`). nflverse schedules are the primary kickoff source (T1.4). Fallback when nflverse is disabled or fails: a player is treated as locked from 13:00 ET on their game date for Sunday games and 20:00 ET for other days. The reason payload marks this as an approximate lock, and the UI says so.
+7. **Waivers (WAIVER-6):** `waiver_type` 0 is rolling (high confidence). 2 is treated as FAAB and 1 as reverse standings (medium-low confidence); unknown codes get standard handling plus a warning. `waiver_day_of_week` uses 0 = Monday, and runs are at about 03:00 ET (medium confidence, one league). `waiver_clear_days` gives the free-agent time for dropped players. `rosters[].settings.waiver_position` gives the order (1 = first). Failed claims are visible in transactions, so WAIVER-6b can combine roster need with competing-claim history. Pending claims by other teams are not visible.
+8. **Players DB:** `GET /players/nfl` is about 14.7 MB raw (2.25 MB gzip). Still once per day, parsed and trimmed to the fields in PLAN 4.5.
+9. **HTTP politeness:** responses carry ETags and support `If-None-Match` (304). Cloudflare edge caching ranges from 60 s to 3,600 s, so polling faster than the edge cache is pointless. The client should send `If-None-Match` where it keeps the previous body. No rate-limit headers exist, so our limiter is the only guard.
+
+**Context:** T0.3a spike, `docs/sleeper-api-notes.md` (93 calls, `/players/nfl` once).
+
+**Alternatives considered:** a baseline projection model now (not needed while the endpoint works; it stays the documented fallback); nflverse-only scoring (unnecessary, Sleeper stats match exactly).
+
+**Consequences:** T1.2 schemas must tolerate placeholder rows and the position leak. T1.3 schema keeps projection snapshots by fetch time. T1.4 nflverse becomes the kickoff source. T3.1 implements the SCORE-3 exceptions. T3.3/T3.5 consume 2025 data, which the worker or a backfill script must fetch politely (36 extra calls).
 
 ## ADR-003: FAAB recommender to P2; rolling-priority waiver advisor becomes P0
 
