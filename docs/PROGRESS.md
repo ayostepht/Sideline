@@ -20,10 +20,12 @@
 | T0.1 | Workspace scaffold and tooling | devops-engineer | A | Done | 1 | a6e3f2c |
 | T0.2 | Next.js skeleton, /api/health, Dockerfile | devops-engineer | B | Done (review fixes) | 2 | a21579d, 36934fd |
 | T0.3a | Sleeper API spike and api-notes | sleeper-data-engineer | B | Done | 1 | 6c89e16 |
-| T0.4 | Test harness (MSW, Playwright, axe, LHCI) | qa-engineer | B | Done (review fixes) | 2 | b5e50ad, (this commit) |
-| T0.3b | Fixture recorder and sanitized fixtures | sleeper-data-engineer | C | Todo | 0 | |
-| T0.5 | gate and screens scripts, CI | devops-engineer | C | Todo | 0 | |
-| T0.6 | ADR-001, ADR-002, PLAN amendments | orchestrator | D | Todo | 0 | |
+| T0.4 | Test harness (MSW, Playwright, axe, LHCI) | qa-engineer | B | Done (review fixes) | 2 | b5e50ad, 3308ac3 |
+| T0.3b | Fixture recorder and sanitized fixtures | sleeper-data-engineer | C | Done | 2 (attempt 1 leaked real ids into test-data.ts, caught by orchestrator scan before commit) | d47388e, 7c0ff9f |
+| T0.5 | gate and screens scripts, CI | devops-engineer | C | Done (2.1k lines, over the 400-line guideline; accepted, mostly helpers and tests) | 1 | 7326537 |
+| T0.6 | ADR-001, ADR-002, PLAN amendments | orchestrator | D | Done | 1 | 0292fe2 |
+| T0.5-fix | Batch C review fixes (M1, m1-m5, m7, m11, n1, n3) | devops-engineer | C-fix | In progress (restarted after a usage-limit interruption at 2026-10-01 ~16:00 ET; no partial edits) | 1 | |
+| T0.3b-fix | Batch C review fixes (m8-m10, m12) | sleeper-data-engineer | C-fix | In progress (restarted after the same interruption; no partial edits) | 1 | |
 | G0 | Gate | qa-engineer, code-reviewer, orchestrator | E | Todo | 0 | |
 
 ## Standing rules for briefs
@@ -36,11 +38,14 @@
 
 - T1.3: add `better-sqlite3: true` under `allowBuilds` in pnpm-workspace.yaml (pnpm 12 blocks native builds by default).
 - ADR-001: TypeScript pinned to 6.0.3 (not 7.x) because typescript-eslint 8.71 requires `<6.1`. Revisit when typescript-eslint supports TS 7.
-- Docker image reports about 400 MB in OrbStack "disk usage" (93 MB compressed, about 290 MB unpacked) for web alone. HOST-5 limit is 400 MB. T4.3 must define the measurement (`docker image inspect` Size) and slim the runtime stage before adding the worker.
+- Image size: the gate measures `docker image inspect` Size (93.3 MB arm64, 93.2 MB amd64 for web alone; HOST-5 limit 400 MB). OrbStack's "disk usage" column (about 400 MB) is not the measure.
 - Route JS headroom: the placeholder page already ships about 132 KB of 200 KB gzipped script. Frontend briefs (T2.1+) must lazy-load charts and watch bundle size.
 - Lighthouse best-practices is 0.96 against a 0.95 floor on the placeholder page.
 - Review m4: coverage does not measure `apps/web/app/api/**`. Decide in the T1.6 brief (keep handlers thin and test via lib/server, or add api to the 75% group).
 - Playwright `--project` is variadic: put the spec path before `--project`.
+- tests/fixtures/README.md should list the extra manifest keys the recorder writes (currentWeek, futureMatchupWeeks, projectionWeeks, statsWeeks, syntheticLeagueId, sanitizerVersion, trimming). Owner: qa-engineer.
+- `pnpm fixtures:check` needs the gitignored raw cache or live API, so it cannot run in CI. The orchestrator runs it plus an independent live-fetched identifier scan before every commit and at every gate.
+- Fixtures are 5.6 MB (target under 6 MB): little headroom for re-recording more weeks; re-record with trimming rather than growing.
 - msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
 
 ## Questions for Steph
