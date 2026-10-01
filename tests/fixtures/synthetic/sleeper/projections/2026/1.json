@@ -1,0 +1,4 @@
+[
+  { "player_id": "9001", "week": 1, "season": "2026", "stats": { "pass_yd": 250, "pass_td": 1.8 } },
+  { "player_id": "9002", "week": 1, "season": "2026", "stats": { "rush_yd": 70, "rec": 3 } }
+]

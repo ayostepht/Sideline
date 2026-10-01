@@ -1,0 +1,4 @@
+[
+  { "user_id": "200000000000000001", "display_name": "Synthetic Manager A", "avatar": null, "metadata": { "team_name": "Fake Team A" } },
+  { "user_id": "200000000000000002", "display_name": "Synthetic Manager B", "avatar": null, "metadata": {} }
+]

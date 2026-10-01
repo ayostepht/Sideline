@@ -16,11 +16,11 @@
 
 | ID | Title | Agent | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|
-| T0.0 | Toolchain, branch, tracking docs, ADR-000/003, PLAN amendments | orchestrator | 0 | Done | 1 | (this commit) |
-| T0.1 | Workspace scaffold and tooling | devops-engineer | A | Todo | 0 | |
-| T0.2 | Next.js skeleton, /api/health, Dockerfile | devops-engineer | B | Todo | 0 | |
-| T0.3a | Sleeper API spike and api-notes | sleeper-data-engineer | B | Todo | 0 | |
-| T0.4 | Test harness (MSW, Playwright, axe, LHCI) | qa-engineer | B | Todo | 0 | |
+| T0.0 | Toolchain, branch, tracking docs, ADR-000/003, PLAN amendments | orchestrator | 0 | Done | 1 | f7345f1 |
+| T0.1 | Workspace scaffold and tooling | devops-engineer | A | Done | 1 | a6e3f2c |
+| T0.2 | Next.js skeleton, /api/health, Dockerfile | devops-engineer | B | In progress | 1 | |
+| T0.3a | Sleeper API spike and api-notes | sleeper-data-engineer | B | In progress | 1 | |
+| T0.4 | Test harness (MSW, Playwright, axe, LHCI) | qa-engineer | B | In progress | 1 | |
 | T0.3b | Fixture recorder and sanitized fixtures | sleeper-data-engineer | C | Todo | 0 | |
 | T0.5 | gate and screens scripts, CI | devops-engineer | C | Todo | 0 | |
 | T0.6 | ADR-001, ADR-002, PLAN amendments | orchestrator | D | Todo | 0 | |
@@ -34,7 +34,9 @@
 
 ## Backlog (Minor findings and follow-ups)
 
-- (none yet)
+- T1.3: add `better-sqlite3: true` under `allowBuilds` in pnpm-workspace.yaml (pnpm 12 blocks native builds by default).
+- ADR-001: TypeScript pinned to 6.0.3 (not 7.x) because typescript-eslint 8.71 requires `<6.1`. Revisit when typescript-eslint supports TS 7.
+- msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
 
 ## Questions for Steph
 

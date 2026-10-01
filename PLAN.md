@@ -452,7 +452,7 @@ Suggested order: notifications (Home Assistant webhook first, then ntfy and Disc
 | UI2 | axe: zero serious or critical violations on every route, light and dark |
 | UI3 | Lighthouse mobile budgets (6.6) met on Home, Lineup, Waivers, Players (as they exist) |
 | UI4 | ux-reviewer report has zero open Blocker or Major findings; 390px and 1280px screenshots archived to `docs/gates/G{n}/screens/` (compressed) |
-| UI5 | No horizontal scroll at 390px on any route (automated: `document.documentElement.scrollWidth <= window.innerWidth`) |
+| UI5 | No horizontal scroll at 390px on any route (automated: `document.documentElement.scrollWidth <= document.documentElement.clientWidth`; `innerWidth` grows with overflowing content in mobile Chromium, see DECISIONS ADR-004) |
 
 ### 10.3 Phase-specific checks
 

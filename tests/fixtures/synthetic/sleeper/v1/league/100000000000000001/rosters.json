@@ -1,0 +1,4 @@
+[
+  { "roster_id": 1, "owner_id": "200000000000000001", "league_id": "100000000000000001", "players": ["9001", "9002"], "starters": ["9001", "9002"], "settings": { "wins": 0, "losses": 0, "ties": 0, "waiver_position": 1 } },
+  { "roster_id": 2, "owner_id": "200000000000000002", "league_id": "100000000000000001", "players": ["9003", "9004"], "starters": ["9003", "9004"], "settings": { "wins": 0, "losses": 0, "ties": 0, "waiver_position": 2 } }
+]

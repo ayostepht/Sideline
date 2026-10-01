@@ -42,3 +42,15 @@ Date: 2026-10-01
 **Alternatives considered:** keeping FAAB as P0 tested only on synthetic leagues (rejected by Steph: effort with no user value this season).
 
 **Consequences:** Phase 4 ships sooner and with more value for this league. Leagues without FAAB remain a supported edge case. The T0.3a spike must document the waiver fields WAIVER-6 needs (roster `waiver_position`, waiver day and hour settings, `waiver_type` codes, whether failed claims appear in transactions).
+
+## ADR-004: UI5 horizontal-scroll check compares against clientWidth
+
+Date: 2026-10-01
+
+**Decision:** UI5 uses `document.documentElement.scrollWidth <= document.documentElement.clientWidth` instead of `<= window.innerWidth`. PLAN.md 10.2 is amended.
+
+**Context:** qa-engineer (T0.4) measured on the Pixel 7 profile that a 1000px-wide element makes both `scrollWidth` and `innerWidth` 1009 while `clientWidth` stays 412, so the original formula passes a page that scrolls sideways. `e2e/helpers/no-hscroll.ts` uses the stricter form, and `e2e/helpers.spec.ts` covers the regression.
+
+**Alternatives considered:** comparing against the device viewport width from the Playwright project (works, but duplicates config and breaks on zoomed layouts).
+
+**Consequences:** any script that checks UI5 (including the T0.5 gate script) must use `e2e/helpers/no-hscroll.ts` or the same formula.

@@ -26,14 +26,23 @@ export default defineConfig({
   test: {
     passWithNoTests: true,
     retry: 0,
-    projects: packageDirs.map((dir) => ({
-      test: {
-        name: dir.replace(/^(apps|packages)\//, ""),
-        root: dir,
-        include: ["**/*.test.ts"],
-        exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
+    projects: [
+      ...packageDirs.map((dir) => ({
+        test: {
+          name: dir.replace(/^(apps|packages)\//, ""),
+          root: dir,
+          include: ["**/*.test.ts"],
+          exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
+        },
+      })),
+      // Self-tests for the test harness itself (MSW fixture handlers). Part of `test:unit`.
+      {
+        test: {
+          name: "harness",
+          include: ["tests/harness/**/*.test.ts"],
+        },
       },
-    })),
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "json-summary", "lcov"],
