@@ -12,6 +12,7 @@ export default tseslint.config(
       "**/coverage/**",
       "**/.turbo/**",
       ".screens/**",
+      ".gate/**",
       ".lighthouseci/**",
       "playwright-report/**",
       "test-results/**",

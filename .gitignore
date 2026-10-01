@@ -19,3 +19,4 @@ playwright-report
 test-results
 .lighthouseci
 apps/web/next-env.d.ts
+.gate/

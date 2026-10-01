@@ -21,13 +21,13 @@
     "test:a11y": "playwright test --grep UI2",
     "test:contract": "tsx scripts/not-implemented.ts T1.7 test:contract",
     "lhci": "lhci autorun",
-    "screens": "tsx scripts/not-implemented.ts T0.5 screens",
+    "screens": "tsx scripts/screens.ts",
     "validate:scoring": "tsx scripts/not-implemented.ts T3.1 validate:scoring",
     "backtest": "tsx scripts/not-implemented.ts T3.5 backtest",
     "sync": "tsx scripts/not-implemented.ts T1.5 sync",
     "db:migrate": "tsx scripts/not-implemented.ts T1.3 db:migrate",
     "db:seed:fixtures": "tsx scripts/not-implemented.ts T1.3 db:seed:fixtures",
-    "gate": "tsx scripts/not-implemented.ts T0.5 gate",
+    "gate": "tsx scripts/gate.ts",
     "fixtures:record": "tsx scripts/not-implemented.ts T0.3b fixtures:record"
   },
   "devDependencies": {

@@ -6,6 +6,7 @@ out
 coverage
 .turbo
 .screens
+.gate
 .lighthouseci
 playwright-report
 test-results
