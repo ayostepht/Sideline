@@ -222,8 +222,12 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 - **WAIVER-2** **Lineup Impact** (headline metric): for each candidate and each of the next `N` weeks (default 3), run the optimizer on my roster plus the candidate minus the suggested drop, and sum the projected starting points gained. Suggested drop: the lowest-ROS-value non-IR player on my roster; the user can override it. Prefilter to the top 75 candidates by a cheap composite before running impact. Target: under 2 s total.
 - **WAIVER-3** Composite **Waiver Score** 0 to 100 from percentile-normalized components: Lineup Impact 40%, ROS value 20%, usage trend 20%, Sleeper momentum 10%, schedule next 3 weeks 10%. Weights are configurable and the breakdown is shown as chips.
 - **WAIVER-4** Two views: "For my team" (sorted by Lineup Impact) and "Best available" (sorted by ROS value, independent of my roster). Position filters on both.
-- **WAIVER-5** FAAB bid suggestion (FAAB leagues only, from `league.settings.waiver_type`; confirm codes in Phase 0): from this season's league transactions, collect winning bids as a percentage of the starting budget, grouped by Waiver Score quartile. Recommend Conservative (median), Likely to win (75th percentile), and Aggressive (90th percentile), scaled by my remaining budget fraction and weeks remaining. With fewer than 8 winning bids in history, fall back to documented default tiers and show reason `LIMITED_LEAGUE_HISTORY`. If failed bids are available in transactions, use them to sharpen the "likely to win" estimate.
-- **WAIVER-6** Non-FAAB leagues: show waiver order and advise whether a claim is worth spending priority on (Lineup Impact above a documented threshold).
+- **WAIVER-5 (moved to P2, ADR-003)** FAAB bid suggestion (FAAB leagues only, from `league.settings.waiver_type`; confirm codes in Phase 0): from this season's league transactions, collect winning bids as a percentage of the starting budget, grouped by Waiver Score quartile. Recommend Conservative (median), Likely to win (75th percentile), and Aggressive (90th percentile), scaled by my remaining budget fraction and weeks remaining. With fewer than 8 winning bids in history, fall back to documented default tiers and show reason `LIMITED_LEAGUE_HISTORY`. If failed bids are available in transactions, use them to sharpen the "likely to win" estimate.
+- **WAIVER-6** Rolling-priority waiver advisor (non-FAAB leagues; Steph's league uses rolling waivers, ADR-003):
+  - **WAIVER-6a** Show my current waiver position (from roster settings) and the full order.
+  - **WAIVER-6b** For each candidate, flag teams ahead of me in the order with a roster need at the candidate's position (likely competing claims). "Need" means the candidate would enter that team's optimal lineup: that team's Lineup Impact for the candidate exceeds a documented, configurable threshold.
+  - **WAIVER-6c** Claim advice: recommend whether a claim is worth dropping to the back of the order by comparing my Lineup Impact with a documented, configurable value-of-priority estimate (which depends on my position and weeks remaining). Always shown with reasons.
+  - **WAIVER-6d** Show when waivers clear (from league waiver day/hour settings) and when unclaimed players become free agents (first come, first served).
 
 ### 5.7 Matchup win probability (SIM)
 
@@ -238,7 +242,7 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 - **LEAGUE-3** Power score = 0.4 x all-play win rate + 0.3 x recent points for (last 3 weeks, normalized) + 0.3 x roster strength (ROS optimal lineup projection, normalized). Weights shown in a tooltip.
 - **LEAGUE-4** Positional strength heatmap: each team's ROS projected starters by position versus the league median.
 - **LEAGUE-5** Playoff odds: simulate the remaining regular season 10,000 times using each team's weekly score distribution (mean from ROS optimal lineup projection, sd from season weekly scores) and the real remaining schedule (from future-week matchups if available; Phase 0 confirms). Apply league playoff settings (`playoff_teams`, divisions if present, tiebreaker per league settings, defaulting to points for). Outputs: playoff %, bye % (if byes exist), seed distribution.
-- **LEAGUE-6** Manager tendencies: FAAB spent and remaining, transaction count, average and max winning bid, trade count.
+- **LEAGUE-6** Manager tendencies: transaction count, waiver claims won, trade count; FAAB spent and remaining plus average and max winning bid only in FAAB leagues.
 
 ### 5.9 Trade analyzer (TRADE, P1)
 
@@ -313,10 +317,10 @@ Web app manifest and icons; installable on iOS and Android in v1. Offline mode s
 
 ## 8. Prioritization
 
-- **P0, in-season MVP (Phases 0 to 4):** data sync; scoring engine with validation; projections; lineup optimizer and Lineup page; Waivers (Lineup Impact, Waiver Score, FAAB); Players and trends; League basics; Home; Docker beta.
+- **P0, in-season MVP (Phases 0 to 4):** data sync; scoring engine with validation; projections; lineup optimizer and Lineup page; Waivers (Lineup Impact, Waiver Score, rolling-priority advisor WAIVER-6); Players and trends; League basics; Home; Docker beta.
 - **P0, v1.0 (Phases 5 and 6):** matchup win probability; power rankings, luck, playoff odds; hardening; auth; PWA install; docs.
-- **P1:** notifications (Home Assistant webhook, ntfy, or Discord: Sunday-morning lineup issue alert, inactive starter alert); trade analyzer and finder; Auto lineup mode; weekly backtest job in the worker; weather; league history across seasons via `previous_league_id`; offline caching; "view as team" switcher for leaguemates.
-- **P2:** 2027 draft assistant; dynasty and keeper values; other platforms; opt-in LLM weekly recap.
+- **P1:** notifications via self-hosted Web Push to the installed iPhone PWA (VAPID keys generated locally, no paid service; Sunday-morning lineup issue alert, inactive starter alert); trade analyzer and finder; Auto lineup mode; weekly backtest job in the worker; weather; league history across seasons via `previous_league_id`; offline caching; "view as team" switcher for leaguemates.
+- **P2:** FAAB bid recommender (WAIVER-5, ADR-003); 2027 draft assistant; dynasty and keeper values; other platforms; opt-in LLM weekly recap.
 
 ## 9. Phased build plan
 
@@ -385,14 +389,14 @@ Objective: working skeleton, tooling, and verified ground truth about the Sleepe
 | ID | Task | Agent | Depends | Batch |
 |---|---|---|---|---|
 | T4.1 | Trends and usage metrics (TREND-1 to TREND-5) | analytics-engineer | G3 | A |
-| T4.2 | Waiver engine: pool, Lineup Impact, Waiver Score, drop suggestion, non-FAAB advice (WAIVER-1 to 4, 6) | analytics-engineer | G3 | A |
+| T4.2 | Waiver engine: pool, Lineup Impact, Waiver Score, drop suggestion (WAIVER-1 to 4) | analytics-engineer | G3 | A |
 | T4.3 | Production Docker image (beta): supervisor for web and worker, `/data` volume, migrations at start, healthcheck, `docker-compose.yml`, quickstart in `docs/self-hosting.md` | devops-engineer | G3 | A |
-| T4.4 | FAAB recommender (WAIVER-5) | analytics-engineer | T4.2 | B |
+| T4.4 | Waiver priority advisor (WAIVER-6a to 6d): waiver position, competing-need flags, claim-worth-it advice, clear times | analytics-engineer | T4.2 | B |
 | T4.5 | Data functions and APIs: waivers, players list (paginated, filterable), player detail | backend-engineer | T4.1, T4.2 | B |
-| T4.6 | Waivers page; Players explorer and player sheet with charts; Home waiver targets and risers cards | frontend-engineer | T4.4, T4.5 | C |
-| T4.7 | Tests: waiver scenarios on synthetic leagues; FAAB with synthetic histories (rich, sparse, none, non-FAAB league); perf (waivers under 2 s, players list with full pool); e2e waivers and players | qa-engineer | T4.6 | D |
+| T4.6 | Waivers page (including waiver position, competing claims, claim advice, clear time); Players explorer and player sheet with charts; Home waiver targets and risers cards | frontend-engineer | T4.4, T4.5 | C |
+| T4.7 | Tests: waiver scenarios on synthetic leagues; priority advisor golden scenarios (first in order, last in order, competing need ahead, no competition, waivers already cleared, daily waivers); perf (waivers under 2 s, players list with full pool); e2e waivers and players | qa-engineer | T4.6 | D |
 
-**G4 phase checks:** all WAIVER and TREND requirements traced to tests; perf budgets met; beta image runs against live data for 30 minutes with healthy sync runs. **Human checkpoint (optional):** Steph deploys the beta on Unraid and uses it for this week's waivers.
+**G4 phase checks:** all P0 WAIVER (1 to 4, 6a to 6d) and TREND requirements traced to tests; WAIVER-6d clear time verified against Steph's league settings; perf budgets met; beta image runs against live data for 30 minutes with healthy sync runs. **Human checkpoint (optional):** Steph deploys the beta on Unraid and uses it for this week's waivers.
 
 ### Phase 5: Matchups and league intelligence (Gate G5)
 
@@ -466,7 +470,7 @@ Listed under each phase in section 9.
 
 - **Pyramid:** many unit tests in `packages/core`, `sleeper`, `providers`; integration tests for sync and data functions against temp SQLite; focused e2e for core flows.
 - **Coverage thresholds:** `packages/core` at least 90% lines and 85% branches; `sleeper` and `providers` at least 85% lines; `db` and `apps/web/lib/server` at least 75% lines. UI is covered by e2e, not line coverage.
-- **Golden tests:** hand-built scenarios with documented expected outputs for the optimizer, waiver engine, and FAAB recommender.
+- **Golden tests:** hand-built scenarios with documented expected outputs for the optimizer, waiver engine, and waiver priority advisor. Partial (in-progress) weeks are never used for golden expectations or SCORE-2.
 - **Property tests (fast-check):** optimizer invariants (LINEUP-8); scoring linearity; simulation probabilities within [0, 1].
 - **Fixtures:** recorded from Steph's real league in Phase 0 and sanitized: usernames, display names, team names, avatars, and the league name replaced with deterministic fakes. Player DB fixture trimmed to rostered players plus the top 400 by `search_rank` plus anything referenced. Synthetic fixtures for edge cases: superflex, IDP, no FAAB, divisions, preseason state, offseason state, week 18, empty transactions. Never commit unsanitized data.
 - **Contract tests:** `pnpm test:contract` hits the live Sleeper API and validates schemas only. Run at every gate and weekly; never part of default CI.
@@ -510,9 +514,11 @@ Listed under each phase in section 9.
 
 ## 13. Open questions for Steph
 
-1. **(Blocking for Phase 0)** Sleeper username and which league(s) to support first.
-2. Should leaguemates be able to use it? This affects auth defaults and whether a "view as team" switcher moves from P1 to P0.
-3. Final app name (placeholder "Sideline").
-4. Subdomain for deployment.
-5. Preferred notification channel for P1 (Home Assistant, ntfy, or Discord).
-6. Assumed yes unless told otherwise: nflverse downloads from GitHub are enabled by default.
+All answered on 2026-10-01 (see DECISIONS.md ADR-000 and ADR-003):
+
+1. Username and league: provided; stored only in the gitignored `.env` (`SLEEPER_USERNAME`, `DEFAULT_LEAGUE_ID`), never in tracked files.
+2. Leaguemates: Steph only for now, possibly one leaguemate later. Single shared `APP_PASSWORD`; "view as team" stays P1.
+3. App name: Sideline.
+4. Subdomain: `sleeper.beantech.site` (behind Nginx Proxy Manager, TLS terminated at the proxy). Unraid is x86_64: deployable images are `linux/amd64`.
+5. Notifications (P1): Web Push to the installed iPhone PWA.
+6. nflverse downloads enabled by default (assumed yes).
