@@ -1,5 +1,18 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*.ts", "**/*.ts"],
-  "exclude": ["node_modules", "dist", ".next"]
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "incremental": true,
+    "allowJs": false,
+    "plugins": [{ "name": "next" }]
+  },
+  "include": [
+    "next-env.d.ts",
+    "next.config.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next"]
 }

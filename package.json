@@ -9,6 +9,7 @@
   },
   "scripts": {
     "verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test:unit",
+    "build": "pnpm -r build",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r --workspace-concurrency=1 typecheck",
     "lint": "eslint .",
     "format": "prettier --write .",
