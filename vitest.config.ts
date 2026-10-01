@@ -31,7 +31,7 @@ export default defineConfig({
         test: {
           name: dir.replace(/^(apps|packages)\//, ""),
           root: dir,
-          include: ["**/*.test.ts"],
+          include: ["**/*.test.{ts,tsx}"],
           exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
         },
       })),

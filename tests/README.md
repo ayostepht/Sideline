@@ -20,7 +20,7 @@ everything here is cross-cutting.
 | Integration                 | `pnpm test:integration`                  | MSW + temp SQLite, from T1.7. Project goes in `tests/integration/` |
 | E2E                         | `pnpm test:e2e`                          | Playwright, 3 projects, needs a production build                   |
 | Accessibility               | `pnpm test:a11y`                         | Axe checks (the same specs, see below)                             |
-| Lighthouse                  | `pnpm lhci`                              | Needs a running production server                                  |
+| Lighthouse                  | `pnpm lhci`                              | Needs `pnpm build` first; lhci starts the standalone server itself |
 | Contract                    | `pnpm test:contract`                     | Live Sleeper, schema only, manual                                  |
 
 ### Playwright
@@ -30,7 +30,8 @@ Config: `playwright.config.ts`. Projects: `desktop-chromium` (1280x800), `mobile
 `pnpm exec playwright install chromium webkit`.
 
 - `E2E_BASE_URL=http://host:port` tests an already running server; nothing is started.
-- Without it, the config builds and starts the production web app on 127.0.0.1:3000
+- Without it, the config builds and starts the production standalone server (the one Docker
+  ships, `pnpm --filter @sideline/web start:standalone`) on 127.0.0.1:3000
   (`reuseExistingServer` locally, never in CI; 180 s timeout). `E2E_SKIP_SERVER=1` never
   starts one.
 - `e2e/helpers.spec.ts` is the helpers' own self-test (uses `page.setContent`, needs no app, so
@@ -54,16 +55,19 @@ Config: `playwright.config.ts`. Projects: `desktop-chromium` (1280x800), `mobile
    own `e2e/<feature>.spec.ts`; use role and `data-testid` locators.
 2. Lighthouse: add the full URL to `ci.collect.url` in `lighthouserc.json`
    (e.g. `http://127.0.0.1:3000/lineup`). JSON has no comments, so this README is the doc.
-3. Run `pnpm lhci` with the production server up. Budgets (PLAN.md 6.6, error level, median of
-   3 runs, mobile emulation which is the Lighthouse default): performance >= 0.85,
-   accessibility >= 0.95, best-practices >= 0.95. Lighthouse needs Chrome (`CHROME_PATH`
-   if it is not auto-detected).
+3. Run `pnpm build && pnpm lhci`. `pnpm lhci` does not build; it starts the standalone server
+   itself (`startServerCommand`, ready when the log shows "Ready in") and needs the existing
+   build. Budgets (PLAN.md 6.6, error level, median of 3 runs, mobile emulation which is the
+   Lighthouse default): performance >= 0.85, accessibility >= 0.95, best-practices >= 0.95.
+   Lighthouse needs Chrome (`CHROME_PATH` if it is not auto-detected).
 
 ### Route JS budget (200 KB gzipped, PLAN.md 6.6)
 
-Not checked by Lighthouse. The T0.5 gate script should parse the `next build` route table (or
-`.next/build-manifest.json` plus gzip of each chunk) and fail when any route's first-load JS
-exceeds 200 KB gzipped. Until then it is unchecked.
+Asserted per URL in `lighthouserc.json` as `resource-summary:script:size` (error,
+`maxNumericValue` 204800 bytes). Lighthouse reports transfer size, which is the compressed
+size on the wire, so this is the "200 KB gzipped" budget. The server must compress responses
+for this to be meaningful (the Next standalone server does by default). A build-time check of
+first-load JS from `next build` output may still be added in the T0.5 gate script.
 
 ## MSW fixture handlers
 
