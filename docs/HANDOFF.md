@@ -20,12 +20,13 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight
 
-- code-reviewer on Batch B1+B2 (diff 1225d42..cfd1d59). Save as `docs/reviews/2026-10-02-p2-batchB-code.md`.
+- Batch B code review saved (10fc521): 1 Major (M1).
+- T2.2b-fix (backend-engineer): apps/web/lib/server, app/api. M1, m1, m2, m3, m5.
 - ux-reviewer on `/dev/gallery` (seeded `pnpm screens`, captures in `.screens/` only). Save as `docs/reviews/2026-10-02-p2-batchB-ux.md`.
 
 ## 4. Next steps (in order)
 
-1. Save both reviews; fix Blocker and Major before Batch C.
+1. Save the UX review; verify and commit T2.2b-fix; dispatch UX fixes (frontend) if Blocker or Major. T2.5a waits until the ux-reviewer's screens run is finished (Playwright rebuilds .next).
 2. Batch C: T2.3a shell (frontend) and T2.5a QA harness (qa). Inputs for T2.5a are in the PROGRESS backlog (seeded Playwright and lhci, fixture worker command, review m2, m3, m12, gallery `?open=` URLs).
 3. Then Batches D to G.
 

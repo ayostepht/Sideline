@@ -77,6 +77,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.1b | Design system part 2 (plus review m10) | frontend-engineer | B1 | Done (gallery 185,138 B; `/` 133,517 B) | 1 | c42b101 |
 | T2.2b | Server data functions and route handlers | backend-engineer | B2 | Done (lib/server 98.2%, app/api 100% lines; p95 under 5 ms on a synthetic DB) | 1 | cfd1d59 |
 | T2.2c | Worker onboarding jobs, active league, fixture fetch mode | sleeper-data-engineer | B2 | Done (worker 90% lines; deviation: onboarding writes no sync_runs row, the sync_requests row is the record) | 1 | 74ebc74 |
+| T2.2b-fix | Batch B review M1 (league switch sync), m1, m2, m3, m5 | backend-engineer | B-fix | In progress | 1 | |
 | T2.3a | Layout shell, switcher, week selector, search, placeholders | frontend-engineer | C | Not started | 0 | |
 | T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker) | qa-engineer | C | Not started | 0 | |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |
@@ -148,6 +149,8 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - T2.5a e2e fixture worker: `pnpm --filter @sideline/worker start:fixtures` with DATA_DIR set, NODE_ENV not production, DEFAULT_LEAGUE_ID unset. Fixture user `manager_04` (id 100000000000000004), league 1000000000000000001 (season 2026); a second synthetic league 1000000000000000999 also listed.
 
 - T2.2b follow-ups: `rosters` has no division column, so standings `division` is always null (needs db migration plus worker mapping); PATCH settings schema is local to apps/web, not shared; apps/web reads use raw `h.sqlite.prepare` (drizzle-orm not a web dependency); `selectLeague` may report `rate_limited` and skip queueing `all` after a recent sync (sent to the Batch B review); perf measured on a synthetic DB only (T2.5b measures on the fixture DB).
+
+- Batch B review (docs/reviews/2026-10-02-p2-batchB-code.md): m4 raw SQL in apps/web and the worker `failUnknownJobs` into @sideline/db helpers (backend, then sleeper-data); m6 non-ASCII search matching (normalized search_name); m7 WhySheet key to T2.3a; m8 worker container must inherit NODE_ENV=production (T4.3).
 
 ## Questions for Steph
 
