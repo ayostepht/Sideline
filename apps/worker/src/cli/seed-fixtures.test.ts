@@ -1,8 +1,15 @@
-import { dbPathFromDataDir, openDb } from "@sideline/db";
+import {
+  dbPathFromDataDir,
+  getActiveLeagueId,
+  getSleeperUserId,
+  getSleeperUsername,
+  openDb,
+  readUserLeagues,
+} from "@sideline/db";
 import { RateLimiter } from "@sideline/sleeper";
 import { describe, expect, it } from "vitest";
 import { tempDataDir } from "../testutil.js";
-import { createFixtureFetch } from "../fixture-fetch.js";
+import { createFixtureFetch, readManifest } from "../fixture-fetch.js";
 import { runSeed } from "./seed-fixtures.js";
 
 const fast = (): RateLimiter => new RateLimiter({ ratePerSecond: 10_000, maxPerWindow: 1_000_000 });
@@ -50,6 +57,45 @@ describe("db:seed:fixtures", () => {
     const db = openDb(dbPathFromDataDir(dir));
     const runs = db.sqlite.prepare("SELECT COUNT(*) AS n FROM sync_runs").get() as { n: number };
     expect(runs.n).toBeGreaterThanOrEqual(22);
+    db.sqlite.close();
+  }, 60_000);
+
+  it("stores the fixture identity, league choices and active league by default", async () => {
+    const dir = tempDataDir();
+    const m = readManifest();
+    const lines: string[] = [];
+    expect(
+      await runSeed({ env: { DATA_DIR: dir }, out: (l) => lines.push(l), limiter: fast() }),
+    ).toBe(0);
+    const db = openDb(dbPathFromDataDir(dir));
+    expect(getSleeperUsername(db)).toBe(m.username);
+    expect(getSleeperUserId(db)).toBe(m.userId);
+    expect(getActiveLeagueId(db)).toBe(m.leagueId);
+    const ids = readUserLeagues(db, m.userId ?? "", Number(m.season)).map((l) => l.leagueId);
+    expect(ids).toHaveLength(2);
+    expect(ids).toContain(m.leagueId);
+    db.sqlite.close();
+    const second: string[] = [];
+    await runSeed({ env: { DATA_DIR: dir }, out: (l) => second.push(l), limiter: fast() });
+    expect(second.find((l) => l.startsWith("identity:"))).toContain(", 0 rows changed");
+  }, 60_000);
+
+  it("stays anonymous with noIdentity", async () => {
+    const dir = tempDataDir();
+    const m = readManifest();
+    expect(
+      await runSeed({
+        env: { DATA_DIR: dir },
+        out: () => undefined,
+        limiter: fast(),
+        noIdentity: true,
+      }),
+    ).toBe(0);
+    const db = openDb(dbPathFromDataDir(dir));
+    expect(getSleeperUsername(db)).toBeNull();
+    expect(getSleeperUserId(db)).toBeNull();
+    expect(getActiveLeagueId(db)).toBeNull();
+    expect(readUserLeagues(db, m.userId ?? "")).toHaveLength(0);
     db.sqlite.close();
   }, 60_000);
 });

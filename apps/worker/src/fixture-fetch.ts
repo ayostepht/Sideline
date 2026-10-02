@@ -9,6 +9,9 @@ export interface FixtureManifest {
   season: string;
   currentWeek: number;
   recordedAt: string;
+  /** Fixture user (a fake); present in recorded manifests, absent in minimal test manifests. */
+  username?: string;
+  userId?: string;
 }
 
 export function readManifest(dir: string = FIXTURES_DIR): FixtureManifest {
@@ -30,6 +33,8 @@ export function readManifest(dir: string = FIXTURES_DIR): FixtureManifest {
     season: m.season,
     currentWeek: m.currentWeek,
     recordedAt: m.recordedAt,
+    ...(typeof m.username === "string" ? { username: m.username } : {}),
+    ...(typeof m.userId === "string" ? { userId: m.userId } : {}),
   };
 }
 

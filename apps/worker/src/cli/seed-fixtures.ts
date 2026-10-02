@@ -1,9 +1,20 @@
-import { dbPathFromDataDir, openDb } from "@sideline/db";
+import {
+  dbPathFromDataDir,
+  getActiveLeagueId,
+  getSleeperUserId,
+  getSleeperUsername,
+  migrate,
+  openDb,
+  readUserLeagues,
+  setActiveLeagueId,
+  type DbHandle,
+} from "@sideline/db";
 import { loadConfig } from "@sideline/shared";
-import { RateLimiter } from "@sideline/sleeper";
+import { createCallCounter, RateLimiter } from "@sideline/sleeper";
 import { pathToFileURL } from "node:url";
 import pino, { type Logger } from "pino";
 import { createAllJobs } from "../jobs/index.js";
+import { runOnboardingJob } from "../jobs/onboarding.js";
 import { createJobRegistry } from "../registry.js";
 import { createFixtureFetch, FIXTURES_DIR, readManifest } from "../fixture-fetch.js";
 import { runSyncCli } from "./sync.js";
@@ -29,6 +40,55 @@ export interface SeedDeps {
   limiter?: RateLimiter;
   logger?: Logger;
   fixturesDir?: string;
+  /** Skip storing the fixture user identity (anonymous, first-run state). Default false. */
+  noIdentity?: boolean;
+}
+
+/** Everything the identity step stores, as one comparable string (for change counting). */
+function identitySnapshot(db: DbHandle, userId: string, season: number): string {
+  return JSON.stringify([
+    getSleeperUsername(db),
+    getSleeperUserId(db),
+    getActiveLeagueId(db),
+    readUserLeagues(db, userId, season),
+  ]);
+}
+
+/** Runs the onboarding `user` and `user_leagues` jobs and selects the league, as a finished onboarding. */
+async function seedIdentity(
+  deps: SeedDeps,
+  config: ReturnType<typeof loadConfig>,
+  manifest: ReturnType<typeof readManifest>,
+  fixtureFetch: typeof fetch,
+  now: () => Date,
+): Promise<void> {
+  const { username, userId } = manifest;
+  if (username === undefined || userId === undefined) {
+    throw new Error("fixture manifest has no username/userId; re-record or use --no-identity");
+  }
+  const season = Number(manifest.season);
+  const db = openDb(dbPathFromDataDir(config.dataDir));
+  try {
+    migrate(db);
+    const before = identitySnapshot(db, userId, season);
+    const ctx = {
+      db,
+      limiter: deps.limiter ?? new RateLimiter(),
+      counter: createCallCounter(),
+      now,
+      logger: deps.logger ?? pino({ level: "silent" }),
+      config,
+      signal: new AbortController().signal,
+    };
+    const jobDeps = { fetch: fixtureFetch };
+    await runOnboardingJob(ctx, jobDeps, "user", { username });
+    await runOnboardingJob(ctx, jobDeps, "user_leagues", { userId, season });
+    setActiveLeagueId(db, manifest.leagueId);
+    const changed = identitySnapshot(db, userId, season) === before ? 0 : 1;
+    deps.out(`identity: ${username} (${userId}), season ${season}, ${changed} rows changed`);
+  } finally {
+    db.sqlite.close();
+  }
 }
 
 /** Full worker sync (every job in ALL_ORDER) against recorded fixtures. Returns an exit code. */
@@ -54,6 +114,7 @@ export async function runSeed(deps: SeedDeps): Promise<number> {
       sleep: () => Promise.resolve(),
       out: deps.out,
     });
+    if (deps.noIdentity !== true) await seedIdentity(deps, config, manifest, fixtureFetch, now);
     const db = openDb(dbPathFromDataDir(config.dataDir));
     try {
       deps.out("row counts:");
@@ -72,7 +133,11 @@ export async function runSeed(deps: SeedDeps): Promise<number> {
 
 /* eslint-disable no-console -- CLI output */
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runSeed({ env: process.env, out: (l) => console.log(l) }).then(
+  runSeed({
+    env: process.env,
+    out: (l) => console.log(l),
+    noIdentity: process.argv.includes("--no-identity"),
+  }).then(
     (code) => process.exit(code),
     (e: unknown) => {
       console.error(e instanceof Error ? e.message : String(e));
