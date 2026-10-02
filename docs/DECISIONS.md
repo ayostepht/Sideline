@@ -17,7 +17,7 @@ Read this list at session start. Open a full ADR below only when a task touches 
 - **App (ADR-009):** identity and active league in `app_settings` (env seeds them; then the DB wins). Routes under `/l/[leagueId]`. Server components call `lib/server`; route handlers only for client interactions. Stale means older than 2x `SYNC_CADENCE_MS`. `/dev/gallery` needs `SIDELINE_GALLERY=1`. Route JS target 170 KB.
 - **UI checks (ADR-004):** the no-horizontal-scroll check compares `scrollWidth` with `clientWidth`.
 - **Ownership (ADR-000, ADR-005, ADR-008, ADR-009):** dependencies, `next.config.ts` and `postcss.config.mjs` belong to devops-engineer; `components/ui/` to frontend-engineer; fixture output under `tests/fixtures/` is written by the sleeper-data-engineer recorder.
-- **Visual identity (ADR-011):** palette #FFFFFF, #2A2A2A, #D9D9D9, lime #D5FC51 (fill, never text on light), plus at most a blue and a purple; Inter; corners at most 4px; denser spacing; scoreboard feel.
+- **Visual identity (ADR-011):** palette #FFFFFF, #2A2A2A, #D9D9D9, lime #D5FC51 (fill, never text on light), plus a blue and neon purple #DF00FE (secondary accent, non-text or large text only); Inter; corners at most 4px; denser spacing; scoreboard feel.
 - **G2 checkpoint (ADR-012):** notFound() page tests run serial in chained `*-notfound` projects, assertions unchanged, retries 0; dev tools allowed in `next dev`, asserted absent from the production/Docker build (DEVTOOLS-1).
 - **Session reading (ADR-010):** HANDOFF, PROGRESS, this list, latest gate report; PLAN by section; briefs point to `docs/brief-rules.md`.
 - **Coverage (ADR-005 item 8):** `lib/server`, `app/api`, db and worker at least 75% lines; sleeper and providers at least 85%.
@@ -273,6 +273,9 @@ Date: 2026-10-02. Status: accepted (Steph's direction at the G2 human checkpoint
 **Alternatives.** Keep the indigo palette with smaller tweaks (rejected by Steph's direction). Lime as the only accent with no extension (kept open: blue and purple are optional).
 
 **Consequences.** WCAG AA still applies; axe must stay at 0 serious or critical. Position badge colors are redrawn from the new palette. `next/font/google` needs network at build time, including Docker builds (checked at the gate). Screens archived for G2 are retaken after the refresh.
+
+**Amendment (2026-10-02, Steph):** the purple extension is neon `#DF00FE`, used more as a secondary accent. It is about 3.8:1 on both #FFFFFF and #2A2A2A, so it is for non-text accents (bars, borders, icons, indicators, badge fills), and large bold text (at least 18.66px bold or 24px) only; small text on a #DF00FE fill is #000000 (5.6:1). Lime stays the primary accent.
+
 
 ## ADR-012: G2 checkpoint test and tooling decisions
 
