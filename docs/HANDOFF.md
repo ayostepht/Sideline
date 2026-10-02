@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch D committed (847c7e0, fe43bdd, eeaf97d, 3091394); Batch D code review in flight.
+Last updated: 2026-10-02, after commit 8433f87 (T1.5c). Batch D reviewed (9882a5d); Batch E committed; Batch E code review in flight.
 
 ## 1. Resume in five steps
 
@@ -23,31 +23,23 @@ Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch D committed (8
   - T1.4a, T1.2b, T1.4b, T1.3b, T1.5a;
   - T1.6 plus the T1.6-build devops fix, and T1.6-fix (be35d5f, shared `SYNC_CADENCE_MS`);
   - T1.5a-fix (4b021b2);
-  - Batch D: T1.8 (847c7e0), T1.7a (fe43bdd, root scripts 3091394), T1.5b (eeaf97d).
+  - Batch D: T1.8 (847c7e0), T1.7a (fe43bdd, root scripts 3091394), T1.5b (eeaf97d); review saved (9882a5d, 0 Blocker/Major, ADR-008).
+  - Batch E: T1.5c (8433f87), including Batch D fixes m1, m2, m3, m6, n1.
 
   Commit ids are in the PROGRESS.md task table.
-- **Reviews:** saved in `docs/reviews/2026-10-02-p1-*`. Batch A, B and C findings are all fixed (Minor items in the PROGRESS backlog).
-- **Last full check:** `pnpm verify` green (479 tests), `pnpm test:coverage` thresholds pass (94% lines), `pnpm test:integration` 5 passed, container health verified. `pnpm build` passes. Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
+- **Reviews:** saved in `docs/reviews/2026-10-02-p1-*`. Batch A to D findings are all fixed (Minor items in the PROGRESS backlog).
+- **Last full check:** `pnpm verify` green (503 tests); `db:seed:fixtures` twice into a temp DATA_DIR: exit 0, second run 0 rows changed, `pnpm test:coverage` thresholds pass (94% lines), `pnpm test:integration` 5 passed, container health verified. `pnpm build` passes. Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
 
 ## 3. In flight
 
 | Task | Agent | Writes to | Done when |
 |---|---|---|---|
-| Batch D code review (`git diff 0aed7c8..3091394`) | code-reviewer | nothing (read-only) | Report returned; save it as `docs/reviews/2026-10-02-p1-batchD-code.md`, then fix Blocker and Major findings before Batch E. If lost, re-dispatch the review. |
+| Batch E code review (`git show 8433f87`) | code-reviewer | nothing (read-only) | Report returned; save it as `docs/reviews/2026-10-02-p1-batchE-code.md`, then fix Blocker and Major findings before Batch F. If lost, re-dispatch the review. |
 
 ## 4. Next steps (in order)
 
-1. **Batch D review fixes**: Blocker and Major findings from the review, dispatched to the owning agents.
-2. **Batch E: T1.5c** (sleeper-data-engineer):
-   - the nflverse job through `createNflverseProvider` (ok and degraded both work when the flag is off or a download fails);
-   - compute the ADR-002 fallback kickoff when `kickoffApproximate`;
-   - pin the kickoff `Z` format with a test (Batch C m7);
-   - the derived-table recompute hook (an empty registry until T3.2);
-   - run nflverse before projections in `ALL_ORDER` so pregame snapshots have kickoffs (T1.5b follow-up);
-   - `db:seed:fixtures`: a full worker sync from a fixture-backed fetch into `DATA_DIR`.
-
-   Then a code review.
-3. **Batch F: T1.7b** (qa-engineer), integration suites:
+1. **Batch E review fixes**: Blocker and Major findings, dispatched to sleeper-data-engineer.
+2. **Batch F: T1.7b** (qa-engineer), integration suites:
    - a full sync from fixtures with per-table counts;
    - idempotency: the second run has `rows_changed = 0`;
    - MSW 500, 429 and timeout failures;
@@ -57,7 +49,7 @@ Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch D committed (8
    - CLI cases: worker alive, no worker, lease held, and a run longer than the lease expiry.
 
    Then a code review.
-4. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
+3. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
    - `pnpm test:contract` run live once;
    - the orchestrator live smoke: `pnpm run sync --once` into a gitignored `./data`, the day's single `/players/nfl` fetch, then a second run with near-zero changes;
    - `pnpm fixtures:check` and an identifier scan;

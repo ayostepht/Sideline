@@ -55,7 +55,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T1.5b | Sleeper sync jobs and 2025 backfill | sleeper-data-engineer | D | Done (479 tests; worker+sleeper lines 92%) | 1 | eeaf97d |
 | T1.7a | Integration and contract harness | qa-engineer | D | Done (fixtures README left open; root scripts wired in 3091394) | 1 | fe43bdd |
 | T1.8 | Docker and build with SQLite | devops-engineer | D | Done (container health 200 degraded in 2 s, verified by orchestrator) | 1 | 847c7e0 |
-| T1.5c | nflverse job, derived hook, db:seed:fixtures | sleeper-data-engineer | E | Not started | 0 | |
+| T1.5c | nflverse job, derived hook, db:seed:fixtures | sleeper-data-engineer | E | Done | 1 | 8433f87 |
 | T1.7b | Integration suites | qa-engineer | F | Not started | 0 | |
 | G1 | Gate | qa-engineer, code-reviewer, orchestrator | G | Not started | 0 | |
 
@@ -93,6 +93,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 - T1.5c: compute the ADR-002 fallback kickoff when nflverse gametime is missing (provider returns kickoffUtc null, kickoffApproximate true); pass PlayerRef.gsisId as stored. getUsage re-parses cached files each call (fine at this size).
 - Batch B review (docs/reviews/2026-10-02-p1-batchB-code.md): m2, m3, m7 providers cache meta zod, guarded/atomic cache writes, season_type filter (sleeper-data-engineer); m4 log loud position-drop counts (T1.5b); m5 stats rows without gp are did-not-play (T3.1); m6 document starters "0" = empty slot in shared (T1.3b).
 - Batch D review (docs/reviews/2026-10-02-p1-batchD-code.md): m5 move worker raw SQL reads (`db-reads.ts`) into `@sideline/db` typed helpers (backend-engineer, then sleeper-data-engineer); m7 contract suite header comment on direct fetch and the CONTRACT_PLAYERS gate (qa-engineer); auth task must refuse to start with empty SESSION_SECRET or APP_PASSWORD (T4.x).
+- T1.5c follow-ups: degraded nflverse is stored as `skipped` (no `degraded` SyncRunStatus, no note column in sync_runs); consider adding both in shared/db (backend-engineer). With nflverse off there is no schedule list, so no fallback rows are created; `fallbackKickoffUtc` is ready for a Sleeper-date source. apps/worker has no `test` script (devops). Root `db:seed:fixtures` needs an absolute DATA_DIR (default /data). `league_player_week_points` and `defense_vs_position` are not mapped in `JOB_TABLES` yet (T3.2).
 - T1.5a-fix: worker function coverage 67% (lines 83%); `seedLastAttempts` uses raw SQL in the worker instead of a `@sideline/db` helper. Fold into T1.5b or T1.7b.
 - T1.7a: tests/fixtures/README.md section (what each fixture is, sanitization, fake id ranges, how to re-record) still open; Lighthouse `DATA_DIR=$(mktemp -d)` startServerCommand unverified (run `pnpm lhci` once at G1); e2e/Lighthouse temp DATA_DIRs never cleaned up. The contract suite was run live once by the agent (5 GETs, all shapes passed, nothing written); /players/nfl not yet run.
 - T1.5b: move `apps/worker/src/jobs/db-reads.ts` raw SQL into packages/db helpers (backend-engineer); pregame snapshots need nflverse kickoffs, so T1.5c should order nflverse before projections in `ALL_ORDER`; `SIDELINE_VERSION` constant must track package version; consider `etag: false` for regular stats/projections to keep multi-MB bodies out of http_cache.
