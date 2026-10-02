@@ -20,7 +20,7 @@ Last updated: 2026-10-02, G2 automated checks PASS (gate re-run 11/11 after M1 f
 
 ## 3. In flight
 
-- G2-B1 (sleeper-data-engineer): worker resolves sleeper_user_id when identity was env-seeded and onboarding skipped (Steph's checkpoint bug: "doesn't know which team is mine"). Uncommitted edits in `apps/worker/src` are this task. After it: verify, commit, re-run the full gate, add to G2.md.
+- G2-B1 done and committed (verify 728, integration 23). Full gate re-run still owed: run it once Steph's dev servers are off port 3000, batched with any other checkpoint fixes, then add B1 to G2.md.
 - Waiting on Steph's replies to the G2 questions (`docs/gates/G2.md`, Human checkpoint). Do not start Phase 3.
 
 ## 4. Next steps (in order)

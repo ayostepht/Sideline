@@ -53,6 +53,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T2.6d-fix | My Team soft-404 (team/page.tsx had the same notFound+loading.tsx conflict as team detail pre-T2.6b) | orchestrator | G | Done (direct fix, precedented one-file deletion; verify 710, e2e 41/42 only known TEAM-3 flake) | 1 | 887dc00 |
 | T2.6d-test | MYTEAM-3 e2e coverage for the My Team 404 fix | qa-engineer | G | Done (30/30 at repeat-each=10, orchestrator-verified) | 1 | 7e00c00 |
 | G2-M1 | G2 code review M1: block cross-origin and non-JSON writes on mutating API routes | backend-engineer | G2 | Done (verify 721, integration 23; 1-line orchestrator fix to an integration test request header) | 1 | 1aaa95d |
+| G2-B1 | Checkpoint bug: worker resolves sleeper_user_id when identity was env-seeded ("doesn't know which team is mine") | sleeper-data-engineer | G2 | Done (verify 728, integration 23; full gate re-run pending, batched with other checkpoint fixes) | 1 | b7aa20a |
 | G2-reviews | Batch F code and UX review (closeout) | code-reviewer, ux-reviewer | G | Done (code: 1 Major found and fixed same session, see T2.6d-fix; UX: APPROVE, no Blocker/Major) | 1 | see docs/reviews/2026-10-02-p2-batchF2-{code,ux}.md |
 | G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
 
@@ -86,6 +87,7 @@ Remove an item when it is done; the archive keeps history.
 
 - **G2 UX review minors (frontend-engineer, `docs/reviews/2026-10-02-G2-ux.md`).** m1 onboarding ready view alignment at 1280; m2 League rosters list duplicates standings on desktop; m3 team detail back link and top bar label; m4 theme toggle labels at 390; m5 sync summary wording and tooltip; m6 one shared content width across pages; n1 reserve a stat slot in roster rows. Also: `pnpm screens` cannot capture 404 routes (devops-engineer).
 
+- **G2 checkpoint notes (Steph).** Settings cannot re-run setup for the same username (Change stays disabled when unchanged); consider a "Re-check my account" action. Next.js dev indicator: offered `devIndicators: false` (devops), awaiting answer. B1 follow-up: an invalid configured username makes one failing lookup per cycle.
 - **G2 gate leftovers.** Missing `favicon.ico` (console 404; with the PWA work, frontend-engineer). `.playwright-mcp/` not in `.gitignore` (devops-engineer). Gallery states not asserted one by one; NAV-6 mocks the league-switch POST (qa-engineer).
 
 ### Data and backend
