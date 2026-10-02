@@ -20,6 +20,7 @@ Spike facts: observed on 2026-10-01 (Thursday, NFL week 4, regular season, Thurs
 8. **Conditional requests work.** Responses carry `ETag`, and `If-None-Match` returns `304` with an empty body. Responses sit behind Cloudflare with `s-maxage` between 60 s (state, matchups) and 3,600 s (projections, stats), so polling faster than that returns cached data. No rate-limit headers were present.
 9. **Steph's league matches "10 team, PPR, 1 QB"** (section 10). Extra facts: 2 FLEX slots (RB/WR/TE), K, DEF, 5 bench, 2 IR slots, no taxi, no divisions, 6 playoff teams starting week 15, redraft.
 10. **Undocumented endpoints are fragile in specific ways.** `projections` without `season_type` returns `400 {"error":"bad-request"}`. The position filter is not strict (FB, P, CB, DB rows leak through). Weeks outside the season (for example 25) still return placeholder rows. Stats for a week with no games yet return `200 []`. The provider must check for real rows, not just HTTP 200.
+11. **nflverse works as the kickoff and usage source, with one join problem (VERIFIED 2026-10-02, T1.4a).** Schedules carry ET kickoff times for all 272 games, `spread_line` positive means the home team is favored, and weekly stats and snap counts exist for weeks 1 to 3. But Sleeper's `gsis_id` is set for only about 26% of relevant 2026 skill players (64 of 244), so the provider must fall back to name plus team matching (99%). Red-zone touches need play-by-play. See section 14.
 
 ## 2. Endpoint table
 
@@ -465,7 +466,7 @@ Counts across weeks 1 to 4: 14 waiver/complete, 10 waiver/failed, 46 free_agent/
 - Usable from Sleeper: which games are on Thursday, Sunday or Monday (by `date`), and who plays whom (by `team`/`opponent`). Not usable: Sunday early versus late versus night.
 - Provider plan: nflverse schedule for exact kickoff times, with the PLAN 3.4 fallback windows (Thu 20:00 to 24:00, Sun 13:00 to 24:00, Mon 20:00 to 24:00 ET) when it fails. The fallback treats all of Sunday as one lock window, which is acceptable for refresh cadence but too coarse for per-player lineup locks.
 - Late week check: in week 4, the Thursday game is in `date` 2026-10-01, matching the real schedule.
-- Spread sign (PLAN 3.3): deferred to T1.4 (needs nflverse data, not a Sleeper endpoint).
+- Spread sign (PLAN 3.3): VERIFIED in T1.4a, see section 14d. Kickoff times and their time zone: section 14c.
 
 ## 10. League settings versus "10 team, PPR, 1 QB"
 
@@ -530,3 +531,92 @@ Fields found while sanitizing that matter for any code that stores or logs API d
 - A manager's team name can equal a real player's name (it did here). Public player name fields (`full_name`, `first_name`, ...) are never rewritten; the leak check ignores them.
 - The `GET /user/{id}/leagues/nfl/{season}` fixture holds the primary league plus one synthetic second league (`Example League 2`, id `1000000000000000999`) so the league picker can be tested.
 - Fixture size 5.6 MB: players trimmed from 12,229 to 1,021 entries; each projections week keeps all real rows, rows for kept players, all leaked-position rows and 30 placeholder rows; stats keep real rows plus rows for kept players. Detail per week is in `manifest.json` under `trimming`.
+
+## 14. nflverse (T1.4a)
+
+Dated 2026-10-02. Spike plus recorder `scripts/fixtures/nflverse.ts` (fixtures in `tests/fixtures/nflverse/`, 348 KB). Raw downloads stay in the gitignored `.spike-cache/nflverse/`. All facts below were observed on the real 2026 assets, not assumed.
+
+### 14a. Assets, formats, cadence
+
+All from GitHub releases of `nflverse/nflverse-data`. URL pattern: `https://github.com/nflverse/nflverse-data/releases/download/<tag>/<asset>`. Each asset comes as `.csv`, `.csv.gz`, `.parquet`, `.rds` (and an older `.qs`). The recorder uses `.csv.gz` (about 5x smaller). Asset metadata (name, size, `updated_at`) comes from `GET https://api.github.com/repos/nflverse/nflverse-data/releases/tags/<tag>` (60 unauthenticated calls per hour per IP, plenty for 4 tags).
+
+| Data | Tag | Asset (csv.gz) | gz size | `updated_at` observed | Rows |
+|---|---|---|---|---|---|
+| Schedules, all seasons | `schedules` | `games.csv.gz` | 514 KB (2.2 MB csv) | 2026-10-02T03:49Z | 7,548 total, 272 for 2026 (all REG, weeks 1 to 18) |
+| Weekly player stats | `stats_player` | `stats_player_week_2026.csv.gz` | 218 KB | 2026-10-01T16:26Z | 3,339 (weeks 1, 2, 3: 1,118 / 1,107 / 1,114) |
+| Snap counts | `snap_counts` | `snap_counts_2026.csv.gz` | 85 KB | 2026-09-29T11:01Z | 4,488 (weeks 1, 2, 3: 1,492 / 1,502 / 1,494) |
+| Player id map | `players` | `players.csv.gz` | 2.5 MB (7.3 MB csv) | 2026-10-01T15:10Z | 24,838 |
+| Team weekly stats (optional) | `stats_team` | `stats_team_week_2026.csv` | 40 KB | not recorded | 96 |
+| Play-by-play (not used) | `pbp` | `play_by_play_2026.csv.gz` | 3.26 MB (16.7 MB csv) | 2026-10-01T16:24Z | not downloaded |
+
+- Naming: the old `player_stats` release is stale. Current player stats live in the `stats_player` release as `stats_player_week_<season>`, `stats_player_reg_<season>`, `stats_player_regpost_<season>` (season totals) and `stats_player_post_<season>`. Use `stats_player_week_<season>`. There is one asset per season (no per-week file).
+- Cadence and lag: the stats asset was updated 2026-10-01 16:26Z and holds weeks 1 to 3 only. Week 4 started on the evening of 2026-10-01 ET, so a finished week appears in the stats asset about a day or more after its last game. Snap counts were updated 2026-09-29 11:01Z with weeks 1 to 3 (the week 3 Monday night game was 2026-09-28, so they landed the next morning, a lag of roughly 12 hours). Schedules refresh nightly (03:49Z) and pick up new scores and lines. Only one observation of each, so treat the cadence as "about daily", not a guarantee.
+- Weeks 1 to 3 of 2026 are present in all three weekly assets. Weeks 4+ are absent until each week finishes. The provider must treat "week missing" as "no usage data yet", not as an error.
+- The `schedules` asset holds every season since 1999 in one file; filter on `season`.
+
+### 14b. Usage columns (PLAN 4.5 `usage_week`)
+
+| usage_week column | Source | Notes |
+|---|---|---|
+| `snap_pct` | `snap_counts.offense_pct` | Fraction 0 to 1 (a full-time QB is `1`, 0.9 is 90%). Not a percent. Also `offense_snaps`, `defense_snaps`, `st_snaps`, `st_pct`. |
+| `targets` | `stats_player_week.targets` | |
+| `target_share` | `stats_player_week.target_share` | Provided, fraction 0 to 1. Verified equal to `targets / sum(team targets in that game)` (KC week 1: Worthy 6 of 25 = 0.24). Blank is not used; 3,339 of 3,339 rows have a value. |
+| `air_yards_share` | `stats_player_week.air_yards_share` | Provided, can be negative (net negative air yards). |
+| `carries` | `stats_player_week.carries` | |
+| `carry_share` | NOT provided. Compute | `carries / sum(carries of every player on that team in that game)`. The sum includes QBs and WRs. Verified: KC week 1 player carries sum to 38, equal to `stats_team_week_2026.carries` for KC week 1 (38). Guard divide by zero (team with 0 carries gives null). The recorder keeps every row for KC and SF so tests can run this. |
+| `rz_touches` | NOT available | See below. |
+
+- Also present and cheap: `wopr` (weighted opportunity), `receiving_air_yards`, `fantasy_points_ppr`.
+- Red-zone touches: no column anywhere in `stats_player_week` (header grepped for red, rz, zone, inside: no matches), `snap_counts` or `stats_team_week` (only `carries`). It needs play-by-play (`yardline_100 <= 20` on rush and target plays). The 2026 pbp asset is 3.26 MB gz and 16.7 MB csv, and grows each week (the 2025 full-season file was 97.9 MB csv, 19.1 MB gz). Decision already made (ADR-005 item 13): TREND-2 ships without `rz_touches` (nullable column), play-by-play goes to the P1 backlog.
+- Rows with the same player and week appear once per game (no double headers in the NFL, so effectively once per player per week). `season_type` is `REG` for every row seen.
+
+### 14c. Kickoff time semantics
+
+- `gameday` is `YYYY-MM-DD` and `gametime` is `HH:MM` 24-hour, both in **America/New_York wall-clock time**. Evidence: the international games all read `09:30` (ET for a 14:30 BST London or 15:30 CET Madrid local kickoff, the real NFL pattern), and Sunday slot times are 13:00, 16:05, 16:25 and 20:20 (ET). `weekday` is the English weekday of `gameday` (observed: Sunday 228, Thursday 19, Monday 17, Friday 4, Saturday 2, Wednesday 2).
+- Observed 2026 `gametime` values: 09:30, 13:00, 15:00, 16:05, 16:25, 16:30, 17:00, 20:00, 20:15, 20:20, 20:35. All 272 games have one.
+- Conversion rule: parse `gameday` + `gametime` as an America/New_York local time (IANA zone, so DST is handled), then convert to UTC. Never use a fixed offset. DST ends **2026-11-01** (first Sunday of November): ET is UTC-4 before 02:00 that day and UTC-5 after. `kickoffUtc()` in `scripts/fixtures/nflverse-lib.ts` does this with `Intl.DateTimeFormat` and a two-pass offset correction; it has tests for both sides of the boundary.
+- Worked examples (from the 2026 schedule):
+  - September: `2026_01_CHI_CAR`, gameday `2026-09-13`, gametime `13:00`, EDT (UTC-4) gives `2026-09-13T17:00:00Z`.
+  - After DST ends: `2026_11_MIN_SF`, gameday `2026-11-22`, gametime `20:20`, EST (UTC-5) gives `2026-11-23T01:20:00Z`. Same wall time on a September Sunday would be 00:20Z, so one hour shifts.
+  - Boundary day: `2026_08_*` games on `2026-11-01` at `13:00` are already EST, so `2026-11-01T18:00:00Z`.
+- International games: `location` is `Neutral` (8 of 272 in 2026: Melbourne, Rio, London twice, Paris, Madrid, Munich, Mexico City), `gametime` is still ET (the `09:30` games). `home_team` is the nominal home team. Cross-check after the DST change: `2026_09_CIN_ATL` in Madrid, gameday `2026-11-08`, `09:30` ET = `2026-11-08T14:30:00Z` = 15:30 CET, a normal European afternoon kickoff. Before the change, `2026_04_IND_WAS` in London, `2026-10-04`, `09:30` ET = `13:30Z` = 14:30 BST.
+- Odd calendar days exist: week 1 has a Wednesday game (`2026_01_NE_SEA`, 2026-09-09 20:20) and the Melbourne game is Thursday 20:35 ET. Never assume Thursday, Sunday or Monday only. Group lock windows by the actual kickoff instants.
+- If `gametime` is empty or `gameday` is malformed (`kickoffUtc` returns null; in past seasons old games have blank times): use the ADR-002 fallback (Sunday 13:00 ET, other days 20:00 ET on the game date) and set `kickoffApproximate = true` in the reason payload. Do not drop the game.
+
+### 14d. Spread sign and implied totals
+
+- **`spread_line` positive means the HOME team is favored** (it is the number of points the home team is favored by). Confidence: high.
+- Evidence: (1) `home_moneyline` agrees with the sign of `spread_line` (positive spread and negative home moneyline, or the reverse) in 280 of 285 games in 2025 and 75 of 77 in 2026 (the misses are near pick'ems where the lines round differently). (2) `2026_01_CLE_JAX` (away CLE, home JAX): `spread_line` 8.5, `home_moneyline` -470, `away_moneyline` 360, JAX won 34 to 10. (3) `2026_01_ARI_LAC`: `spread_line` 8.5, `home_moneyline` -455, LAC won 26 to 14. (4) Negative case: `2026_02_PHI_TEN` (home TEN): `spread_line` -7, `home_moneyline` 260, `away_moneyline` -325, away PHI favored. (5) 2025 week 1 `DAL_PHI`: `spread_line` 8.5, `home_moneyline` -425, PHI won 24 to 20. Note `result` is `home_score - away_score`, so a positive `result` and positive `spread_line` mean a home win and a home favorite; they correlate (about 0.5 in 2025) but a result is not the line.
+- `total_line` is the over/under for combined points (for example 44.5 or 47.5). `total` is the actual combined score (result), not the line.
+- Implied team totals: `home = total_line / 2 + spread_line / 2`, `away = total_line / 2 - spread_line / 2`. Example: spread 3, total 44.5 gives home 23.75, away 20.75. `impliedTotals()` in `nflverse-lib.ts` is tested.
+- Lines are present only for upcoming games roughly through the current week (77 of 272 games have `spread_line` and `total_line` on 2026-10-02: weeks 1 to 4 and part of week 5; later weeks are blank). Missing lines mean "no implied total", never a zero.
+
+### 14e. Team codes: nflverse versus Sleeper
+
+Compared the 32 codes in the 2026 schedule and weekly stats against the `team` values in `tests/fixtures/sleeper/v1/players/nfl.json` (and the 32 DEF player ids, which equal the Sleeper team codes).
+
+| Sleeper | nflverse |
+|---|---|
+| `LAR` | `LA` |
+
+That is the only difference (all 31 other codes match: ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC LAC LV MIA MIN NE NO NYG NYJ PHI PIT SEA SF TB TEN WAS). `schedule`, stats and snap counts all use `LA`. Older seasons use `OAK`, `SD` and `STL`, which only matter for pre-2020 data. Sleeper `team` can be `null` (free agents), so the join must skip nulls.
+
+### 14f. Player id joins
+
+- Weekly stats `player_id` is the gsis id (`00-00xxxxx`). Sleeper `gsis_id` matches the same format, with two problems:
+  1. **Coverage is poor.** In the full Sleeper `/players/nfl` response only 156 of 822 active QB/RB/WR/TE on a team have a `gsis_id` (19%); `espn_id` covers about 25%. Of the 244 QB/RB/WR/TE with at least 10 PPR points in weeks 1 to 3, only **64 (26%)** join by `gsis_id`. Many top players are missing it (for example high `search_rank` rookies and some veterans). The trimmed fixture has `gsis_id` for 291 of 1,021 players.
+  2. **Whitespace.** 866 of 3,886 Sleeper `gsis_id` values in the full response have a leading space (for example `" 00-0026300"`). Always `trim()`.
+  3. nflverse has 3 stats rows with a blank `player_id` and blank name (position blank); skip them.
+- Fallback join that works: normalized `full_name` + team (Sleeper `LAR` mapped to `LA`) against `player_display_name` + `team`. Normalize by lowercasing, dropping `.` and `'`, dropping suffixes (jr, sr, ii, iii, iv, v) and collapsing spaces. Result on the 244 relevant players: **242 of 244 (99.2%)**, no key collisions in the fixture. The 2 misses are nicknames (Sleeper `Joshua Palmer` vs nflverse `Josh Palmer`; `Matt Hibner` vs `Matthew Hibner`), which would need a position-and-team-only tiebreak or an alias table. Recommended provider order: trimmed `gsis_id`, then name+team (+position when two candidates), then give up and leave usage null.
+- Another route, `espn_id` (Sleeper) to `players.csv.espn_id` to `gsis_id`, reaches only 80 of 244 here (combined with gsis), far below the name join, and the trimmed Sleeper player table does not keep `espn_id`. Not recommended.
+- DEF and K: nflverse player stats have no team-defense rows (DEF scores come from Sleeper stats, or `stats_team` if ever needed). Kickers appear as `K` rows with a gsis id and join the same way. Rows with team `null` in Sleeper never join.
+- Snap counts use the PFR id (`pfr_player_id`, like `StraCo01`), the player name and the team code. Join to gsis through `players.csv`: `https://github.com/nflverse/nflverse-data/releases/download/players/players.csv.gz` (2.5 MB gz, 7.3 MB csv, refreshed about daily) has `gsis_id` and `pfr_id` side by side. 1,676 of 1,679 distinct snap-count pfr ids exist there, and 243 of 244 relevant stats players have a `pfr_id`. A name+team join also works on snap counts directly. The provider can skip the 2.5 MB players asset if it joins snap counts by name+team; the recorder keeps a 644 row id-map subset (`players/players.csv`: gsis_id, pfr_id, display_name, position, latest_team, last_season) so the pfr route stays testable.
+- Snap counts also include offensive linemen and defenders; filter by position when ingesting.
+
+### 14g. Bye weeks
+
+Byes derive from the schedule: a team with no game in a regular-season week has a bye. Verified for 2026: weeks 1 to 4 and 12, 15 to 18 have all 32 teams; byes fall in weeks 5 to 14 (week 5: 2 teams, 6: 4, 7: 4, 8: 4, 9: 2, 10: 4, 11: 6, 13: 4, 14: 2; week 12 has none). Every one of the 32 teams has exactly one bye. No separate bye asset is needed.
+
+### 14h. Recorder behavior
+
+`pnpm exec tsx scripts/fixtures/nflverse.ts [--from-cache] [--season N] [--through-week N]`. Defaults to downloading only missing assets (8 calls on a cold cache: 4 release lookups and 4 downloads, 1.1 s apart, `User-Agent: Sideline-fixture-recorder/0.0.0 (self-hosted)`). `--from-cache` makes no network call and fails if the cache is missing. Output (sorted, LF, original column names, trimmed): `schedules/games.csv` (272 rows), `stats_player/stats_player_week_2026.csv` (1,470 rows), `snap_counts/snap_counts_2026.csv` (1,703 rows), `players/players.csv` (644 rows), `manifest.json` (source URLs, asset `updated_at`, `recordedAt` taken from the cache download time so reruns are identical, row counts, columns). Stats and snap rows kept: Sleeper fixture players by trimmed gsis id or normalized name plus team, and every row for KC and SF. No Sleeper API calls; the only Sleeper input is the committed player fixture (ids, names, teams).
