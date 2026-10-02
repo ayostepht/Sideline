@@ -1,7 +1,9 @@
 import { finishRun, startRun, type DbHandle } from "@sideline/db";
-import type { AppConfig, SyncJobName } from "@sideline/shared";
+import type { AppConfig, OnboardingJobName, SyncJobName } from "@sideline/shared";
 import { createCallCounter, type RateLimiter } from "@sideline/sleeper";
 import type { Logger } from "pino";
+import type { SleeperJobDeps } from "./jobs/common.js";
+import { ensureSleeperUserId, runOnboardingJob } from "./jobs/onboarding.js";
 import { JOB_TABLES, recomputeHooks, type RecomputeRegistry } from "./recompute.js";
 import type { JobRegistry } from "./registry.js";
 import type { Job, JobContext, RunOutcome } from "./types.js";
@@ -113,6 +115,56 @@ export async function runJobs(
   }
   await (deps.recompute ?? recomputeHooks).run(deps.db, changed, deps.logger);
   return out;
+}
+
+/**
+ * Runs one onboarding job (ADR-009). Never throws. No sync_runs row: that table's job column and
+ * the shared status list are SyncJobName-only, so the sync_requests row (status, error) is the
+ * record and calls made are logged.
+ */
+export async function runOnboarding(
+  deps: RunnerDeps,
+  sleeper: SleeperJobDeps,
+  job: OnboardingJobName,
+  params: unknown,
+): Promise<{ error: string | null; callsMade: number; rowsChanged: number }> {
+  const logger = deps.logger.child({ job });
+  const counter = createCallCounter();
+  const ctx: JobContext = {
+    db: deps.db,
+    limiter: deps.limiter,
+    counter,
+    now: deps.now,
+    logger,
+    config: deps.config,
+    signal: deps.signal(),
+  };
+  try {
+    const rowsChanged = await runOnboardingJob(ctx, sleeper, job, params);
+    logger.info({ callsMade: counter.calls, rowsChanged }, "onboarding job finished");
+    return { error: null, callsMade: counter.calls, rowsChanged };
+  } catch (e) {
+    logger.error({ err: errMessage(e) }, "onboarding job failed");
+    return { error: errMessage(e), callsMade: counter.calls, rowsChanged: 0 };
+  }
+}
+
+/** Resolves a missing sleeper_user_id before league jobs (G2-B1). Never throws. */
+export async function ensureUserIdForCycle(
+  deps: RunnerDeps,
+  sleeper: SleeperJobDeps,
+): Promise<void> {
+  const ctx: JobContext = {
+    db: deps.db,
+    limiter: deps.limiter,
+    counter: createCallCounter(),
+    now: deps.now,
+    logger: deps.logger.child({ job: "user" }),
+    config: deps.config,
+    signal: deps.signal(),
+  };
+  if (ctx.signal.aborted) return;
+  await ensureSleeperUserId(ctx, sleeper, deps.config.sleeperUsername);
 }
 
 export function summarizeFailures(outcomes: readonly RunOutcome[]): string | null {

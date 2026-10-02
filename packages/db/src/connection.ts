@@ -1,10 +1,10 @@
-import { mkdirSync, readFileSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { migrate as drizzleMigrate } from "drizzle-orm/better-sqlite3/migrator";
-import { z } from "zod";
+import { EXPECTED_MIGRATIONS, type ExpectedMigration } from "./migrations-manifest.js";
 import * as schema from "./schema.js";
 
 export type Db = BetterSQLite3Database<typeof schema>;
@@ -59,33 +59,29 @@ export function migrate(
   drizzleMigrate(handle.db, { migrationsFolder });
 }
 
-const JournalSchema = z.object({ entries: z.array(z.unknown()) });
-
-/** Number of migrations the folder's journal lists. */
-function journalCount(migrationsFolder: string): number {
-  const raw: unknown = JSON.parse(
-    readFileSync(join(migrationsFolder, "meta", "_journal.json"), "utf8"),
-  );
-  return JournalSchema.parse(raw).entries.length;
-}
-
-/** True when every migration in the journal is recorded as applied (used by health). Never throws. */
+/**
+ * True when every expected migration (see `migrations-manifest.ts`) is recorded as applied. Needs no
+ * files, so it works inside the bundled web server. Never throws.
+ */
 export function isMigrated(
   handle: DbHandle,
-  migrationsFolder: string = defaultMigrationsFolder(),
+  expected: readonly ExpectedMigration[] = EXPECTED_MIGRATIONS,
 ): boolean {
   try {
-    const expected = journalCount(migrationsFolder);
     const table = handle.sqlite
       .prepare(
         "SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = '__drizzle_migrations'",
       )
       .get();
-    if (table === undefined) return expected === 0;
-    const row = handle.sqlite.prepare("SELECT count(*) AS n FROM __drizzle_migrations").get() as {
-      n: number;
-    };
-    return row.n >= expected;
+    if (table === undefined) return expected.length === 0;
+    const applied = new Set(
+      (
+        handle.sqlite.prepare("SELECT created_at FROM __drizzle_migrations").all() as {
+          created_at: number | bigint;
+        }[]
+      ).map((r) => Number(r.created_at)),
+    );
+    return expected.every((m) => applied.has(m.when));
   } catch {
     return false;
   }

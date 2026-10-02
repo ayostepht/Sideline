@@ -143,7 +143,12 @@ describe("requestSync", () => {
 describe("POST /api/sync/run", () => {
   it("accepts an empty body as 'all' and returns 202", async () => {
     seed();
-    const res = await POST(new Request("http://x/api/sync/run", { method: "POST" }));
+    const res = await POST(
+      new Request("http://x/api/sync/run", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+      }),
+    );
     expect(res.status).toBe(202);
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(SyncRunResponseSchema.parse(await res.json()).request.job).toBe("all");

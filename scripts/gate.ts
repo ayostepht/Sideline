@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { redactHome } from "./lib/paths.js";
 import { CHECKS, flagSkipReason } from "./gate/checks.js";
 import { GateContext, type Outcome } from "./gate/context.js";
 import { FlagError, GATE_HELP, parseGateArgs, selectChecks } from "./gate/flags.js";
@@ -100,7 +101,7 @@ async function main(): Promise<number> {
       );
     }
   } finally {
-    await ctx.stopServer();
+    await ctx.cleanup();
   }
 
   const summary = summarize(results);
@@ -121,7 +122,8 @@ async function main(): Promise<number> {
     flags.only === undefined ? latestFile : path.join(root, "docs/gates/latest.partial.json");
   const outName = path.relative(root, outFile);
   mkdirSync(path.dirname(outFile), { recursive: true });
-  writeFileSync(outFile, `${JSON.stringify(report, null, 2)}\n`);
+  // Home-relative paths only: the OS user name must not land in tracked reports.
+  writeFileSync(outFile, redactHome(`${JSON.stringify(report, null, 2)}\n`));
 
   const idWidth = Math.max(...results.map((r) => r.id.length), 2);
   process.stdout.write("\nGate summary\n");

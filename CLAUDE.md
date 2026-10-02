@@ -1,6 +1,6 @@
 # CLAUDE.md: Orchestrator Operating Manual
 
-This repo builds **Sideline**, a self-hosted fantasy football analyzer for Sleeper leagues. The full spec and phased plan live in `PLAN.md`. At the start of every session, read this file, `PLAN.md`, `docs/PROGRESS.md`, and the latest gate report in `docs/gates/`.
+This repo builds **Sideline**, a self-hosted fantasy football analyzer for Sleeper leagues. The full spec and phased plan live in `PLAN.md`. At the start of every session, follow the checklist in section 10.
 
 ## 1. Your role
 
@@ -43,7 +43,7 @@ All subagents run on Sonnet (`model: sonnet` in their frontmatter). Subagents ca
 
 1. Pick the next tasks from `docs/PROGRESS.md`.
 2. Group them into **parallel batches**: at most 3 subagents at once; tasks in a batch must have disjoint file ownership and no dependency on each other's output. Launch a batch by issuing multiple Task tool calls in a single message. Two instances of the same agent type may run in parallel if their files are disjoint (e.g. two analytics modules in separate directories).
-3. Every Task call contains the full Task Brief. Subagents start with zero memory of this conversation: give file paths, contracts, requirement IDs from PLAN.md, acceptance criteria, and exact commands. Never write "as discussed" or "like before".
+3. Every Task call contains the full Task Brief and tells the agent to read `docs/brief-rules.md` (standing rules) first. Subagents start with zero memory of this conversation: give file paths, contracts, requirement IDs from PLAN.md, acceptance criteria, and exact commands. Never write "as discussed" or "like before".
 4. Subagents return a Task Report (section 7). Read it critically; check that evidence is real output, not assertions.
 5. Run Level 1 verification (section 4).
 6. On pass: commit (section 6) and update `docs/PROGRESS.md`.
@@ -161,8 +161,9 @@ Batch questions in one message. Continue unrelated work while waiting when possi
 
 ## 10. Session start checklist
 
-1. Read CLAUDE.md, PLAN.md, `docs/PROGRESS.md`, latest gate report.
+1. Read CLAUDE.md, `docs/HANDOFF.md`, `docs/PROGRESS.md`, the "Rules in force" list at the top of `docs/DECISIONS.md`, and the latest gate report. Read PLAN.md by section only: section 9 for the current phase, section 10 for gates, plus the sections the next tasks cite. At the start of a new phase, read the whole phase section and every section it references. Open full ADRs, reviews and `docs/archive/` only when a task needs them.
 2. `git status` and `git log --oneline -10` to confirm state.
-3. From Phase 0 onward, run `pnpm verify` to confirm a green baseline before new work.
+3. From Phase 0 onward, run `pnpm verify` to confirm a green baseline before new work. Show only counts and failures.
 4. Continue with the next open task.
-5. At phase boundaries, update PROGRESS.md, then tell Steph it's a good moment to `/clear` and resume.
+5. At phase boundaries, archive the finished phase's task table to `docs/archive/` and drop done backlog items from PROGRESS.md, then tell Steph it's a good moment to `/clear` and resume. Mid-phase, suggest `/clear` after each batch's reviews are committed.
+6. After `/clear` or compaction, the SessionStart hook (`.claude/hooks/session-resume.sh`, registered in `.claude/settings.json`) injects git state, `docs/HANDOFF.md` and the Rules in force. Treat that as step 1 done for those files, run steps 2 and 3, and continue from HANDOFF section 4 when Steph says go.

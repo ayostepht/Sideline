@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { EXPECTED_MIGRATIONS } from "./migrations-manifest.js";
 import { dbPathFromDataDir, isMigrated, migrate, openDb, type DbHandle } from "./connection.js";
 
 const dirs: string[] = [];
@@ -67,10 +68,22 @@ describe("T1.3a migrations", () => {
     expect(isMigrated(h)).toBe(true);
   });
 
-  it("isMigrated is false when the migrations folder cannot be read", () => {
+  it("isMigrated is false for an empty db, an older db, and true for a migrated one", () => {
     const h = open(dbPathFromDataDir(tmp()));
+    expect(isMigrated(h)).toBe(false);
     migrate(h);
-    expect(isMigrated(h, join(tmp(), "missing"))).toBe(false);
+    expect(isMigrated(h)).toBe(true);
+    // Simulate a db one migration behind the application.
+    const last = EXPECTED_MIGRATIONS[EXPECTED_MIGRATIONS.length - 1];
+    if (last === undefined) throw new Error("no migrations");
+    h.sqlite.prepare("DELETE FROM __drizzle_migrations WHERE created_at = ?").run(last.when);
+    expect(isMigrated(h)).toBe(false);
+    // A db with a migrations table but no rows is also unmigrated.
+    h.sqlite.prepare("DELETE FROM __drizzle_migrations").run();
+    expect(isMigrated(h)).toBe(false);
+    // Table dropped entirely: never throws.
+    h.sqlite.exec("DROP TABLE __drizzle_migrations");
+    expect(isMigrated(h)).toBe(false);
   });
 
   it("nfl_state accepts only the single row id 1", () => {

@@ -1,8 +1,14 @@
-import { createDbEtagStore, upsertNflState } from "@sideline/db";
+import {
+  createDbEtagStore,
+  readNflState,
+  readNflStateFetchedAt,
+  resolveIdentity,
+  touchNflStateFetchedAt,
+  upsertNflState,
+} from "@sideline/db";
 import type { NflState, SeasonType } from "@sideline/shared";
 import { createDefaultSleeperClient, mapState, type SleeperClient } from "@sideline/sleeper";
 import type { JobContext } from "../types.js";
-import { readState, readStateFetchedAt, touchStateFetchedAt } from "./db-reads.js";
 
 /** Sent as `Sideline/<version> (self-hosted)`. Keep in step with the worker package version. */
 export const SIDELINE_VERSION = "0.1.0";
@@ -45,8 +51,8 @@ export function checkAbort(ctx: JobContext): void {
 
 /** Persisted state; fetched (and stored) when missing or older than STATE_MAX_AGE_MS. */
 export async function loadState(ctx: JobContext, client: SleeperClient): Promise<NflState> {
-  const stored = readState(ctx.db);
-  const fetchedAt = readStateFetchedAt(ctx.db);
+  const stored = readNflState(ctx.db);
+  const fetchedAt = readNflStateFetchedAt(ctx.db);
   if (
     stored &&
     fetchedAt !== null &&
@@ -65,7 +71,7 @@ export async function loadState(ctx: JobContext, client: SleeperClient): Promise
 export function storeState(ctx: JobContext, state: NflState): { rowsChanged: number } {
   const at = ctx.now().toISOString();
   const out = upsertNflState(ctx.db, state, at);
-  touchStateFetchedAt(ctx.db, at);
+  touchNflStateFetchedAt(ctx.db, at);
   return out;
 }
 
@@ -89,6 +95,21 @@ export function weekCursor(state: NflState): WeekCursor | null {
   };
 }
 
+export const NO_LEAGUE_MESSAGE = "no league selected: finish onboarding or set DEFAULT_LEAGUE_ID";
+
+/** Skip reasons already logged, per logger-less run context (one info line per run). */
+const loggedSkip = new WeakSet<object>();
+
+/**
+ * The league to sync: the active league in app_settings (ADR-009), else DEFAULT_LEAGUE_ID, else
+ * null. A null result logs the skip reason once per run (the run's counter identifies the run).
+ */
 export function requireLeagueId(ctx: JobContext): string | null {
-  return ctx.config.defaultLeagueId;
+  const id = resolveIdentity(ctx.db, { activeLeagueId: ctx.config.defaultLeagueId }).activeLeagueId;
+  if (id !== null) return id;
+  if (!loggedSkip.has(ctx.counter)) {
+    loggedSkip.add(ctx.counter);
+    ctx.logger.info(NO_LEAGUE_MESSAGE);
+  }
+  return null;
 }

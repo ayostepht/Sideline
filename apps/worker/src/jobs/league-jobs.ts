@@ -1,4 +1,6 @@
 import {
+  readLeaguePlayoffWeekStart,
+  readStoredMatchupWeeks,
   upsertLeague,
   upsertLeagueUsers,
   upsertMatchups,
@@ -20,16 +22,16 @@ import {
   loadState,
   makeClient,
   MAX_REGULAR_WEEK,
+  NO_LEAGUE_MESSAGE,
   requireLeagueId,
   storeState,
   type SleeperJobDeps,
 } from "./common.js";
-import { readPlayoffWeekStart, storedMatchupWeeks } from "./db-reads.js";
 
 const NO_LEAGUE: JobResult = {
   rowsChanged: 0,
   status: "skipped",
-  note: "DEFAULT_LEAGUE_ID is not set",
+  note: NO_LEAGUE_MESSAGE,
 };
 
 /** Default Sleeper playoff start when the league does not say. */
@@ -129,8 +131,8 @@ export function matchupsJob(deps: SleeperJobDeps): Job {
       const current = Math.min(MAX_REGULAR_WEEK, Math.max(1, state.week));
       const weeks = matchupWeeksToFetch(
         current,
-        readPlayoffWeekStart(ctx.db, leagueId),
-        storedMatchupWeeks(ctx.db, leagueId),
+        readLeaguePlayoffWeekStart(ctx.db, leagueId),
+        readStoredMatchupWeeks(ctx.db, leagueId),
       );
       let rowsChanged = 0;
       for (const week of weeks) {

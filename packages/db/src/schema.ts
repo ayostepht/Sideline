@@ -413,8 +413,10 @@ export const syncRequests = sqliteTable(
   "sync_requests",
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
-    /** A SyncJobName or "all". */
+    /** A SyncJobName, "all", or an onboarding job ("user", "user_leagues"). */
     job: text("job").notNull(),
+    /** JSON object validated with shared parseParamsForJob; null for jobs without params. */
+    paramsJson: text("params_json"),
     /** ISO 8601. */
     requestedAt: text("requested_at").notNull(),
     /** "pending" | "running" | "done" | "failed". */
@@ -429,4 +431,25 @@ export const syncRequests = sqliteTable(
     index("sync_requests_status_idx").on(t.status, t.id),
     index("sync_requests_job_idx").on(t.job, t.requestedAt),
   ],
+);
+
+/**
+ * The Sleeper user's leagues found during onboarding (ADR-009). A table rather than an
+ * app_settings JSON key: it is replaced per (user, season) and read back as rows for the picker.
+ */
+export const userLeagues = sqliteTable(
+  "user_leagues",
+  {
+    userId: text("user_id").notNull(),
+    leagueId: text("league_id").notNull(),
+    season: integer("season").notNull(),
+    /** Untrusted text. */
+    name: text("name").notNull(),
+    status: text("status").notNull(),
+    totalRosters: integer("total_rosters").notNull(),
+    avatar: text("avatar"),
+    /** ISO 8601. */
+    syncedAt: text("synced_at").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.leagueId, t.season] })],
 );

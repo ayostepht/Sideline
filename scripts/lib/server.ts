@@ -161,6 +161,8 @@ export async function startStandaloneServer(options: {
   timeoutMs?: number;
   /** Writable data directory for the server. Defaults to a fresh temp dir removed on stop. */
   dataDir?: string;
+  /** Extra environment for the server process (for example SIDELINE_GALLERY=1). */
+  env?: Record<string, string>;
 }): Promise<RunningServer> {
   const { root } = options;
   if (!standaloneBuildExists(root)) {
@@ -187,6 +189,7 @@ export async function startStandaloneServer(options: {
         NODE_ENV: "production",
         PORT: String(port),
         HOSTNAME: "127.0.0.1",
+        ...options.env,
         DATA_DIR: dataDir,
       },
     },

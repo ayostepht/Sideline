@@ -121,6 +121,42 @@ describe("collectRouteSizes with a fixture build dir", () => {
     expect(sizes.every((s) => s.gzipBytes > 0)).toBe(true);
   });
 
+  it("resolves percent-encoded dynamic route keys to bracket files on disk", () => {
+    const dir = makeBuild({});
+    const write = (rel: string, content: string): void => {
+      mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      writeFileSync(path.join(dir, rel), content);
+    };
+    write(
+      "app-path-routes-manifest.json",
+      JSON.stringify({
+        "/page": "/",
+        "/l/%5BleagueId%5D/page": "/l/[leagueId]",
+        "/l/%5BleagueId%5D/league/teams/%5BrosterId%5D/page":
+          "/l/[leagueId]/league/teams/[rosterId]",
+      }),
+    );
+    write("server/app/l/[leagueId]/page_client-reference-manifest.js", SAMPLE_MANIFEST);
+    write(
+      "server/app/l/[leagueId]/league/teams/[rosterId]/page_client-reference-manifest.js",
+      SAMPLE_MANIFEST,
+    );
+    write("static/chunks/app/l/[leagueId]/error-x.js", "err();");
+    write(
+      "server/app/l/[leagueId]/page_client-reference-manifest.js",
+      SAMPLE_MANIFEST.replace(
+        "/_next/static/chunks/bbb.js",
+        "/_next/static/chunks/app/l/%5BleagueId%5D/error-x.js",
+      ),
+    );
+    const sizes = collectRouteSizes(dir);
+    expect(sizes.map((s) => s.route)).toEqual([
+      "/",
+      "/l/[leagueId]",
+      "/l/[leagueId]/league/teams/[rosterId]",
+    ]);
+  });
+
   it("throws naming the route when a client manifest is missing", () => {
     expect(() => collectRouteSizes(makeBuild({ missing: "/lineup/page" }))).toThrow(/\/lineup/);
   });

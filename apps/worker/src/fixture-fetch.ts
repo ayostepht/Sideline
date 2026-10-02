@@ -2,13 +2,16 @@ import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 
-export const FIXTURES_DIR = resolve(import.meta.dirname, "../../../../tests/fixtures");
+export const FIXTURES_DIR = resolve(import.meta.dirname, "../../../tests/fixtures");
 
 export interface FixtureManifest {
   leagueId: string;
   season: string;
   currentWeek: number;
   recordedAt: string;
+  /** Fixture user (a fake); present in recorded manifests, absent in minimal test manifests. */
+  username?: string;
+  userId?: string;
 }
 
 export function readManifest(dir: string = FIXTURES_DIR): FixtureManifest {
@@ -30,6 +33,8 @@ export function readManifest(dir: string = FIXTURES_DIR): FixtureManifest {
     season: m.season,
     currentWeek: m.currentWeek,
     recordedAt: m.recordedAt,
+    ...(typeof m.username === "string" ? { username: m.username } : {}),
+    ...(typeof m.userId === "string" ? { userId: m.userId } : {}),
   };
 }
 
@@ -38,6 +43,10 @@ export function fixturePathFor(rawUrl: string): { path: string; gzip: boolean } 
   const url = new URL(rawUrl);
   if (url.hostname === "api.sleeper.app") {
     const p = url.pathname.replace(/\/+$/, "");
+    // Usernames are case-insensitive on Sleeper; recorded files use the lowercase form.
+    const user = /^\/v1\/user\/([^/]+)$/.exec(p);
+    if (user?.[1] !== undefined && !/^\d+$/.test(user[1]))
+      return { path: `sleeper/v1/user/${user[1].toLowerCase()}.json`, gzip: false };
     if (p.startsWith("/v1/")) return { path: `sleeper/v1/${p.slice(4)}.json`, gzip: false };
     const m = /^\/(projections|stats)\/nfl\/(\d{4})\/(\d{1,2})$/.exec(p);
     if (m) return { path: `sleeper/${m[1]}/${m[2]}/${m[3]}.json`, gzip: false };

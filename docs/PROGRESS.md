@@ -6,8 +6,8 @@
 |---|---|---|---|
 | 0 Bootstrap and API spike | G0 | `phase/0-bootstrap` (merged) | Done, G0 PASS 2026-10-01 |
 | 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
-| 2 App shell and league views | G2 (human) | | Not started |
-| 3 Scoring, projections, optimizer | G3 (human) | | Not started |
+| 2 App shell and league views | G2 (human) | `phase/2-shell` (merged) | Done, G2 PASS 2026-10-02 (Steph approved) |
+| 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` | Next: plan batches (not started) |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | | Not started |
 | 5 Matchups and league intelligence | G5 | | Not started |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
@@ -16,98 +16,63 @@
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
 
-## Phase 0 tasks
+## Earlier phases
 
-| ID | Title | Agent | Batch | Status | Attempts | Commit |
-|---|---|---|---|---|---|---|
-| T0.0 | Toolchain, branch, tracking docs, ADR-000/003, PLAN amendments | orchestrator | 0 | Done | 1 | f7345f1 |
-| T0.1 | Workspace scaffold and tooling | devops-engineer | A | Done | 1 | a6e3f2c |
-| T0.2 | Next.js skeleton, /api/health, Dockerfile | devops-engineer | B | Done (review fixes) | 2 | a21579d, 36934fd |
-| T0.3a | Sleeper API spike and api-notes | sleeper-data-engineer | B | Done | 1 | 6c89e16 |
-| T0.4 | Test harness (MSW, Playwright, axe, LHCI) | qa-engineer | B | Done (review fixes) | 2 | b5e50ad, 3308ac3 |
-| T0.3b | Fixture recorder and sanitized fixtures | sleeper-data-engineer | C | Done | 2 (attempt 1 leaked real ids into test-data.ts, caught by orchestrator scan before commit) | d47388e, 7c0ff9f |
-| T0.5 | gate and screens scripts, CI | devops-engineer | C | Done (2.1k lines, over the 400-line guideline; accepted, mostly helpers and tests) | 1 | 7326537 |
-| T0.6 | ADR-001, ADR-002, PLAN amendments | orchestrator | D | Done | 1 | 0292fe2 |
-| T0.5-fix | Batch C review fixes (M1, m1-m5, m7, m11, n1, n3) | devops-engineer | C-fix | Done (restarted once after a usage-limit interruption) | 1 | 4471a14 |
-| T0.3b-fix | Batch C review fixes (m8-m10, m12) | sleeper-data-engineer | C-fix | Done (restarted once after the same interruption) | 1 | 5f4a760 |
-| G0 | Gate | qa-engineer, code-reviewer, orchestrator | E | PASS | 1 | see `docs/gates/G0.md`, tag `gate-G0` |
+Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`. Standing rules for briefs are in `docs/brief-rules.md`.
 
-## Phase 1 tasks
+## Backlog (open items only)
 
-| ID | Title | Agent | Batch | Status | Attempts | Commit |
-|---|---|---|---|---|---|---|
-| T1.B0 | Branch, ADR-005, PLAN amendments, coverage config | orchestrator | 0 | Done | 1 | e4330e4 |
-| T1.0 | Dependency preinstall, workspace links, script wiring, next.config | devops-engineer | A0 | Done | 1 | b0cf521 |
-| T1.1 | Shared domain types, DTOs, env config | backend-engineer | A | Done | 1 | 4aa4207 |
-| T1.2a | Sleeper HTTP core (limiter, retries, errors, ETag) | sleeper-data-engineer | A | Done | 1 | aab3c0c |
-| T1.1-fix | Review fixes m6-m9 (cron, TZ, transaction fields, timestamp note) | backend-engineer | A-fix | Done | 1 | 133ebef |
-| T1.2a-fix | Review fixes m1-m3, m5, n1 (Retry-After cap, body cancel, monotonic limiter, timer injection) | sleeper-data-engineer | A-fix | Done | 1 | fa96fab |
-| T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Done | 1 | d5b2200 |
-| T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | Done (agent hit the session limit after finishing; orchestrator verified; 712 non-test lines, mostly schemas, accepted) | 1 | 38ee8a4 |
-| T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Done | 1 | 195826e |
-| T1.4b | nflverse provider | sleeper-data-engineer | B | Done (attempt 1 stopped at pause before writing; attempt 2 delivered; 693 non-test lines across 7 files, accepted) | 2 | f759d28 |
-| T1.3a-fix | Batch B review M1-M3, m1, n1 (waiver_position, total_rosters, reapStale, unique lease holders) | backend-engineer | B-fix | Done | 1 | d155036 |
-| T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Done (targeted checks; full verify pending T1.5a) | 1 | fd8023f |
-| T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Done (targeted checks; worker coverage 83.8%) | 1 | 45c4b9e |
-| T1.6 | Health, sync status, sync run API | backend-engineer | C | Done (build fix T1.6-build by devops-engineer in 34e0e78) | 1 | 7995e8e |
-| T1.6-fix | Batch C review M3, m1: shared SYNC_CADENCE_MS (projections 60 min), findActiveRequest, enqueue with created flag, web uses them | backend-engineer | C-fix | Done | 1 | be35d5f |
-| T1.5a-fix | Batch C review M1, M3 (worker side), m2-m4: CLI heartbeat re-check, shared cadences, reap only pre-acquire rows, seed lastAttempt from any run, shutdown timeout | sleeper-data-engineer | C-fix | Done (orchestrator lint/format fix; worker coverage 83% lines) | 1 | 4b021b2 |
-| T1.5b | Sleeper sync jobs and 2025 backfill | sleeper-data-engineer | D | Done (479 tests; worker+sleeper lines 92%) | 1 | eeaf97d |
-| T1.7a | Integration and contract harness | qa-engineer | D | Done (fixtures README left open; root scripts wired in 3091394) | 1 | fe43bdd |
-| T1.8 | Docker and build with SQLite | devops-engineer | D | Done (container health 200 degraded in 2 s, verified by orchestrator) | 1 | 847c7e0 |
-| T1.5c | nflverse job, derived hook, db:seed:fixtures | sleeper-data-engineer | E | Done | 1 | 8433f87 |
-| T1.7b | Integration suites | qa-engineer | F | Done | 1 | 08c4d7a |
-| T1.7a-fix | Contract suite without skipIf (gate U4) | qa-engineer | G1 | Done | 1 | 9233328 |
-| T1.8-fix | Gate standalone server temp DATA_DIR and failure logs (UI1/UI2); e2e health expects degraded | devops-engineer, orchestrator | G1 | Done | 1 | 49956b7, 0d0c0c3 |
-| G1 | Gate | qa-engineer, code-reviewer, orchestrator | G | Not started | 0 | |
+Remove an item when it is done; the archive keeps history.
 
-Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live worker; renewed DB lease), projection real-row rule documented per endpoint with a week 5 non-empty test and bye handling via schedule, red-zone touches dropped to P1 if they need play-by-play.
+### Carried from Phase 2
 
-## Standing rules for briefs
+- **Phase 3 design follow-ups (Steph, G2):** scoreboard hero on Home and My Team (large tabular Record, PF, Rank strip); lime on one content item per page (top recommendation). Home standings snippet "You" should use the purple badge like League. Settings route JS 169,200 B of the 170 KB target (800 B headroom); `/dev/gallery` 193,866 B of the 200 KB budget.
+- **Frontend:** player-row primitive caps at `md:max-w-2xl` for other consumers; desktop header shows "League" briefly before the team name hydrates; dark your-row purple bar is 2.52:1 against accent-soft (fine against the ground, You badge carries text); missing `favicon.ico` (with the PWA work); not-found page has no h1 (add `level` prop to `EmptyState`) and no app chrome; every StaleBanner renders its own Sync now; Suspense fallback may shift layout; no shared Input/Select; reserve a stat slot in roster rows (Phase 3 points); Settings cannot re-run setup for the same username (consider "Re-check my account"); "Still syncing" has no auto refresh; layout DB-error catch and `app/error.tsx` untested at runtime; `lib/client/api.ts` imports schemas from `app/onboarding/_components/schemas`; overlay fade under reduced motion.
+- **Backend:** G2 code review minors (`docs/reviews/2026-10-02-G2-code.md`): `startOnboarding` writes in one immediate transaction; seed env identity once at boot rather than on GET; zod or column test for `league-views.ts` row casts; cache the player-search owner map if profiles show it; shared response schemas for `/api/onboarding/league` and `PATCH /api/settings`; a route-listing test that every mutating route uses `guardedWrite`. After a Settings league switch, `/onboarding` has no `syncSince`. Client schemas import shared by deep path (consider `@sideline/shared/schemas`).
+- **Worker:** an invalid configured username makes one failing user-id lookup per cycle (G2-B1).
+- **Tests (qa-engineer):** e2e for `header-title-mobile`, `settings-sync-info`, the desktop "League / <team>" label; gallery states not asserted one by one; NAV-6 mocks the league-switch POST (real switch and "Still syncing" not in e2e); stale and preseason states not in e2e; two-fast-clicks week path has no e2e; not-found tests are skipped when a main-suite test fails (Playwright dependencies) and must be stressed with `--workers=1`; TEAM-3 option (a), a server-side pre-check, remains possible if the flake ever matters outside tests.
+- **Tooling (devops-engineer):** `geist` dependency unused; `.playwright-mcp/` not in `.gitignore`; `pnpm screens` cannot capture 404 routes; two `start-standalone.mjs` at once race on copying `.next/static`; temp seeded DATA_DIRs are never cleaned up; `scripts/lib/seed.ts` may not forward `--no-identity`; `next/font/google` needs network at build time (works in Docker today).
 
-- Real identifiers (username, league id, league name, user ids, manager and team names) are read from `.env` and never written to tracked files (ADR-000).
-- Partial weeks (in progress at recording time) are excluded from SCORE-2 validation and golden expectations (ADR-000 item 9). Phase 3 briefs must restate this.
-- Agents use Node 24: prefix shell commands with `export PATH="$HOME/.local/share/fnm/node-versions/v24.21.0/installation/bin:$PATH"` (the tool shell defaults to Node 25).
+### Data and backend
 
-## Backlog (Minor findings and follow-ups)
+- **G2 code review minors (backend-engineer, `docs/reviews/2026-10-02-G2-code.md`).** m1 wrap `startOnboarding` writes in an immediate transaction; m2 seed env identity once at boot instead of on GET (busy_timeout already set); m3 zod or column test for `league-views.ts` row casts; m4 cache the player-search owner map if profiles show it; shared response schemas for `/api/onboarding/league` and `PATCH /api/settings`; a route-listing test that every mutating route uses `guardedWrite`.
 
-- T1.0 (was T1.3): add `better-sqlite3: true` under `allowBuilds` in pnpm-workspace.yaml (pnpm 12 blocks native builds by default).
-- T4.3: revisit health semantics once the supervisor exists; a worker heartbeat stale beyond a threshold should probably fail the Docker healthcheck (ADR-005 item 6).
-- ADR-001: TypeScript pinned to 6.0.3 (not 7.x) because typescript-eslint 8.71 requires `<6.1`. Revisit when typescript-eslint supports TS 7.
-- Image size: the gate measures `docker image inspect` Size (93.3 MB arm64, 93.2 MB amd64 for web alone; HOST-5 limit 400 MB). OrbStack's "disk usage" column (about 400 MB) is not the measure.
-- Route JS headroom: the placeholder page already ships about 132 KB of 200 KB gzipped script. Frontend briefs (T2.1+) must lazy-load charts and watch bundle size.
-- Lighthouse best-practices is 0.96 against a 0.95 floor on the placeholder page.
-- Review m4: resolved in ADR-005 item 8 (api and worker at 75% lines).
-- Playwright `--project` is variadic: put the spec path before `--project`.
-- tests/fixtures/README.md should list the extra manifest keys the recorder writes (currentWeek, futureMatchupWeeks, projectionWeeks, statsWeeks, syntheticLeagueId, sanitizerVersion, trimming). Owner: qa-engineer.
-- `pnpm fixtures:check` needs the gitignored raw cache or live API, so it cannot run in CI. The orchestrator runs it plus an independent live-fetched identifier scan before every commit and at every gate.
-- Fixtures are 5.6 MB (target under 6 MB): little headroom for re-recording more weeks; re-record with trimming rather than growing.
-- G0 review N1: `pnpm gate --only=...` overwrites `docs/gates/latest.json`; write partial runs to `latest.partial.json`. Owner: devops-engineer.
-- G0 review N3: `reuseExistingServer: !CI` in playwright.config.ts can reuse a stale local server. Owner: qa-engineer.
-- G0 review N4: UI3 should wait for port 3000 to be released after stopping the shared server. Owner: devops-engineer.
-- G0 review n1 and Batch C n2: document the Lighthouse script-size unit; update tests/fixtures/README.md fake id ranges, manifest keys and the short-name word-boundary rule. Owner: qa-engineer.
-- T1.0: pnpm prints a peer-dependency warning on install (not investigated). @types/better-sqlite3 9.6.0 may lag the v13 API. Worker stub scripts use root tsx; add tsx to the worker when real scripts land. Owner: devops-engineer (T1.8).
-- Per-project coverage (`vitest run --coverage --project X`) prints Unknown% because coverage globs are repo-relative; use the whole-repo run. Owner: qa-engineer (T1.7a).
-- T1.2b/T1.5b: pass a `Sideline/<version> (self-hosted)` user agent; `/players/nfl` calls pass `{ etag: false }`; the worker shares one `RateLimiter`.
-- P1: nflverse play-by-play for red-zone touches (TREND-2), ADR-006 item 6.
-- T1.8 (devops): declare zod and tsx in packages/db (imported/used but resolved via root hoisting); bundle `packages/db/drizzle/` migrations into the image or set `SIDELINE_MIGRATIONS_DIR`. `cli/migrate.ts` has no unit test (covered by the CLI run; db total 91.6%).
-- T1.4a review m6/m8 (sleeper-data-engineer): nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, root from import.meta.url, write-then-swap; label 14f join rates as spike measurements or add `--report`.
-- T1.5c: compute the ADR-002 fallback kickoff when nflverse gametime is missing (provider returns kickoffUtc null, kickoffApproximate true); pass PlayerRef.gsisId as stored. getUsage re-parses cached files each call (fine at this size).
-- Batch B review (docs/reviews/2026-10-02-p1-batchB-code.md): m2, m3, m7 providers cache meta zod, guarded/atomic cache writes, season_type filter (sleeper-data-engineer); m4 log loud position-drop counts (T1.5b); m5 stats rows without gp are did-not-play (T3.1); m6 document starters "0" = empty slot in shared (T1.3b).
-- Batch D review (docs/reviews/2026-10-02-p1-batchD-code.md): m5 move worker raw SQL reads (`db-reads.ts`) into `@sideline/db` typed helpers (backend-engineer, then sleeper-data-engineer); m7 contract suite header comment on direct fetch and the CONTRACT_PLAYERS gate (qa-engineer); auth task must refuse to start with empty SESSION_SECRET or APP_PASSWORD (T4.x).
-- T1.5c follow-ups: degraded nflverse is stored as `skipped` (no `degraded` SyncRunStatus, no note column in sync_runs); consider adding both in shared/db (backend-engineer). With nflverse off there is no schedule list, so no fallback rows are created; `fallbackKickoffUtc` is ready for a Sleeper-date source. apps/worker has no `test` script (devops). Root `db:seed:fixtures` needs an absolute DATA_DIR (default /data). `league_player_week_points` and `defense_vs_position` are not mapped in `JOB_TABLES` yet (T3.2).
-- Batch E review (docs/reviews/2026-10-02-p1-batchE-code.md), sleeper-data-engineer: m1 `storeState` in one transaction; m2 recompute changed-tables should include failed jobs with rowsChanged > 0; m3 zod for the fixture manifest; m4 test that a later real gametime replaces an approximate kickoff.
-- T1.7b follow-ups: backoff/timeout integration tests hook the client retry warn log in `makeClient` (apps/worker/src/jobs/common.ts); an injectable `sleep` on job deps would make them sturdier (sleeper-data-engineer). RATE-1 sees about 107 calls per game-window hour; the 300/min cap itself is covered by limiter unit tests.
-- Batch F review (docs/reviews/2026-10-02-p1-batchF-code.md), qa-engineer: m1 iteration guard in `drive()` (sync-harness.ts) so a changed retry log shape fails instead of hanging; m2 comment that RATE-1 checks schedule cadence and limiter enforcement lives in limiter unit tests.
-- G1: worker CLI does not load `.env`; without DEFAULT_LEAGUE_ID the league jobs skip with no log reason. Log the reason (sleeper-data-engineer); decide whether local `pnpm run sync` loads `.env` (devops-engineer).
-- G1: gate JSON includes a local Chrome path with the OS user name; write home-relative paths (devops-engineer).
-- G1: CONTRACT_PLAYERS=1 widens the contract include to all of tests/contract; CONTRACT-3 body has not yet run live.
-- T1.5a-fix: worker function coverage 67% (lines 83%); `seedLastAttempts` uses raw SQL in the worker instead of a `@sideline/db` helper. Fold into T1.5b or T1.7b.
-- T1.7a: tests/fixtures/README.md section (what each fixture is, sanitization, fake id ranges, how to re-record) still open; Lighthouse `DATA_DIR=$(mktemp -d)` startServerCommand unverified (run `pnpm lhci` once at G1); e2e/Lighthouse temp DATA_DIRs never cleaned up. The contract suite was run live once by the agent (5 GETs, all shapes passed, nothing written); /players/nfl not yet run.
-- T1.5b: move `apps/worker/src/jobs/db-reads.ts` raw SQL into packages/db helpers (backend-engineer); pregame snapshots need nflverse kickoffs, so T1.5c should order nflverse before projections in `ALL_ORDER`; `SIDELINE_VERSION` constant must track package version; consider `etag: false` for regular stats/projections to keep multi-MB bodies out of http_cache.
-- T1.8 follow-ups for T4.3: supervisor entrypoint must start the worker (runtime image has web standalone only), run migrations, PUID/PGID for Unraid 99/100; trim all-platform better-sqlite3 prebuilds and sharp. Image content 105 MB, filesystem 320 MB.
-- msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
+- Raw SQL to `@sideline/db` helpers: apps/web reads (`h.sqlite.prepare`), worker `failUnknownJobs` and `seedLastAttempts`, `requestSyncForLeagueChange` (add `enqueueFresh`). Make `claimNext`/`toRequest` tolerant of unknown jobs, then drop the worker's raw UPDATE.
+- `rosters` has no division column, so standings `division` is always null (migration plus worker mapping).
+- Non-ASCII player search (normalized search name). PATCH settings schema is local to apps/web, not shared.
+- Share the "No Sleeper user with that username" text as a constant between worker and web.
+- Onboarding jobs write no `sync_runs` rows (`latestRunPerJob`/`startRun` are SyncJobName-only). `RawLeagueSchema` has no `avatar`.
+- Degraded nflverse is stored as `skipped` (no `degraded` status, no note column). `league_player_week_points` and `defense_vs_position` not in `JOB_TABLES` (T3.2).
+- packages/db: declare zod and tsx; `cli/migrate.ts` has no unit test.
+- `SIDELINE_VERSION` must track the package version; consider `etag: false` for regular stats and projections (keeps multi-MB bodies out of http_cache).
+
+### Worker and providers (sleeper-data-engineer)
+
+- p1 Batch B m2, m3, m7: providers cache meta zod, atomic cache writes, season_type filter; m5 stats rows without gp are did-not-play (T3.1); m6 document starters "0" as an empty slot.
+- p1 Batch E m1 to m4: `storeState` in one transaction; recompute changed tables includes failed jobs with rowsChanged > 0; zod for the fixture manifest; test that a real gametime replaces an approximate kickoff.
+- T1.5c: compute the ADR-002 fallback kickoff when gametime is missing; with nflverse off no fallback rows exist.
+- T1.4a m6/m8: nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, write-then-swap.
+- Injectable `sleep` in `makeClient` (sturdier backoff tests; the 503 retry test takes about 4 s). apps/worker has no `test` script (devops).
+
+### Tests and tooling
+
+- tests/fixtures/README.md: extra manifest keys, fake id ranges, short-name word-boundary rule, Lighthouse script-size unit (qa).
+- p1 Batch F m1 iteration guard in `drive()`; m2 RATE-1 comment. p1 Batch D m7 contract suite header comment (qa).
+- `pnpm gate --only=...` overwrites `latest.json` (write `latest.partial.json`); UI3 should wait for port 3000 to be released (devops).
+- `reuseExistingServer: !CI` can reuse a stale local server (qa).
+- CONTRACT_PLAYERS=1 widens the contract include; CONTRACT-3 body not run live yet.
+- `pnpm fixtures:check` needs the raw cache or live API, so it can't run in CI; the orchestrator runs it at commits touching fixtures and at gates.
+- Fixtures 5.6 MB of a 6 MB target: re-record with trimming, not growth.
+- pnpm peer-dependency warning on install not investigated; @types/better-sqlite3 9.6.0 may lag v13.
+
+### Later phases
+
+- T3.5 and T4.1 own the real `gradeFromScore` and `trendFromDelta` thresholds (placeholders now). No testing-library/jsdom: components have mapping tests only.
+- T4.3: supervisor starts the worker, runs migrations, PUID/PGID 99/100; worker container inherits NODE_ENV=production; trim better-sqlite3 prebuilds and sharp; revisit health (stale heartbeat fails the healthcheck).
+- T4.x auth refuses to start with an empty SESSION_SECRET or APP_PASSWORD.
+- T6.2: remove the next@16.3.8 `minimumReleaseAgeExclude`. T6.3: themeColor vs the in-app theme toggle.
+- P1: nflverse play-by-play for red-zone touches (TREND-2).
 
 ## Questions for Steph
 
-- None open. PLAN.md section 13 answered on 2026-10-01.
+- None open. (G2 answered 2026-10-02: ADR-011, ADR-012, final approval.)

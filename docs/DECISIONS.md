@@ -1,6 +1,26 @@
 # Decisions (ADR-lite)
 
-Format: number, date, decision, context, alternatives considered, consequences. ADR-001 (stack) and ADR-002 (data sources) are reserved for T0.6, per PLAN.md section 9.
+Format: number, date, decision, context, alternatives considered, consequences.
+
+## Rules in force (summary)
+
+Read this list at session start. Open a full ADR below only when a task touches it. Keep this list in sync when an ADR is added or superseded.
+
+- **Process (ADR-000):** delegate only to the 8 project agents plus Explore. The current week always comes from `/v1/state/nfl`. Stub scripts exit non-zero and the gate reports them SKIPPED. Lockfile and generated fixtures don't count toward the 400-line task size.
+- **Privacy (ADR-000, ADR-009 item 17):** real identifiers only in `.env`; staged diffs scanned before every commit, the whole repo at gates. Spike data in `.spike-cache/`. Screenshots only from a fixture-seeded temp DATA_DIR; `scripts/screens` refuses anything else.
+- **Stack (ADR-001, ADR-007):** exact pins (table in ADR-001). TypeScript 6.0.3 until typescript-eslint supports 7. Webpack builds, not Turbopack (`.js` extension alias). Deployable images are linux/amd64.
+- **Sleeper (ADR-002, ADR-005, ADR-009):** the worker is the only Sleeper caller, through one shared limiter; the web enqueues `sync_requests`, including onboarding jobs `user` and `user_leagues`. `/players/nfl` at most once per day. No live calls during development; the orchestrator makes the gate's live run. Projections keep only real rows; the last pre-kickoff snapshot is kept per player-week.
+- **Scoring (ADR-002):** `sum(stats[k] * scoring_settings[k])`; SCORE-3 exceptions listed in ADR-002 item 3. Partial weeks stay out of golden tests and SCORE-2.
+- **nflverse (ADR-006):** primary kickoff source (America/New_York wall time); fallback lock times per ADR-002 item 6; join by trimmed gsis_id, then name plus team; `LA` maps to `LAR`; no red-zone touches (P1).
+- **Waivers (ADR-003):** rolling waivers are P0 (WAIVER-6a to 6d); FAAB recommender is P2.
+- **Data layer (ADR-005):** idempotent upserts count real changes only. `/api/health` returns 503 only when SQLite fails. The web never runs migrations. A DB lease prevents overlapping syncs.
+- **App (ADR-009):** identity and active league in `app_settings` (env seeds them; then the DB wins). Routes under `/l/[leagueId]`. Server components call `lib/server`; route handlers only for client interactions. Stale means older than 2x `SYNC_CADENCE_MS`. `/dev/gallery` needs `SIDELINE_GALLERY=1`. Route JS target 170 KB.
+- **UI checks (ADR-004):** the no-horizontal-scroll check compares `scrollWidth` with `clientWidth`.
+- **Ownership (ADR-000, ADR-005, ADR-008, ADR-009):** dependencies, `next.config.ts` and `postcss.config.mjs` belong to devops-engineer; `components/ui/` to frontend-engineer; fixture output under `tests/fixtures/` is written by the sleeper-data-engineer recorder.
+- **Visual identity (ADR-011):** palette #FFFFFF, #2A2A2A, #D9D9D9, lime #D5FC51 (fill, never text on light), plus a blue and neon purple #DF00FE (secondary accent, non-text or large text only); Inter; corners at most 4px; denser spacing; scoreboard feel.
+- **G2 checkpoint (ADR-012):** notFound() page tests run serial in chained `*-notfound` projects, assertions unchanged, retries 0; dev tools allowed in `next dev`, asserted absent from the production/Docker build (DEVTOOLS-1).
+- **Session reading (ADR-010):** HANDOFF, PROGRESS, this list, latest gate report; PLAN by section; briefs point to `docs/brief-rules.md`.
+- **Coverage (ADR-005 item 8):** `lib/server`, `app/api`, db and worker at least 75% lines; sleeper and providers at least 85%.
 
 ## ADR-000: Process, privacy, and ownership decisions for Phase 0
 
@@ -54,7 +74,7 @@ Date: 2026-10-01
 | Logging | pino 10.3.1, pino-pretty 13.1.3 | |
 | Scripts | tsx | 4.23.15 |
 
-Still to pin when first installed (owning task records the version here): Tailwind CSS, shadcn/ui, Radix, lucide-react, Recharts, TanStack Table (T2.1).
+Pinned in T2.0 (2026-10-02, apps/web dependencies): tailwindcss and @tailwindcss/postcss 4.3.3; @radix-ui/react-dialog 1.1.23, -popover 1.1.23, -tooltip 1.2.16, -dropdown-menu 2.1.24, -tabs 1.1.21, -toggle-group 1.1.19, -visually-hidden 1.2.11, -slot 1.3.3; class-variance-authority 0.7.1; clsx 2.1.1; tailwind-merge 3.7.0; lucide-react 1.49.0; cmdk 1.1.1; next-themes 0.4.6; geist 1.7.2. shadcn/ui is generated code (no runtime package). Recharts and TanStack Table are deferred to Phase 4 (ADR-009 item 6).
 
 Pinned in T1.0 (2026-10-02): better-sqlite3 13.0.3 (SQLite 3.53.4), drizzle-orm 0.45.3, drizzle-kit 0.31.11, @types/better-sqlite3 9.6.0, croner 10.0.1, csv-parse 7.0.3; zod 4.6.5 and pino 10.3.1 also as runtime dependencies of the packages that use them.
 
@@ -186,3 +206,85 @@ Date: 2026-10-02
 **Alternatives considered:** giving `next.config.ts` to frontend-engineer. Rejected because the config is about bundling and server externals, not UI.
 
 **Consequences:** frontend briefs that need config changes are split out to devops-engineer.
+
+## ADR-009: Phase 2 plan decisions (app shell and league views)
+
+Date: 2026-10-02
+
+**Decision**
+
+1. **Task splits for the 400-line target.** T2.0 (UI dependency preinstall) and T2.0b (seeded screens and gate harness, devops) are added. T2.1 becomes T2.1a and T2.1b; T2.2 becomes T2.2a (contracts and DB), T2.2b (data functions and API) and T2.2c (worker onboarding jobs); T2.3 becomes T2.3a (shell), T2.3b (onboarding and Settings) and T2.3c (Home, League, team views); T2.5 becomes T2.5a (harness) and T2.5b (suites). PLAN.md section 9 amended.
+2. **Onboarding goes through the worker** (keeps ADR-005 item 3). New jobs `user` (username to user id) and `user_leagues` (current-season leagues). `sync_requests` gains `params_json`. The web enqueues and the onboarding page polls a status endpoint. With no live worker heartbeat, onboarding shows a "worker not running" error state.
+3. **Identity and active league live in `app_settings`** (`sleeper_username`, `sleeper_user_id`, `active_league_id`, plus the stored league list). `SLEEPER_USERNAME` and `DEFAULT_LEAGUE_ID` seed them when unset; after onboarding the DB wins. Worker league jobs read the active league with env as fallback, and log a skip reason when neither exists. Selecting a league stores it and enqueues `all`.
+4. **Routes:** `/` redirects to `/onboarding` or `/l/{activeLeagueId}`; `/l/[leagueId]` (Home), `/team` (My Team), `/league`, `/league/teams/[rosterId]`, `/settings`. Lineup, Matchup, Waivers and Players are placeholder pages naming the phase that delivers them. `?week=` is the deep-linkable week.
+5. **Rendering:** pages are server components calling `apps/web/lib/server` directly. Route handlers exist only for client interactions (onboarding, search, league switch, Sync now) and stay thin.
+6. **Bundle discipline:** no Recharts or TanStack Table in Phase 2 (hand-rolled SVG Sparkline, semantic HTML tables); per-icon lucide imports; target at most 170 KB gzipped per route under the 200 KB budget.
+7. **Fonts and theme:** Geist via the `geist` package (no network at build); light, dark and system themes with no flash; toggle in Settings.
+8. **`/dev/gallery`** returns 404 in production unless `SIDELINE_GALLERY=1` (set by screens and gate runs).
+9. **Freshness:** data DTOs carry `updatedAt` and `stale` (older than 2x `SYNC_CADENCE_MS`, PLAN 3.4).
+10. **Standings:** wins, then points for; ties shown; grouped by division when present. All-play and luck stay in Phase 5.
+11. **Global search in Phase 2:** players by name with position, NFL team, injury status and owner. A rostered player opens the owner's team page with the player highlighted; a free agent opens a small sheet. The full player sheet is T4.6.
+12. **Live API budget:** no Sleeper calls during development. At G2, one live onboarding run by the orchestrator (about 22 calls; `/players/nfl` only if the daily guard allows).
+13. **Ownership:** `apps/web/components/ui/` and `components.json` belong to frontend-engineer; `postcss.config.mjs` to devops-engineer (as ADR-008). Tailwind v4 tokens live in CSS (frontend-engineer).
+
+**Steph's approval answers (binding)**
+
+14. **Settings v1 ships in Phase 2:** league and username change, theme toggle, sync status per job, Sync now. Data source toggles wait for T6.3. PLAN 6.4 amended.
+15. **G2 is reviewed locally, phone over the LAN.** The dev server and worker bind so the Mac's LAN IP is reachable; `allowedDevOrigins` (or the Next 16.3 equivalent) admits that IP. T2.0b adds a `dev:lan` script that prints the LAN URL. Run instructions mention the macOS firewall prompt. The orchestrator verifies a non-localhost-origin request before the checkpoint.
+16. **My Team** is reachable from Home's roster card and the League page, and has its own entry in the desktop sidebar and the mobile More sheet. PLAN 6.3 amended.
+17. **Screenshot privacy.** The text identifier scan can't read images. Every committed or archived screenshot (`docs/gates/**`, `docs/reviews/**`) comes only from a fixture-seeded temp DATA_DIR. `scripts/screens` refuses `./data` and any DATA_DIR without the seeding step's marker, with unit tests. `pnpm screens` prints its DATA_DIR and the gate checks that line for UI4. ux-reviewer captures stay in gitignored `.screens/`. PLAN 10.2 UI4 amended.
+
+**Later additions**
+
+18. **Pages that call `notFound()` get no loading boundary** (2026-10-02, T2.6b, Batch F review M1; amended 2026-10-02, Batch F closeout review). A `loading.tsx` above a page makes Next stream a 200 before `notFound()` runs, so an unknown id returns a soft 404 instead of a real one. Loading boundaries live in route groups (`(main)` for Home, `league/(list)` for League) scoped away from pages that call `notFound()`. Team detail (`league/teams/[rosterId]`) and My Team (`team/`) both call `notFound()` and have no loading boundary at all (My Team's `loading.tsx` was removed in the closeout round; it had the same soft-404 gap team detail did before T2.6b). Other pages (no `notFound()` call) keep their own boundaries.
+
+**Context:** Phase 2 planning on 2026-10-02, approved by Steph with answers 14 to 17.
+
+**Alternatives considered:** the web calling `/user` and `/user/leagues` with its own limiter (rejected: two limiters, against ADR-005 item 3); pulling the T4.3 supervisor forward so G2 runs on Unraid (rejected by Steph in favor of local review); no My Team nav entry (Steph chose to add one).
+
+**Consequences:** the worker must run for onboarding, so Docker onboarding waits for T4.3. E2E needs a fixture-mode worker. Screens and gate runs always use seeded temp data.
+
+## ADR-010: Smaller session-start reading
+
+Date: 2026-10-02
+
+**Decision:** sessions read HANDOFF, PROGRESS, the "Rules in force" summary at the top of this file and the latest gate report; PLAN.md is read by section (whole phase section at a phase start). Finished phases' task tables and done backlog items move to `docs/archive/`. Standing brief rules live in `docs/brief-rules.md`, which every brief points to. The orchestrator suggests `/clear` after each batch's reviews are committed.
+
+**Context:** Steph's token budget is limited. Session start read about 125 KB (about 32k tokens), and mid-session compaction is the most expensive event.
+
+**Alternatives considered:** splitting PLAN.md into per-phase files (rejected: breaks section references used throughout the docs).
+
+**Consequences:** the "Rules in force" list must be updated with every new ADR. Full ADRs, reviews and the archive stay available on demand.
+
+## ADR-011: Visual identity from the G2 checkpoint
+
+Date: 2026-10-02. Status: accepted (Steph's direction at the G2 human checkpoint).
+
+**Decision.**
+1. **Palette.** Core colors: `#FFFFFF`, `#2A2A2A`, `#D9D9D9`, accent `#D5FC51` (lime), used in both themes. Light: white ground, `#2A2A2A` text, `#D9D9D9` lines and muted surfaces. Dark: `#2A2A2A` ground, white text, `#D9D9D9` muted text. Extension, at most two: an electric blue and a neon purple, for secondary highlights and data. Shades of the neutrals (tints between the core grays) are allowed where a theme needs a second surface or a muted text that passes AA. Red and amber stay as functional colors for injury, error and warning states only, tuned to sit with the palette.
+2. **Lime is a fill, not a text color on light grounds** (about 1.1:1 on white). On lime, text is `#2A2A2A`. On the dark ground, lime may be used as text or line color.
+3. **Font:** Inter (via `next/font/google`, self-hosted at build time) replaces Geist Sans. Tabular numerals for stats.
+4. **Shape:** far fewer rounded corners. Cards and controls at most 4px; no pill shapes except small status dots and avatars.
+5. **Density:** tighter spacing; roughly one Tailwind step less padding and gap across cards, lists and sections.
+6. **Character:** less generic. Direction chosen by the orchestrator for Steph's review: a sports data, scoreboard feel (bold numbers, small uppercase tracked labels, thin dividers, lime used sparingly as the one loud color).
+
+**Context.** At the G2 checkpoint Steph found the UI generic, too rounded and too airy. G2 stays open until the refresh passes the UI checks and Steph approves the screenshots.
+
+**Alternatives.** Keep the indigo palette with smaller tweaks (rejected by Steph's direction). Lime as the only accent with no extension (kept open: blue and purple are optional).
+
+**Consequences.** WCAG AA still applies; axe must stay at 0 serious or critical. Position badge colors are redrawn from the new palette. `next/font/google` needs network at build time, including Docker builds (checked at the gate). Screens archived for G2 are retaken after the refresh.
+
+**Amendment (2026-10-02, Steph):** the purple extension is neon `#DF00FE`, used more as a secondary accent. It is about 3.8:1 on both #FFFFFF and #2A2A2A, so it is for non-text accents (bars, borders, icons, indicators, badge fills), and large bold text (at least 18.66px bold or 24px) only; small text on a #DF00FE fill is #000000 (5.6:1). Lime stays the primary accent.
+
+
+## ADR-012: G2 checkpoint test and tooling decisions
+
+Date: 2026-10-02. Status: accepted (Steph, G2 checkpoint).
+
+**Decision.**
+1. **TEAM-3 flake, option (c):** the notFound() page tests live in `e2e/not-found.spec.ts`, run serial in three `*-notfound` Playwright projects chained after the main projects (one at a time), with every assertion unchanged and retries still 0. Caveats: a main-suite failure skips them (Playwright dependencies); stress them with `--workers=1`, since `--repeat-each` at default workers still reproduces the root cause. The root cause (deferred stylesheet under load, PROGRESS backlog) stays logged; a server-side pre-check (option a) remains a backlog item, not scheduled.
+2. **Next.js dev tools:** the dev indicator stays on for local `next dev` (useful while testing). It must never appear in the production or Docker build. An e2e test (DEVTOOLS-1) asserts its absence on the standalone server, which is the same build Docker ships.
+
+**Alternatives.** (a) fix now with a middleware or DB pre-check; (b) accept with a deadline; hide dev tools everywhere with `devIndicators: false`. Not chosen.
+
+**Consequences.** Slightly longer e2e wall time for the serial block. A regression that leaked dev tooling into production fails the gate.

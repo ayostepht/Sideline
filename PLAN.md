@@ -271,8 +271,8 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 
 ### 6.3 Navigation
 
-- **Desktop (1024px and up):** left sidebar with Home, Lineup, Matchup, Waivers, Players, League, Settings; league switcher at the top; global search (Cmd/Ctrl+K).
-- **Mobile (under 1024px):** bottom tab bar with Home, Lineup, Matchup, Waivers, More (Players, League, Settings). Search icon and week selector in the top bar.
+- **Desktop (1024px and up):** left sidebar with Home, Lineup, Matchup, Waivers, Players, League, My Team, Settings (My Team added in ADR-009); league switcher at the top; global search (Cmd/Ctrl+K).
+- **Mobile (under 1024px):** bottom tab bar with Home, Lineup, Matchup, Waivers, More (Players, League, My Team, Settings). Search icon and week selector in the top bar.
 - Every view is deep-linkable, e.g. `/l/{leagueId}/lineup?week=5&mode=safe`.
 
 ### 6.4 Screens
@@ -284,7 +284,7 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 - **Waivers:** tabs "For my team" and "Best available"; position filter; each row shows name, team, position, Waiver Score, Lineup Impact (+pts over next 3 weeks), trend signal, matchup grades for next 3 weeks, suggested drop, FAAB range. Tap opens the player sheet with the score breakdown.
 - **Players:** searchable, filterable table on desktop and card list on mobile: rostered by whom or free agent, PPG, L3, trend, key usage stat, ROS value. Player sheet: weekly league-scored bars with projection line, usage chart, next 4 opponents with grades, status and injury, Sleeper momentum.
 - **League:** standings (record, PF, PA, all-play, luck); power rankings; playoff odds; positional strength heatmap; transactions feed; manager tendencies. Team detail view for any roster (read-only, with its optimal lineup).
-- **Settings:** league selection, username, theme, data source toggles, sync status per job (last run, errors, "Sync now" with rate limiting), version info.
+- **Settings:** league selection, username, theme, data source toggles, sync status per job (last run, errors, "Sync now" with rate limiting), version info. Settings v1 (everything except data source toggles) ships in Phase 2 (ADR-009); data source toggles come in T6.3.
 
 ### 6.5 States
 
@@ -368,14 +368,24 @@ Tasks were split for size in ADR-005 (original IDs T1.2 to T1.5 and T1.7 became 
 
 ### Phase 2: App shell, design system, league and team views (Gate G2, human review)
 
+Tasks were split for size in ADR-009 (T2.0 and T2.0b added; T2.1, T2.2, T2.3 and T2.5 became lettered subtasks).
+
 | ID | Task | Agent | Depends | Batch |
 |---|---|---|---|---|
-| T2.1 | Design system: tokens, themes, fonts; layout shell with sidebar and bottom tabs; league switcher; week selector; global search; core components (StatCard, PlayerRow, PositionBadge, InjuryBadge, MatchupGrade, TrendIndicator, Sparkline, ReasonChips, WhySheet, DataFreshness, StaleBanner, EmptyState, ErrorState, skeletons); dev-only `/dev/gallery` route showing every component in every state | frontend-engineer | G1 | A |
-| T2.2 | Server data functions and DTOs: onboarding (resolve user, list leagues), league overview, standings, rosters, my team, player search | backend-engineer | G1 | A |
-| T2.3 | Onboarding; Home v1 (standings snippet, roster summary, freshness); League page (standings, rosters, team detail); My Team view (roster with status, injury, bye) | frontend-engineer | T2.1, T2.2 | B |
-| T2.4 | UX review of gallery and pages | ux-reviewer | T2.3 | C |
-| T2.5 | E2E: onboarding, navigation on desktop and mobile, league and team pages; axe on all routes; Lighthouse | qa-engineer | T2.3 | C |
-| T2.6 | Fix round for T2.4 and T2.5 findings | frontend-engineer | T2.4, T2.5 | D |
+| T2.0 | Preinstall UI dependencies (Tailwind v4, Radix primitives, cva, clsx, tailwind-merge, lucide-react, cmdk, next-themes, geist), `postcss.config.mjs` | devops-engineer | G1 | A0 |
+| T2.1a | Design system part 1: tokens, themes, fonts, primitives, PositionBadge, InjuryBadge, StatCard, PlayerRow, MatchupGrade, TrendIndicator; dev-only `/dev/gallery` | frontend-engineer | T2.0 | A |
+| T2.2a | Contracts: shared DTOs (onboarding, league overview, standings, rosters, team detail, my team, player search, settings, freshness), `user` and `user_leagues` job names, sync request params; db migration and typed helpers | backend-engineer | T2.0 | A |
+| T2.0b | Seeded screens and gate harness, screenshot guard, LAN dev access, G1 backlog (.env for local sync, home-relative gate paths) | devops-engineer | T2.0 | A |
+| T2.1b | Design system part 2: ReasonChips, WhySheet, Sparkline, DataFreshness, StaleBanner, EmptyState, ErrorState, skeletons | frontend-engineer | T2.1a | B |
+| T2.2b | Server data functions and thin route handlers: onboarding, league overview, standings, rosters, team detail, my team, player search, settings, freshness | backend-engineer | T2.2a | B |
+| T2.2c | Worker onboarding jobs (`user`, `user_leagues`), active league from `app_settings`, fixture fetch mode for e2e | sleeper-data-engineer | T2.2a | B |
+| T2.3a | Layout shell: sidebar, bottom tabs and More sheet, league switcher, week selector, global search, placeholder pages | frontend-engineer | T2.1b, T2.2b | C |
+| T2.5a | QA harness: seeded e2e and Lighthouse servers, fixture-mode worker for onboarding specs, route list for axe and no-hscroll | qa-engineer | T2.0b, T2.2c | C |
+| T2.3b | Onboarding; Settings v1 | frontend-engineer | T2.3a | D |
+| T2.3c | Home v1 (standings snippet, roster summary, freshness); League page (standings, rosters, team detail); My Team view (roster with status, injury, bye) | frontend-engineer | T2.3a | D |
+| T2.4 | UX review of gallery and pages | ux-reviewer | T2.3b, T2.3c | E |
+| T2.5b | E2E: onboarding, navigation on desktop and mobile, league and team pages, search; axe on all routes; Lighthouse; data function perf on the fixture DB | qa-engineer | T2.3b, T2.3c | E |
+| T2.6 | Fix round for T2.4 and T2.5b findings | frontend-engineer | T2.4, T2.5b | F |
 
 **G2 phase checks:** onboarding works end to end against fixtures and against the live API; gallery covers all states; UI checks pass. **Human checkpoint:** Steph reviews look and feel on her phone and desktop.
 
@@ -462,7 +472,7 @@ Suggested order: notifications (Home Assistant webhook first, then ntfy and Disc
 | UI1 | E2E suite passes on all three Playwright projects |
 | UI2 | axe: zero serious or critical violations on every route, light and dark |
 | UI3 | Lighthouse mobile budgets (6.6) met on Home, Lineup, Waivers, Players (as they exist) |
-| UI4 | ux-reviewer report has zero open Blocker or Major findings; 390px and 1280px screenshots archived to `docs/gates/G{n}/screens/` (compressed) |
+| UI4 | ux-reviewer report has zero open Blocker or Major findings; 390px and 1280px screenshots archived to `docs/gates/G{n}/screens/` (compressed), taken only from a fixture-seeded temp DATA_DIR (ADR-009); `pnpm screens` refuses any other DATA_DIR |
 | UI5 | No horizontal scroll at 390px on any route (automated: `document.documentElement.scrollWidth <= document.documentElement.clientWidth`; `innerWidth` grows with overflowing content in mobile Chromium, see DECISIONS ADR-004) |
 
 ### 10.3 Phase-specific checks

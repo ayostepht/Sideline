@@ -85,6 +85,14 @@ export function routesOverBudget(
   return sizes.filter((s) => s.gzipBytes > budget);
 }
 
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 /** Reads a finished `next build` output (apps/web/.next) and measures every page route. */
 export function collectRouteSizes(nextDir: string): RouteSize[] {
   const readJson = (rel: string): unknown =>
@@ -95,9 +103,12 @@ export function collectRouteSizes(nextDir: string): RouteSize[] {
   const routes: Record<string, string[]> = {};
   for (const [key, route] of Object.entries(pathManifest)) {
     if (!key.endsWith("/page")) continue; // skip route handlers (API) and other entry types
-    const manifestFile = path.join(nextDir, "server/app", `${key}_client-reference-manifest.js`);
+    // Manifest keys percent-encode dynamic segments (%5BleagueId%5D); the files on disk use brackets.
+    const manifestFile = [key, safeDecode(key)]
+      .map((k) => path.join(nextDir, "server/app", `${k}_client-reference-manifest.js`))
+      .find((f) => existsSync(f));
     // A route we cannot measure must fail the budget check, never slip past it.
-    if (!existsSync(manifestFile)) {
+    if (manifestFile === undefined) {
       throw new Error(`route ${route}: client reference manifest is missing (${key})`);
     }
     const manifest = parseClientManifest(readFileSync(manifestFile, "utf8"));
@@ -110,8 +121,11 @@ export function collectRouteSizes(nextDir: string): RouteSize[] {
   const sizeOf = (file: string): number => {
     const cached = cache.get(file);
     if (cached !== undefined) return cached;
-    const full = path.join(nextDir, file);
-    if (!existsSync(full)) throw new Error(`build output references a missing file: ${file}`);
+    // Chunk URLs percent-encode brackets too; the files on disk do not.
+    const full = [file, safeDecode(file)]
+      .map((f) => path.join(nextDir, f))
+      .find((f) => existsSync(f));
+    if (full === undefined) throw new Error(`build output references a missing file: ${file}`);
     const size = gzipSync(readFileSync(full)).length;
     cache.set(file, size);
     return size;
