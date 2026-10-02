@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 0 Bootstrap and API spike | G0 | `phase/0-bootstrap` (merged) | Done, G0 PASS 2026-10-01 |
 | 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
-| 2 App shell and league views | G2 (human) | | Not started |
+| 2 App shell and league views | G2 (human) | `phase/2-shell` | In progress (plan approved 2026-10-02, ADR-009) |
 | 3 Scoring, projections, optimizer | G3 (human) | | Not started |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | | Not started |
 | 5 Matchups and league intelligence | G5 | | Not started |
@@ -59,9 +59,32 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T1.7b | Integration suites | qa-engineer | F | Done | 1 | 08c4d7a |
 | T1.7a-fix | Contract suite without skipIf (gate U4) | qa-engineer | G1 | Done | 1 | 9233328 |
 | T1.8-fix | Gate standalone server temp DATA_DIR and failure logs (UI1/UI2); e2e health expects degraded | devops-engineer, orchestrator | G1 | Done | 1 | 49956b7, 0d0c0c3 |
-| G1 | Gate | qa-engineer, code-reviewer, orchestrator | G | Not started | 0 | |
+| G1 | Gate | qa-engineer, code-reviewer, orchestrator | G | PASS | 1 | see `docs/gates/G1.md`, tag `gate-G1` |
 
 Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live worker; renewed DB lease), projection real-row rule documented per endpoint with a week 5 non-empty test and bye handling via schedule, red-zone touches dropped to P1 if they need play-by-play.
+
+## Phase 2 tasks
+
+| ID | Title | Agent | Batch | Status | Attempts | Commit |
+|---|---|---|---|---|---|---|
+| T2.B0 | Branch, ADR-009, PLAN amendments, tracking docs | orchestrator | 0 | Done | 1 | |
+| T2.0 | UI dependency preinstall, postcss config | devops-engineer | A0 | Not started | 0 | |
+| T2.1a | Design system part 1 and gallery | frontend-engineer | A | Not started | 0 | |
+| T2.2a | Shared DTOs, job names, db migration and helpers | backend-engineer | A | Not started | 0 | |
+| T2.0b | Seeded screens/gate harness, screenshot guard, LAN dev, G1 backlog | devops-engineer | A | Not started | 0 | |
+| T2.1b | Design system part 2 | frontend-engineer | B | Not started | 0 | |
+| T2.2b | Server data functions and route handlers | backend-engineer | B | Not started | 0 | |
+| T2.2c | Worker onboarding jobs, active league, fixture fetch mode | sleeper-data-engineer | B | Not started | 0 | |
+| T2.3a | Layout shell, switcher, week selector, search, placeholders | frontend-engineer | C | Not started | 0 | |
+| T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker) | qa-engineer | C | Not started | 0 | |
+| T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |
+| T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Not started | 0 | |
+| T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
+| T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | Not started | 0 | |
+| T2.6 | Fix round | frontend-engineer | F | Not started | 0 | |
+| G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
+
+Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locally with phone over the LAN; My Team nav entry; screenshots only from a seeded temp DATA_DIR.
 
 ## Standing rules for briefs
 

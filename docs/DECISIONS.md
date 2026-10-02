@@ -186,3 +186,36 @@ Date: 2026-10-02
 **Alternatives considered:** giving `next.config.ts` to frontend-engineer. Rejected because the config is about bundling and server externals, not UI.
 
 **Consequences:** frontend briefs that need config changes are split out to devops-engineer.
+
+## ADR-009: Phase 2 plan decisions (app shell and league views)
+
+Date: 2026-10-02
+
+**Decision**
+
+1. **Task splits for the 400-line target.** T2.0 (UI dependency preinstall) and T2.0b (seeded screens and gate harness, devops) are added. T2.1 becomes T2.1a and T2.1b; T2.2 becomes T2.2a (contracts and DB), T2.2b (data functions and API) and T2.2c (worker onboarding jobs); T2.3 becomes T2.3a (shell), T2.3b (onboarding and Settings) and T2.3c (Home, League, team views); T2.5 becomes T2.5a (harness) and T2.5b (suites). PLAN.md section 9 amended.
+2. **Onboarding goes through the worker** (keeps ADR-005 item 3). New jobs `user` (username to user id) and `user_leagues` (current-season leagues). `sync_requests` gains `params_json`. The web enqueues and the onboarding page polls a status endpoint. With no live worker heartbeat, onboarding shows a "worker not running" error state.
+3. **Identity and active league live in `app_settings`** (`sleeper_username`, `sleeper_user_id`, `active_league_id`, plus the stored league list). `SLEEPER_USERNAME` and `DEFAULT_LEAGUE_ID` seed them when unset; after onboarding the DB wins. Worker league jobs read the active league with env as fallback, and log a skip reason when neither exists. Selecting a league stores it and enqueues `all`.
+4. **Routes:** `/` redirects to `/onboarding` or `/l/{activeLeagueId}`; `/l/[leagueId]` (Home), `/team` (My Team), `/league`, `/league/teams/[rosterId]`, `/settings`. Lineup, Matchup, Waivers and Players are placeholder pages naming the phase that delivers them. `?week=` is the deep-linkable week.
+5. **Rendering:** pages are server components calling `apps/web/lib/server` directly. Route handlers exist only for client interactions (onboarding, search, league switch, Sync now) and stay thin.
+6. **Bundle discipline:** no Recharts or TanStack Table in Phase 2 (hand-rolled SVG Sparkline, semantic HTML tables); per-icon lucide imports; target at most 170 KB gzipped per route under the 200 KB budget.
+7. **Fonts and theme:** Geist via the `geist` package (no network at build); light, dark and system themes with no flash; toggle in Settings.
+8. **`/dev/gallery`** returns 404 in production unless `SIDELINE_GALLERY=1` (set by screens and gate runs).
+9. **Freshness:** data DTOs carry `updatedAt` and `stale` (older than 2x `SYNC_CADENCE_MS`, PLAN 3.4).
+10. **Standings:** wins, then points for; ties shown; grouped by division when present. All-play and luck stay in Phase 5.
+11. **Global search in Phase 2:** players by name with position, NFL team, injury status and owner. A rostered player opens the owner's team page with the player highlighted; a free agent opens a small sheet. The full player sheet is T4.6.
+12. **Live API budget:** no Sleeper calls during development. At G2, one live onboarding run by the orchestrator (about 22 calls; `/players/nfl` only if the daily guard allows).
+13. **Ownership:** `apps/web/components/ui/` and `components.json` belong to frontend-engineer; `postcss.config.mjs` to devops-engineer (as ADR-008). Tailwind v4 tokens live in CSS (frontend-engineer).
+
+**Steph's approval answers (binding)**
+
+14. **Settings v1 ships in Phase 2:** league and username change, theme toggle, sync status per job, Sync now. Data source toggles wait for T6.3. PLAN 6.4 amended.
+15. **G2 is reviewed locally, phone over the LAN.** The dev server and worker bind so the Mac's LAN IP is reachable; `allowedDevOrigins` (or the Next 16.3 equivalent) admits that IP. T2.0b adds a `dev:lan` script that prints the LAN URL. Run instructions mention the macOS firewall prompt. The orchestrator verifies a non-localhost-origin request before the checkpoint.
+16. **My Team** is reachable from Home's roster card and the League page, and has its own entry in the desktop sidebar and the mobile More sheet. PLAN 6.3 amended.
+17. **Screenshot privacy.** The text identifier scan can't read images. Every committed or archived screenshot (`docs/gates/**`, `docs/reviews/**`) comes only from a fixture-seeded temp DATA_DIR. `scripts/screens` refuses `./data` and any DATA_DIR without the seeding step's marker, with unit tests. `pnpm screens` prints its DATA_DIR and the gate checks that line for UI4. ux-reviewer captures stay in gitignored `.screens/`. PLAN 10.2 UI4 amended.
+
+**Context:** Phase 2 planning on 2026-10-02, approved by Steph with answers 14 to 17.
+
+**Alternatives considered:** the web calling `/user` and `/user/leagues` with its own limiter (rejected: two limiters, against ADR-005 item 3); pulling the T4.3 supervisor forward so G2 runs on Unraid (rejected by Steph in favor of local review); no My Team nav entry (Steph chose to add one).
+
+**Consequences:** the worker must run for onboarding, so Docker onboarding waits for T4.3. E2E needs a fixture-mode worker. Screens and gate runs always use seeded temp data.

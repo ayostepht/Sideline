@@ -2,24 +2,21 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, after gate G1 PASS (14d4305), merged to `main` and tagged `gate-G1`. Phase 2 not started.
+Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on `phase/2-shell`. Plan file: `~/.claude/plans/fresh-session-after-clear-radiant-umbrella.md` (ADR-009 and the PROGRESS Phase 2 table hold the same content).
 
 ## 1. Resume in five steps
 
-1. Read `CLAUDE.md`, then this file. Read `docs/PROGRESS.md` (task table, backlog) and `docs/DECISIONS.md` (ADR-005 to ADR-007) only as needed.
-2. Run `git status` and `git log --oneline -10` on branch `phase/1-data`.
-3. Check every task listed under "In flight" (section 3). Agents die with the session, so any uncommitted files in their paths are partial work. For each one, either:
-   - verify it against that task's acceptance criteria and commit it if everything passes, or
-   - discard it (`git checkout -- <paths> && git clean -fd <paths>`) and re-dispatch the task.
+1. Read `CLAUDE.md`, then this file. Read `docs/PROGRESS.md` (Phase 2 table, backlog) and `docs/DECISIONS.md` (ADR-009) as needed.
+2. Run `git status` and `git log --oneline -10` on branch `phase/2-shell`.
+3. Check every task listed under "In flight" (section 3). Agents die with the session, so any uncommitted files in their paths are partial work. Verify and commit, or discard and re-dispatch.
 4. Run `pnpm verify` (Node 24 PATH prefix, section 6) to confirm a green baseline.
 5. Continue with "Next steps" (section 4), in order.
 
 ## 2. Where things stand
 
-- **Phase 1 done.** G1 PASS on 2026-10-02 (`docs/gates/G1.md`): `pnpm gate --amd64` 10 of 10, live contract run once, live smoke sync into `./data` (third run 0 rows changed, `/players/nfl` once). Merged `phase/1-data` to `main` with `--no-ff`, tag `gate-G1`, no push.
-- **Baseline:** `pnpm verify` 505 unit tests; `pnpm test:integration` 22; e2e 33; coverage 94.7% lines.
-- **Local data:** `./data` (gitignored) holds a live-synced DB from 2026-10-02. The worker CLI does not load `.env`: run `set -a && . ./.env && set +a` first, and pass an absolute `DATA_DIR`.
-- **Backlog:** Minor review items and follow-ups are in PROGRESS.md. Notable for Phase 2: route JS headroom (132 of 200 KB on the placeholder), the league-job skip reason log, and the `degraded` sync status.
+- **Phase 1 done** (G1 PASS, tag `gate-G1`). **Phase 2 in progress** on `phase/2-shell`.
+- **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
+- **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
 ## 3. In flight
 
@@ -27,8 +24,9 @@ Nothing.
 
 ## 4. Next steps (in order)
 
-1. Tell Steph G1 passed and it is a good moment to `/clear`.
-2. **Phase 2 planning** (gate G2, human): create branch `phase/2-shell` from `main`. Break PLAN section 9 Phase 2 (T2.1 design system and shell, T2.2 server data functions and DTOs, and the rest) into tasks in PROGRESS.md. Contracts first: T2.2 shared DTOs before frontend pages fan out. Present the plan to Steph for approval before dispatching, as in Phase 1.
+1. Batch A0: dispatch T2.0 (devops-engineer) alone.
+2. Batch A: T2.1a, T2.2a, T2.0b in parallel, then code-reviewer.
+3. Batches B to G per the PROGRESS Phase 2 table and ADR-009. G2 is a human gate: stop for Steph.
 
 ## 5. Standing rules for every brief
 
@@ -39,6 +37,8 @@ Nothing.
 - Agents report failures in other agents' paths rather than fixing them.
 - The CLI is `pnpm run sync`, not `pnpm sync` (pnpm 12 has a built-in `sync`).
 - Partial week 4 is excluded from golden expectations and SCORE-2.
+- Screenshots only from a fixture-seeded temp DATA_DIR; ux-reviewer captures stay in `.screens/` (ADR-009 item 17).
+- UI copy plain and short, no em dashes; WCAG 2.1 AA; color never the only signal; 44 px targets; route JS target 170 KB (ADR-009 item 6).
 - Tell agents the token budget is tight: work efficiently and keep reports short.
 
 ## 6. Before every commit (orchestrator)
