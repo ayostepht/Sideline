@@ -52,6 +52,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T2.6d | Batch F review M1 (loading boundaries for Settings and stubs), m1 to m5, n1; T2.6c bug (blank not-found page under load) | frontend-engineer | F | Done except TEAM-3 (verify 710, e2e 285/285 x2; M1, m1-m5, n1 all resolved and orchestrator-verified; TEAM-3 flake root-caused but not fixable in owned paths, see backlog) | 2 (attempt 1 hit a session limit after a test-retry workaround was correctly rejected and reverted) | bdca45e |
 | T2.6d-fix | My Team soft-404 (team/page.tsx had the same notFound+loading.tsx conflict as team detail pre-T2.6b) | orchestrator | G | Done (direct fix, precedented one-file deletion; verify 710, e2e 41/42 only known TEAM-3 flake) | 1 | 887dc00 |
 | T2.6d-test | MYTEAM-3 e2e coverage for the My Team 404 fix | qa-engineer | G | Done (30/30 at repeat-each=10, orchestrator-verified) | 1 | 7e00c00 |
+| G2-M1 | G2 code review M1: block cross-origin and non-JSON writes on mutating API routes | backend-engineer | G2 | Done (verify 721, integration 23; 1-line orchestrator fix to an integration test request header) | 1 | 1aaa95d |
 | G2-reviews | Batch F code and UX review (closeout) | code-reviewer, ux-reviewer | G | Done (code: 1 Major found and fixed same session, see T2.6d-fix; UX: APPROVE, no Blocker/Major) | 1 | see docs/reviews/2026-10-02-p2-batchF2-{code,ux}.md |
 | G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
 
@@ -84,6 +85,8 @@ Remove an item when it is done; the archive keeps history.
 - T2.5b gaps: NAV-6 mocks the league-switch POST (real switch and "Still syncing" not exercised in e2e); stale and preseason states not in e2e (fixtures are fresh mid-season; unit tests cover them). Empty username submit shows no message (button disabled; accepted).
 
 ### Data and backend
+
+- **G2 code review minors (backend-engineer, `docs/reviews/2026-10-02-G2-code.md`).** m1 wrap `startOnboarding` writes in an immediate transaction; m2 seed env identity once at boot instead of on GET (busy_timeout already set); m3 zod or column test for `league-views.ts` row casts; m4 cache the player-search owner map if profiles show it; shared response schemas for `/api/onboarding/league` and `PATCH /api/settings`; a route-listing test that every mutating route uses `guardedWrite`.
 
 - Raw SQL to `@sideline/db` helpers: apps/web reads (`h.sqlite.prepare`), worker `failUnknownJobs` and `seedLastAttempts`, `requestSyncForLeagueChange` (add `enqueueFresh`). Make `claimNext`/`toRequest` tolerant of unknown jobs, then drop the worker's raw UPDATE.
 - `rosters` has no division column, so standings `division` is always null (migration plus worker mapping).
