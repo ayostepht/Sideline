@@ -1,0 +1,135 @@
+"use client";
+
+import type { LeagueChoice } from "@sideline/shared";
+import { Search } from "lucide-react";
+import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { LeagueSwitcher } from "./league-switcher";
+import { BottomTabs, SidebarNav } from "./nav-links";
+import { WeekSelector } from "./week-selector";
+
+// cmdk and the dialog load on first open, not in the route's initial JS.
+const SearchDialog = dynamic(() => import("./search-dialog"), { ssr: false });
+
+interface Props {
+  leagueId: string;
+  leagueName: string;
+  currentWeek: number | null;
+  leagues: LeagueChoice[];
+  children: ReactNode;
+}
+
+const iconBtn =
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-[8px] text-foreground hover:bg-muted";
+
+export function AppShell({ leagueId, leagueName, currentWeek, leagues, children }: Props) {
+  const pathname = usePathname();
+  const mainRef = useRef<HTMLElement>(null);
+  const firstRender = useRef(true);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLoaded, setSearchLoaded] = useState(false);
+
+  const openSearch = useCallback(() => {
+    setSearchLoaded(true);
+    setSearchOpen(true);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        openSearch();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openSearch]);
+
+  // Move focus to the page content after navigating (not on first load).
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    mainRef.current?.focus({ preventScroll: true });
+  }, [pathname]);
+
+  return (
+    <div className="min-h-dvh">
+      <a
+        href="#main-content"
+        className="sr-only z-[60] rounded-[8px] bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-2 focus:top-2"
+      >
+        Skip to content
+      </a>
+
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col gap-4 border-r bg-card p-3 lg:flex">
+        <LeagueSwitcher
+          leagueId={leagueId}
+          leagueName={leagueName}
+          leagues={leagues}
+          variant="popover"
+        />
+        <button
+          type="button"
+          onClick={openSearch}
+          data-testid="search-trigger"
+          className="flex min-h-11 items-center gap-2 rounded-[8px] border border-input bg-background px-3 text-sm text-muted-foreground hover:bg-muted"
+        >
+          <Search className="size-4" aria-hidden />
+          <span className="flex-1 text-left">Search players</span>
+          <kbd className="rounded-[4px] border px-1.5 text-xs">
+            <span className="sr-only">Command or Control </span>
+            <span aria-hidden>Ctrl K</span>
+          </kbd>
+        </button>
+        <Suspense fallback={null}>
+          <SidebarNav leagueId={leagueId} />
+        </Suspense>
+      </aside>
+
+      <div className="lg:pl-60">
+        <header className="sticky top-0 z-30 flex min-h-14 items-center gap-1 border-b bg-background/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur lg:justify-end lg:px-6">
+          <div className="min-w-0 flex-1 lg:hidden">
+            <LeagueSwitcher
+              leagueId={leagueId}
+              leagueName={leagueName}
+              leagues={leagues}
+              variant="sheet"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={openSearch}
+            aria-label="Search players"
+            data-testid="search-button"
+            className={`${iconBtn} lg:hidden`}
+          >
+            <Search className="size-5" aria-hidden />
+          </button>
+          <Suspense fallback={<div className="h-11 w-40" aria-hidden />}>
+            <WeekSelector currentWeek={currentWeek} />
+          </Suspense>
+        </header>
+
+        <main
+          id="main-content"
+          ref={mainRef}
+          tabIndex={-1}
+          className="mx-auto w-full max-w-5xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-4 outline-none lg:px-8 lg:pb-10 lg:pt-6"
+        >
+          {children}
+        </main>
+      </div>
+
+      <Suspense fallback={null}>
+        <BottomTabs leagueId={leagueId} />
+      </Suspense>
+
+      {searchLoaded ? (
+        <SearchDialog leagueId={leagueId} open={searchOpen} onOpenChange={setSearchOpen} />
+      ) : null}
+    </div>
+  );
+}
