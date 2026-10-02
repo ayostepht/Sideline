@@ -33,9 +33,21 @@ function setup(opts: { live?: boolean; migrated?: boolean } = {}): DbHandle {
 }
 const json = async (r: Response): Promise<unknown> => (await r.json()) as unknown;
 const post = (route: (r: Request) => Promise<Response>, body: string, path = "/x") =>
-  route(new Request(`http://localhost${path}`, { method: "POST", body }));
+  route(
+    new Request(`http://localhost${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    }),
+  );
 const patch = (body: string) =>
-  patchSettingsRoute(new Request("http://localhost/api/settings", { method: "PATCH", body }));
+  patchSettingsRoute(
+    new Request("http://localhost/api/settings", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body,
+    }),
+  );
 const search = (qs: string, leagueId = "L1") =>
   searchRoute(new Request(`http://localhost/api/l/${leagueId}/search${qs}`), {
     params: Promise.resolve({ leagueId }),

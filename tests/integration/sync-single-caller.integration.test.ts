@@ -50,6 +50,7 @@ function post(job: string): Promise<Response> {
   return POST(
     new Request("http://localhost/api/sync/run", {
       method: "POST",
+      headers: { "content-type": "application/json" },
       body: JSON.stringify({ job }),
     }),
   );
