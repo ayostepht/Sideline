@@ -22,7 +22,8 @@ import pino, { type Logger } from "pino";
 import { registeredJobs } from "../jobs/index.js";
 import { LEASE_RENEW_MS, LeaseKeeper, newHolderId } from "../lease.js";
 import { createJobRegistry, type JobRegistry } from "../registry.js";
-import { runJobs } from "../runner.js";
+import type { SleeperJobDeps } from "../jobs/common.js";
+import { ensureUserIdForCycle, runJobs } from "../runner.js";
 
 export const WAIT_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -35,6 +36,8 @@ export interface CliDeps {
   sleep: (ms: number) => Promise<void>;
   out: (line: string) => void;
   holder?: string;
+  /** Fetch for the user-id lookup (tests); defaults to the global fetch. */
+  sleeper?: SleeperJobDeps;
   pollMs?: number;
 }
 
@@ -116,18 +119,16 @@ export async function runSyncCli(argv: readonly string[], deps: CliDeps): Promis
     timer.unref();
     try {
       reapStale(db, deps.now(), 0);
-      const outcomes = await runJobs(
-        {
-          db,
-          limiter: deps.limiter,
-          logger: deps.logger,
-          config: deps.config,
-          now: deps.now,
-          signal: () => lease.signal,
-        },
-        deps.registry,
-        names,
-      );
+      const runnerDeps = {
+        db,
+        limiter: deps.limiter,
+        logger: deps.logger,
+        config: deps.config,
+        now: deps.now,
+        signal: () => lease.signal,
+      };
+      if (args.job === "all") await ensureUserIdForCycle(runnerDeps, deps.sleeper ?? {});
+      const outcomes = await runJobs(runnerDeps, deps.registry, names);
       for (const o of outcomes) {
         deps.out(
           `${o.job}: ${o.status}, ${o.callsMade} calls, ${o.rowsChanged} rows changed${o.error !== null ? `, error: ${o.error}` : ""}`,

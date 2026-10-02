@@ -7,12 +7,19 @@ import {
   type AppConfig,
   type SyncJobName,
 } from "@sideline/shared";
+import { userIdLookupUsername } from "./jobs/onboarding.js";
 import type { SleeperJobDeps } from "./jobs/common.js";
 import type { RateLimiter } from "@sideline/sleeper";
 import type { Logger } from "pino";
 import { LEASE_RENEW_MS, LEASE_RETRY_MS, type LeaseKeeper } from "./lease.js";
 import type { JobRegistry } from "./registry.js";
-import { runJobs, runOnboarding, summarizeFailures, type RunnerDeps } from "./runner.js";
+import {
+  ensureUserIdForCycle,
+  runJobs,
+  runOnboarding,
+  summarizeFailures,
+  type RunnerDeps,
+} from "./runner.js";
 import { buildCadences, dueJobs, type Cadences } from "./schedule.js";
 import { isGameWindow, type GameKickoff } from "./windows.js";
 
@@ -156,6 +163,7 @@ export class Worker {
           ).error;
         } else if (req.job === "all" || parsed.success) {
           const names = parsed.success ? [parsed.data] : this.d.registry.allInOrder();
+          if (req.job === "all") if (this.userIdMissing()) await this.ensureUserId();
           const outcomes = await runJobs(this.runnerDeps(), this.d.registry, names);
           error = summarizeFailures(outcomes);
         } else {
@@ -200,6 +208,16 @@ export class Worker {
     }
   }
 
+  /** Sync check so cycles with a stored id add no await (no scheduling yield). */
+  private userIdMissing(): boolean {
+    return userIdLookupUsername(this.d.db, this.d.config.sleeperUsername) !== null;
+  }
+
+  /** G2-B1: resolve a missing sleeper_user_id first. No await (no yield) when the id is stored. */
+  private async ensureUserId(): Promise<void> {
+    await ensureUserIdForCycle(this.runnerDeps(), this.d.sleeper ?? {});
+  }
+
   /** Runs due scheduled jobs serially. */
   async scheduleTick(): Promise<void> {
     if (this.busy || this.stopped || !this.d.lease.held) return;
@@ -217,6 +235,7 @@ export class Worker {
     this.busy = true;
     const p = (async () => {
       try {
+        if (this.userIdMissing()) await this.ensureUserId();
         for (const job of due) {
           if (this.d.lease.signal.aborted) break;
           this.lastAttempt[job] = this.d.now();
