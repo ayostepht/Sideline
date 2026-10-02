@@ -70,7 +70,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.B0 | Branch, ADR-009, PLAN amendments, tracking docs | orchestrator | 0 | Done | 1 | |
 | T2.0 | UI dependency preinstall, postcss config | devops-engineer | A0 | Done (route JS unchanged 131,641 B; image 105.2 MB, health 200 in 2 s) | 1 | 383678c |
 | T2.1a | Design system part 1 and gallery | frontend-engineer | A | Not started | 0 | |
-| T2.2a | Shared DTOs, job names, db migration and helpers | backend-engineer | A | Not started | 0 | |
+| T2.2a | Shared DTOs, job names, db migration and helpers | backend-engineer | A | Done (targeted checks; full verify before Batch B; db 96.1% lines) | 1 | 863b018 |
 | T2.0b | Seeded screens/gate harness, screenshot guard, LAN dev, G1 backlog | devops-engineer | A | Not started | 0 | |
 | T2.1b | Design system part 2 | frontend-engineer | B | Not started | 0 | |
 | T2.2b | Server data functions and route handlers | backend-engineer | B | Not started | 0 | |
@@ -130,6 +130,8 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - T1.5b: move `apps/worker/src/jobs/db-reads.ts` raw SQL into packages/db helpers (backend-engineer); pregame snapshots need nflverse kickoffs, so T1.5c should order nflverse before projections in `ALL_ORDER`; `SIDELINE_VERSION` constant must track package version; consider `etag: false` for regular stats/projections to keep multi-MB bodies out of http_cache.
 - T1.8 follow-ups for T4.3: supervisor entrypoint must start the worker (runtime image has web standalone only), run migrations, PUID/PGID for Unraid 99/100; trim all-platform better-sqlite3 prebuilds and sharp. Image content 105 MB, filesystem 320 MB.
 - msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
+
+- T2.2a: Sleeper username charset `[A-Za-z0-9_.]` (1 to 40) is an assumption; check against the live onboarding run at G2. drizzle-kit meta JSON needs prettier after each generated migration (backend-engineer).
 
 ## Questions for Steph
 

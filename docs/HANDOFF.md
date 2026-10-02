@@ -20,7 +20,7 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight (Batch A, dispatched 2026-10-02, none verified or committed yet)
 
-- T2.2a (backend-engineer): packages/shared, packages/db (DTOs, onboarding job type separate from SYNC_JOB_NAMES, params_json migration, identity and db-reads helpers).
+- T2.2a done and committed (863b018).
 - T2.1a (frontend-engineer): apps/web/app (layout, globals.css, page, dev/gallery), apps/web/components, components.json, lib/client.
 - T2.0b (devops-engineer): scripts/screens*, scripts/lib, scripts/gate*, package.json scripts, next.config.ts (allowedDevOrigins), .env.example, docs/self-hosting.md.
 
