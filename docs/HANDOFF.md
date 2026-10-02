@@ -20,11 +20,12 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight
 
-- ux-reviewer on the shell (seeded screens only). Save as `docs/reviews/2026-10-02-p2-batchC-ux.md`.
+- Shell UX review saved (d0d2c89): M1 768 layout, M2 desktop header.
+- T2.3a-fix2 (frontend-engineer): components, globals.css, placeholder copy. Sidebar breakpoint stays at 1024 (PLAN 6.3).
 
 ## 4. Next steps (in order)
 
-1. Save the shell UX review; fix Blocker and Major (frontend) before Batch D.
+1. Verify and commit T2.3a-fix2 (run e2e and a11y); its report says how pages render headings with the new header: put that in the Batch D briefs.
 2. Batch D: T2.3b (onboarding, Settings v1) and T2.3c (Home, League, team detail, My Team), two frontend instances, `components/` read-only for both, builds one at a time (`pgrep -f "[n]ext build"` wait). Then code review.
 3. Batch E: T2.4 UX review and T2.5b e2e/axe/Lighthouse/perf. Batch F fix round. Batch G gate G2 (human).
 

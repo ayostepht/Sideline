@@ -84,6 +84,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.0b-fix2 | Route-size check on dynamic routes; screens slugs for query routes | devops-engineer | C | Done (`/` 139,863 B; `/l/*` 158,754 B; gallery 189,202 B) | 1 | 494e0bd |
 | T2.3a-fix | Batch C review M1 (404 loop), M2 (layout errors), m1, m2, m3 | frontend-engineer | C-fix | Done (orchestrator: verify 662 tests, e2e 75, a11y 36 on the combined tree; `/l/[leagueId]` 161,611 B) | 1 | 2a08728 |
 | T2.2b-fix2 | Batch C review m4, m5; getLeagueChoices tests | backend-engineer | C-fix | Done (lib/server and app/api 98.4% lines) | 1 | cfb098d |
+| T2.3a-fix2 | Shell UX review M1 (768 layout, sidebar stays at 1024 per PLAN 6.3), M2 (desktop header title and week label), m1 to m4, n1 | frontend-engineer | C-fix | In progress | 1 | |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |
 | T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Not started | 0 | |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
@@ -170,6 +171,8 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - T2.5a: onboarding e2e server on port 3101 (3001 is taken locally); onboarding state is shared across projects (serial spec). axe runs after `settleAnimations` on overlays (mid-fade contrast); consider skipping overlay fade under reduced motion. Temp seeded dirs are never cleaned up (teardown follow-up). Helpers for T2.5b: `e2e/helpers/servers.ts` (seededBaseUrl, onboardingBaseUrl, FIXTURE), `e2e/routes.ts` (existingRoutes, phase2PageRoutes, overlayRoutes), `useTheme`/`expectThemeApplied`.
 
 - T2.3a-fix: the layout's DB-error catch and `app/error.tsx` are untested at runtime (no way to force a read error in the scratch check); add an e2e or unit test in T2.5b if feasible. "Still syncing" has no auto refresh. Test ids changed: `league-switcher-desktop|mobile`, `league-name-desktop|mobile`, `search-trigger-desktop|mobile`, `league-syncing`.
+
+- Shell UX review (docs/reviews/2026-10-02-p2-batchC-ux.md): M3 (single-league mobile name has no settings route from the top bar) accepted as Minor, Settings is in More; m5 onboarding wordmark goes to T2.3b; add `/l/<id>` shell routes to axe and capture Syncing, not-found, More sheet and search states in T2.5b/T2.4.
 
 ## Questions for Steph
 
