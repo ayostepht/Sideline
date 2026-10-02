@@ -21,9 +21,9 @@ Last updated: 2026-10-02, G2 gate started. Baseline verify 710 green at 549d972.
 ## 3. In flight
 
 - Gate run 1 (549d972): 10/11 pass; UI1 failed only on TEAM-3 (3 of 5 runs failed: gate, 1 of 3 spec re-runs, full re-run). Metrics are in the qa report summary below and in `docs/gates/latest.json` (uncommitted; it is rewritten by the final gate run). Summary: unit 710, integration 23, e2e 288 (287 pass), axe 102/102, LH Home and League 96/100/96/100, route JS max 169,028 B (settings), gallery 193,357 B, docker amd64 100.7 MB with health in 1.5 s, coverage all met, lint warnings 0, U4 clean, U6 traced (gallery states lack assertions; NAV-6 mocks the switch POST).
-- G2-M1 (backend-engineer): Origin and Content-Type guard on mutating API routes. Uncommitted edits under `apps/web/lib/server` and `apps/web/app/api` are this task's work.
+- G2-M1 done and committed (1aaa95d): verify 721, integration 23. Not yet through e2e (the full gate re-run covers it).
 - G2-ux (ux-reviewer): all routes, read-only, screenshots in `.screens/`.
-- After both: verify and commit M1, save the ux report, fix any ux Majors, then re-run the full gate, then the live onboarding (copy `data/sideline.sqlite` to a temp DATA_DIR so the `/players/nfl` daily guard carries over; blank SLEEPER_USERNAME and DEFAULT_LEAGUE_ID in env) and the LAN check, then G2.md and stop for Steph.
+- After the ux review: save the ux report, fix any ux Majors, then re-run the full gate, then the live onboarding (copy `data/sideline.sqlite` to a temp DATA_DIR so the `/players/nfl` daily guard carries over; blank SLEEPER_USERNAME and DEFAULT_LEAGUE_ID in env) and the LAN check, then G2.md and stop for Steph.
 
 ## 4. Next steps (in order)
 
