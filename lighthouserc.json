@@ -3,7 +3,7 @@
     "collect": {
       "url": ["http://127.0.0.1:3000/"],
       "numberOfRuns": 3,
-      "startServerCommand": "pnpm --filter @sideline/web start:standalone",
+      "startServerCommand": "DATA_DIR=$(mktemp -d) pnpm --filter @sideline/web start:standalone",
       "startServerReadyPattern": "Ready in",
       "startServerReadyTimeout": 60000
     },
