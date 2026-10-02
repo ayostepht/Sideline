@@ -21,7 +21,7 @@ Updated: 2026-10-02, after commit f759d28 (T1.4b). The orchestrator rewrites thi
   - B0, T1.0, T1.1 (plus fix), T1.2a (plus fix), T1.4a, T1.3a, T1.2b, T1.4b.
   - Batch A and B work is done.
   - Reviews saved: `docs/reviews/2026-10-02-p1-batchA-part1-code.md` and `-part2-code.md`.
-- **In flight:** the code review of Batch B (code-reviewer, read-only, diff `37f1bde..f759d28` covering T1.3a, T1.2b and T1.4b), to be saved as `docs/reviews/2026-10-02-p1-batchB-code.md`. If interrupted, re-run it; nothing to clean up.
+- **In flight:** the code review of Batch B (code-reviewer, read-only, commits 195826e (T1.3a), 38ee8a4 (T1.2b) and f759d28 (T1.4b)), to be saved as `docs/reviews/2026-10-02-p1-batchB-code.md`. If interrupted, re-run it; nothing to clean up.
 - **Next steps, in order:**
   1. Save the Batch B review. Fix Blocker and Major findings (send each back to the owning agent with a narrowed brief); Minor findings go to the backlog.
   2. Batch C, three in parallel:
