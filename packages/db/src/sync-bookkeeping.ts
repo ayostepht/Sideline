@@ -185,12 +185,74 @@ function toRequest(row: typeof syncRequests.$inferSelect): SyncRequest {
   });
 }
 
+type Tx = Pick<DbHandle["db"], "select" | "insert">;
+
+function findActiveIn(tx: Tx, job: SyncRequest["job"], now: Date, staleMs: number) {
+  const cutoff = iso(new Date(now.getTime() - staleMs));
+  return tx
+    .select()
+    .from(syncRequests)
+    .where(
+      and(
+        eq(syncRequests.job, job),
+        or(
+          eq(syncRequests.status, "pending"),
+          and(eq(syncRequests.status, "running"), gte(syncRequests.startedAt, cutoff)),
+        ),
+      ),
+    )
+    .orderBy(asc(syncRequests.id))
+    .limit(1)
+    .get();
+}
+
 /**
- * Queues a manual sync. If a pending or running request for the same job (`all` counts as its
- * own job) exists, returns it instead of adding a duplicate. Check and insert share one IMMEDIATE
- * transaction so two processes cannot both insert. A `running` request that started more than
- * `staleMs` ago (default 15 min) is presumed orphaned by a crash and does not block a new one.
+ * The active request for `job` (`all` counts as its own job): pending, or running that started
+ * within `staleMs` (default 15 min; older running rows are presumed orphaned). Null if none.
  */
+export function findActiveRequest(
+  h: DbHandle,
+  job: SyncRequest["job"],
+  now: Date,
+  staleMs: number = DEFAULT_STALE_MS,
+): SyncRequest | null {
+  const row = findActiveIn(h.db, job, now, staleMs);
+  return row === undefined ? null : toRequest(row);
+}
+
+/**
+ * Queues a manual sync unless an active request exists (see `findActiveRequest`), in which case
+ * that request is returned with `created: false`. Check and insert share one IMMEDIATE
+ * transaction so two processes cannot both insert.
+ */
+export function enqueueRequest(
+  h: DbHandle,
+  job: SyncRequest["job"],
+  source: SyncRequest["source"],
+  now: Date,
+  staleMs: number = DEFAULT_STALE_MS,
+): { request: SyncRequest; created: boolean } {
+  return h.db.transaction(
+    (tx) => {
+      const existing = findActiveIn(tx, job, now, staleMs);
+      if (existing !== undefined) return { request: toRequest(existing), created: false };
+      const res = tx
+        .insert(syncRequests)
+        .values({ job, requestedAt: iso(now), status: "pending", source })
+        .run();
+      const row = tx
+        .select()
+        .from(syncRequests)
+        .where(eq(syncRequests.id, Number(res.lastInsertRowid)))
+        .get();
+      if (row === undefined) throw new Error("sync_requests insert not readable");
+      return { request: toRequest(row), created: true };
+    },
+    { behavior: "immediate" },
+  );
+}
+
+/** Like `enqueueRequest` but returns only the request. Existing signature, kept for the worker. */
 export function enqueue(
   h: DbHandle,
   job: SyncRequest["job"],
@@ -198,39 +260,7 @@ export function enqueue(
   now: Date,
   staleMs: number = DEFAULT_STALE_MS,
 ): SyncRequest {
-  const cutoff = iso(new Date(now.getTime() - staleMs));
-  return h.db.transaction(
-    (tx) => {
-      const existing = tx
-        .select()
-        .from(syncRequests)
-        .where(
-          and(
-            eq(syncRequests.job, job),
-            or(
-              eq(syncRequests.status, "pending"),
-              and(eq(syncRequests.status, "running"), gte(syncRequests.startedAt, cutoff)),
-            ),
-          ),
-        )
-        .orderBy(asc(syncRequests.id))
-        .limit(1)
-        .get();
-      if (existing !== undefined) return toRequest(existing);
-      const res = tx
-        .insert(syncRequests)
-        .values({ job, requestedAt: iso(now), status: "pending", source })
-        .run();
-      const created = tx
-        .select()
-        .from(syncRequests)
-        .where(eq(syncRequests.id, Number(res.lastInsertRowid)))
-        .get();
-      if (created === undefined) throw new Error("sync_requests insert not readable");
-      return toRequest(created);
-    },
-    { behavior: "immediate" },
-  );
+  return enqueueRequest(h, job, source, now, staleMs).request;
 }
 
 /** Atomically moves the oldest pending request to running and returns it; null if none. */

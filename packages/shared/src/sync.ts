@@ -48,3 +48,27 @@ export const SyncRequestSchema = z.strictObject({
   error: z.string().nullable(),
 });
 export type SyncRequest = z.infer<typeof SyncRequestSchema>;
+
+const MIN_MS = 60 * 1000;
+const HOUR_MS = 60 * MIN_MS;
+
+/**
+ * Default refresh cadence per job in ms, outside game windows. Single source of truth for the
+ * worker schedule and for API freshness flags (stale after 2x cadence). The worker's cron defaults
+ * for players (04:30 ET) and nflverse (05:00 ET) are daily; game-window speedups are worker-local.
+ * `null` means the job never recurs (one-time backfill).
+ */
+export const SYNC_CADENCE_MS: Record<SyncJobName, number | null> = {
+  state: 15 * MIN_MS,
+  league: HOUR_MS,
+  users: HOUR_MS,
+  rosters: 15 * MIN_MS,
+  matchups: 15 * MIN_MS,
+  transactions: 15 * MIN_MS,
+  players: 24 * HOUR_MS,
+  trending: 30 * MIN_MS,
+  stats: HOUR_MS,
+  projections: HOUR_MS,
+  backfill_2025: null,
+  nflverse: 24 * HOUR_MS,
+};

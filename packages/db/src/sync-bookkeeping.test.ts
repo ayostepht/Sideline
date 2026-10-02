@@ -9,6 +9,8 @@ import {
   claimNext,
   complete,
   enqueue,
+  enqueueRequest,
+  findActiveRequest,
   finishRun,
   getRequest,
   lastRequestAt,
@@ -224,5 +226,30 @@ describe("m1: lease holder identity", () => {
     expect(acquireLease(a, "host:1:abc", 1000, t(0))).toBe(true);
     expect(acquireLease(b, "host:2:def", 1000, t(10))).toBe(false);
     expect(renewLease(b, "host:2:def", 1000, t(10))).toBe(false);
+  });
+});
+
+describe("findActiveRequest / enqueueRequest", () => {
+  const STALE = 15 * 60 * 1000;
+
+  it("reports created and returns the active request otherwise", () => {
+    expect(findActiveRequest(a, "all", t(0))).toBeNull();
+    const first = enqueueRequest(a, "all", "api", t(0));
+    expect(first.created).toBe(true);
+    expect(findActiveRequest(a, "all", t(1))?.id).toBe(first.request.id);
+    const second = enqueueRequest(a, "all", "cli", t(2));
+    expect(second).toMatchObject({ created: false, request: { id: first.request.id } });
+    expect(enqueueRequest(a, "league", "api", t(2)).created).toBe(true);
+  });
+
+  it("ignores stale running rows and honors a custom staleMs", () => {
+    const first = enqueueRequest(a, "all", "api", t(0));
+    claimNext(a, t(0));
+    expect(findActiveRequest(a, "all", t(STALE - 1))?.id).toBe(first.request.id);
+    expect(findActiveRequest(a, "all", t(STALE + 1))).toBeNull();
+    expect(findActiveRequest(a, "all", t(1000), 500)).toBeNull();
+    const next = enqueueRequest(a, "all", "api", t(STALE + 1));
+    expect(next.created).toBe(true);
+    expect(next.request.id).not.toBe(first.request.id);
   });
 });

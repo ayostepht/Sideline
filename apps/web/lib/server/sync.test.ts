@@ -1,10 +1,15 @@
 import { complete } from "@sideline/db";
-import { SYNC_JOB_NAMES, SyncRunResponseSchema, SyncStatusResponseSchema } from "@sideline/shared";
+import {
+  SYNC_CADENCE_MS,
+  SYNC_JOB_NAMES,
+  SyncRunResponseSchema,
+  SyncStatusResponseSchema,
+} from "@sideline/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { GET as statusGET } from "../../app/api/sync/status/route";
 import { POST } from "../../app/api/sync/run/route";
 import { finishRun, startRun } from "@sideline/db";
-import { getSyncStatus, isStale, JOB_CADENCE_MS, requestSync } from "./sync";
+import { getSyncStatus, isStale, requestSync } from "./sync";
 import { useTempDb, type TempDb } from "./test-utils";
 
 const NOW = new Date("2026-10-02T12:00:00.000Z");
@@ -29,7 +34,9 @@ describe("isStale", () => {
     expect(isStale("league", ago(2.1 * hour).toISOString(), NOW.getTime())).toBe(true);
     expect(isStale("backfill_2025", ago(900 * hour).toISOString(), NOW.getTime())).toBe(false);
     expect(isStale("league", "garbage", NOW.getTime())).toBe(true);
-    expect(Object.keys(JOB_CADENCE_MS).sort()).toEqual([...SYNC_JOB_NAMES].sort());
+    expect(Object.keys(SYNC_CADENCE_MS).sort()).toEqual([...SYNC_JOB_NAMES].sort());
+    expect(isStale("projections", ago(2.1 * hour).toISOString(), NOW.getTime())).toBe(true);
+    expect(isStale("projections", ago(1.9 * hour).toISOString(), NOW.getTime())).toBe(false);
   });
 });
 

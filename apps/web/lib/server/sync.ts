@@ -1,7 +1,6 @@
 import {
-  DEFAULT_STALE_MS,
-  enqueue,
-  getRequest,
+  enqueueRequest,
+  findActiveRequest,
   isMigrated,
   lastRequestAt,
   lastSuccessAt,
@@ -10,6 +9,7 @@ import {
   type DbHandle,
 } from "@sideline/db";
 import {
+  SYNC_CADENCE_MS,
   SYNC_JOB_NAMES,
   SyncRunRequestBodySchema,
   SyncRunResponseSchema,
@@ -21,37 +21,13 @@ import { z } from "zod";
 import { getDb } from "./db";
 import { errorResult, type ApiResult } from "./http";
 
-const MIN = 60 * 1000;
-const HOUR = 60 * MIN;
-
-/**
- * Default refresh cadence per job in ms (PLAN 3.1). A job is stale when its last success is older
- * than 2x this value (PLAN 3.4). `null` means the job never recurs (one-time backfill): it is
- * stale only until it has succeeded once. Stats, projections and nflverse are not listed in 3.1;
- * their values here are the worker's expected cadence (hourly, 6 h, daily).
- */
-export const JOB_CADENCE_MS: Record<SyncJobName, number | null> = {
-  state: 15 * MIN,
-  league: HOUR,
-  users: HOUR,
-  rosters: 15 * MIN,
-  matchups: 15 * MIN,
-  transactions: 15 * MIN,
-  players: 24 * HOUR,
-  trending: 30 * MIN,
-  stats: HOUR,
-  projections: 6 * HOUR,
-  backfill_2025: null,
-  nflverse: 24 * HOUR,
-};
-
 export const STALE_FACTOR = 2;
 /** Minimum gap between manual sync requests for the same job. */
 export const REQUEST_DEBOUNCE_MS = 60 * 1000;
 
 export function isStale(job: SyncJobName, lastSuccessIso: string | null, nowMs: number): boolean {
   if (lastSuccessIso === null) return true;
-  const cadence = JOB_CADENCE_MS[job];
+  const cadence = SYNC_CADENCE_MS[job];
   if (cadence === null) return false;
   const at = Date.parse(lastSuccessIso);
   if (Number.isNaN(at)) return true;
@@ -108,17 +84,8 @@ export function requestSync(rawBody: string, now: Date = new Date()): ApiResult 
   }
   const { job } = parsed.data;
   return withMigratedDb((h) => {
-    // Same blocking rule as enqueue(): pending, or running that started within the stale window.
-    const cutoff = new Date(now.getTime() - DEFAULT_STALE_MS).toISOString();
-    const active = h.sqlite
-      .prepare(
-        "SELECT id FROM sync_requests WHERE job = ? AND (status = 'pending' OR (status = 'running' AND started_at >= ?)) ORDER BY id LIMIT 1",
-      )
-      .get(job, cutoff) as { id: number } | undefined;
-    if (active) {
-      const existing = getRequest(h, active.id);
-      if (existing) return { status: 200, body: runBody(existing, true) };
-    }
+    const active = findActiveRequest(h, job, now);
+    if (active) return { status: 200, body: runBody(active, true) };
     const last = lastRequestAt(h, job);
     if (last !== null) {
       const elapsed = now.getTime() - Date.parse(last);
@@ -134,9 +101,9 @@ export function requestSync(rawBody: string, now: Date = new Date()): ApiResult 
         );
       }
     }
-    const request = enqueue(h, job, "api", now);
-    // Another process may have queued one between the probe and enqueue; enqueue then returns it.
-    const deduplicated = request.requestedAt !== now.toISOString() || request.status !== "pending";
+    // Another process may have queued one between the probe and enqueue; then created is false.
+    const { request, created } = enqueueRequest(h, job, "api", now);
+    const deduplicated = !created;
     return { status: deduplicated ? 200 : 202, body: runBody(request, deduplicated) };
   });
 }
