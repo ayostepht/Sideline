@@ -16,6 +16,28 @@
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
 
+## Phase 3 task table
+
+Split per ADR-013. Batches run in order A to G; tasks in the same batch run in parallel (disjoint files, no dependency on each other's output).
+
+| ID | Title | Agent | Depends | Batch | Status | Attempts | Commit |
+|---|---|---|---|---|---|---|---|
+| T3.1 | Scoring engine (SCORE-1, SCORE-3) and validation harness (SCORE-2) with report | analytics-engineer | G2 | A | Not started | 0 | |
+| T3.2a | `packages/db` upsert helpers for `league_player_week_points`, `defense_vs_position` | backend-engineer | G2 | A | Not started | 0 | |
+| T3.2b | Worker recompute hook materializing both tables after sync | sleeper-data-engineer | T3.1, T3.2a | B | Not started | 0 | |
+| T3.3a | Projections part 1: PROJ-1 base rescore, PROJ-4 rest-of-season | analytics-engineer | T3.1 | B | Not started | 0 | |
+| T3.4a | Optimizer part 1: Hungarian solver, slot and eligibility resolution (LINEUP-1, 2, 9) | analytics-engineer | T3.1 | B | Not started | 0 | |
+| T3.3b | Projections part 2: PROJ-2 variance and shrinkage, PROJ-3 floor and ceiling | analytics-engineer | T3.3a | C | Not started | 0 | |
+| T3.4b | Optimizer part 2: locks, availability, modes, reasons and issues output, perf (LINEUP-3 to 7) | analytics-engineer | T3.4a | C | Not started | 0 | |
+| T3.5 | Matchup adjustment (MATCH-1, 2, 4) and backtest harness (MATCH-3) with report | analytics-engineer | T3.2b, T3.3b | D | Not started | 0 | |
+| T3.6 | Golden optimizer scenarios (12+) and property tests (1000+ runs, LINEUP-8) | qa-engineer | T3.4b | D | Not started | 0 | |
+| T3.7 | Lineup data function and API with caching | backend-engineer | T3.4b, T3.5 | E | Not started | 0 | |
+| T3.8a | Lineup page | frontend-engineer | T3.7 | F | Not started | 0 | |
+| T3.8b | Home "This week" lineup issues card; carried Phase 2 design backlog (scoreboard hero, lime accent, You badge, roster stat slot) | frontend-engineer | T3.7 | F | Not started | 0 | |
+| T3.9 | E2E lineup flow (mode toggle, swaps, Open in Sleeper, opponent view) | qa-engineer | T3.8a, T3.8b | G | Not started | 0 | |
+
+**G3 phase checks:** SCORE-2 at least 99% match on Steph's real league; golden and property tests pass; LINEUP-7 benchmark passes; backtest report exists and the alpha/beta decision is logged. Human checkpoint: Steph compares this week's recommended lineup and reasons to her own judgment.
+
 ## Earlier phases
 
 Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`. Standing rules for briefs are in `docs/brief-rules.md`.

@@ -21,6 +21,7 @@ Read this list at session start. Open a full ADR below only when a task touches 
 - **G2 checkpoint (ADR-012):** notFound() page tests run serial in chained `*-notfound` projects, assertions unchanged, retries 0; dev tools allowed in `next dev`, asserted absent from the production/Docker build (DEVTOOLS-1).
 - **Session reading (ADR-010):** HANDOFF, PROGRESS, this list, latest gate report; PLAN by section; briefs point to `docs/brief-rules.md`.
 - **Coverage (ADR-005 item 8):** `lib/server`, `app/api`, db and worker at least 75% lines; sleeper and providers at least 85%.
+- **Phase 3 plan (ADR-013):** T3.2/T3.3/T3.4/T3.8 split into lettered subtasks; a new worker-written table always gets its `packages/db` upsert helper from backend-engineer first. The optimizer takes player value and matchup multipliers as plain inputs, never importing `projections` or `matchup`; the lineup API (T3.7) wires them together. LINEUP-8 property tests and golden scenarios are qa-engineer's (T3.6), not co-located unit tests.
 
 ## ADR-000: Process, privacy, and ownership decisions for Phase 0
 
@@ -288,3 +289,21 @@ Date: 2026-10-02. Status: accepted (Steph, G2 checkpoint).
 **Alternatives.** (a) fix now with a middleware or DB pre-check; (b) accept with a deadline; hide dev tools everywhere with `devIndicators: false`. Not chosen.
 
 **Consequences.** Slightly longer e2e wall time for the serial block. A regression that leaked dev tooling into production fails the gate.
+
+## ADR-013: Phase 3 plan decisions (scoring, projections, optimizer)
+
+Date: 2026-10-02
+
+**Decision**
+
+1. **Task splits for the 400-line target and for ownership.** T3.2 becomes T3.2a (backend-engineer: `packages/db` upsert helpers for the already-migrated `league_player_week_points` and `defense_vs_position` tables, following the same per-table upsert pattern as every other derived table) and T3.2b (sleeper-data-engineer: the worker recompute hook that calls T3.1's scoring functions and T3.2a's helpers). `packages/db` is backend-engineer-owned (CLAUDE.md section 2); the worker never writes a new table without a db-package helper first, same precedent as ADR-005 item 2 (contracts before consumers). T3.3 becomes T3.3a (PROJ-1 base rescore plus `NO_PROJECTION`; PROJ-4 rest-of-season sum) and T3.3b (PROJ-2 weekly sd with shrinkage; PROJ-3 floor and ceiling), both analytics-engineer in `packages/core/src/projections/`. T3.4 becomes T3.4a (the Hungarian assignment solver, slot and eligibility resolution: LINEUP-1, LINEUP-2, LINEUP-9) and T3.4b (locks, availability multipliers, modes, swap list and reasons output, issues, the LINEUP-7 perf check: LINEUP-3 to LINEUP-7), both analytics-engineer in `packages/core/src/optimizer/`. T3.8 becomes T3.8a (Lineup page) and T3.8b (Home "This week" lineup issues card, plus the Phase 2 design backlog folded in per HANDOFF: scoreboard hero on Home and My Team, lime accent on one content item per page, Home standings snippet "You" badge, a reserved roster-row stat slot), both frontend-engineer. PLAN.md section 9 amended.
+2. **The optimizer takes player value as a plain input, not an import.** `packages/core/src/optimizer` never imports `packages/core/src/projections`; LINEUP-5's mode (Projected, Safe, Upside) is resolved by the caller, which passes a `{ playerId: value }` map. This keeps T3.4 testable against synthetic values independent of T3.3's landing order and matches PLAN's dependency graph, which lists T3.4 under T3.1 only.
+3. **Matchup multipliers (MATCH-2) are threaded in by the caller, not imported.** PROJ-4's rest-of-season estimate and the optimizer's values both accept an optional per-week multiplier (default 1.0), since T3.5 (matchup adjustment) lands after T3.3 and T3.4 in the batch order. T3.7 (the lineup API) is where real multipliers, real projections and the optimizer are wired together.
+4. **LINEUP-8 property tests belong to qa-engineer (T3.6), not inside T3.4b.** Implementing agents write co-located unit tests for their own code (CLAUDE.md section 2); the property suite (at least 1000 runs) and the 12 golden scenarios are qa-engineer's, run once both optimizer subtasks land.
+5. **Batch order:** A: T3.1, T3.2a. B: T3.2b, T3.3a, T3.4a (all depend on T3.1; T3.2b also depends on T3.2a). C: T3.3b, T3.4b (each depends on its own part a). D: T3.5 (depends on T3.2, T3.3), T3.6 (depends on T3.4) in parallel. E: T3.7 (depends on T3.4, T3.5). F: T3.8a, T3.8b (both depend on T3.7) in parallel. G: T3.9 (depends on T3.8a, T3.8b).
+
+**Context:** Phase 3 planning on 2026-10-02. `packages/core` was still the T0.1 skeleton; `league_player_week_points` and `defense_vs_position` already exist in the schema from Phase 1 (ADR-005 item 4) with a recompute-hook registry already built in T1.5c, so T3.2 only needed the scoring call and the upsert helpers, not new migrations.
+
+**Alternatives considered:** letting sleeper-data-engineer write the two new upserts directly in `apps/worker` with raw drizzle calls against the schema objects (rejected: every other worker-written table goes through a `packages/db` upsert function; raw-SQL writes in the worker are tracked as backlog debt, not the pattern to extend); one combined T3.4 optimizer task (rejected: LINEUP-1 to LINEUP-9 plus the Hungarian solver clears the 400-line target).
+
+**Consequences:** two more lettered subtasks than PLAN's table shows (T3.2a/b, T3.3a/b, T3.4a/b, T3.8a/b) but the dependency shape and phase-gate checks (PLAN 9) are unchanged.

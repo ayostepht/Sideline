@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 2 closed: G2 PASS, Steph approved, merged to `main`, tag `gate-G2`. Phase 3 not started; branch `phase/3-scoring` created from `main`.
+Last updated: 2026-10-02, Phase 3 batch plan drafted (ADR-013), waiting on Steph's go-ahead before dispatching Batch A.
 
 ## 1. Resume in five steps
 
@@ -26,10 +26,10 @@ Last updated: 2026-10-02, Phase 2 closed: G2 PASS, Steph approved, merged to `ma
 
 ## 4. Next steps (in order)
 
-1. Start of Phase 3: read PLAN.md section 9 Phase 3 in full and every section it cites (SCORE, PROJ, LINEUP, MATCH requirements; 6.x for the Lineup page; 10 for G3 checks), plus `docs/sleeper-api-notes.md` sections on scoring settings, stats and projections, and ADR-002 (scoring rules, SCORE-3 exceptions, fallback lock times).
-2. Plan Phase 3 batches from the PLAN table (T3.1 to T3.9), splitting anything over about 400 lines (the optimizer and projections likely split into a/b). Log splits and any PLAN amendments in a new ADR-013. Add the Phase 3 task table to PROGRESS.
-3. Present the batch plan to Steph before dispatching, as at the start of Phase 2.
-4. Fold the Phase 3 design follow-ups from the PROGRESS backlog ("Carried from Phase 2": scoreboard hero, lime on content, Home "You" badge, roster stat slot) into T3.8 (Lineup page and Home "This week" card).
+1. Phase 3 is read and planned (PLAN.md section 9 and 5.1-5.4, 6.4; `docs/sleeper-api-notes.md` sections 4-6; ADR-002). Batch plan and task splits logged in ADR-013; task table in PROGRESS.md "Phase 3 task table". Waiting on Steph's go-ahead.
+2. On approval, dispatch Batch A: T3.1 (analytics-engineer, scoring engine SCORE-1/2/3) and T3.2a (backend-engineer, `packages/db` upsert helpers for `league_player_week_points` and `defense_vs_position`) in parallel.
+3. Then Batch B: T3.2b, T3.3a, T3.4a in parallel (see ADR-013 item 5 for the full batch order through G).
+4. The Phase 3 design follow-ups from the PROGRESS backlog ("Carried from Phase 2": scoreboard hero, lime on content, Home "You" badge, roster stat slot) are folded into T3.8b.
 5. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
 
 ## 5. Briefs
