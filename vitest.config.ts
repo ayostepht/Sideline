@@ -79,7 +79,10 @@ export default defineConfig({
             {
               test: {
                 name: "contract",
-                include: ["tests/contract/**/*.test.ts"],
+                include:
+                  process.env["CONTRACT_PLAYERS"] === "1"
+                    ? ["tests/contract/**/*.test.ts"]
+                    : ["tests/contract/sleeper.contract.test.ts"],
                 // Live network; schema validation only.
                 testTimeout: 60_000,
                 hookTimeout: 60_000,

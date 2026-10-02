@@ -82,8 +82,10 @@ with `--project`, so `pnpm test:unit` and `pnpm verify` never run them.
   `@sideline/*` deps.
 - Contract: `vitest run --project contract`. Live Sleeper, shapes only (no value assertions, no
   files written, nothing logged). Reads `DEFAULT_LEAGUE_ID` from the environment or the gitignored
-  `.env`; the whole suite skips with a message when it is absent. `/players/nfl` runs only with
-  `CONTRACT_PLAYERS=1` (at most once a day). Never part of CI.
+  `.env`; the run FAILS with a clear message when it is absent (no skips). Calls the live API with
+  plain fetch (not the shared limiter), about 20 calls. `/players/nfl` (CONTRACT-3, in
+  `players.contract.test.ts`) is excluded by default; run `CONTRACT_PLAYERS=1 pnpm test:contract`
+  to include it (at most once a day). Manual or gate-only, never part of CI.
 
 ## Coverage
 

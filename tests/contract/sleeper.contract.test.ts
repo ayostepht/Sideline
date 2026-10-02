@@ -3,7 +3,6 @@ import {
   RawLeagueSchema,
   RawLeagueUserSchema,
   RawMatchupSchema,
-  RawPlayerSchema,
   RawRosterSchema,
   RawStateSchema,
   RawStatRowSchema,
@@ -13,23 +12,19 @@ import {
 import { readEnvValue } from "../helpers/env.js";
 
 /**
- * Live contract suite (`pnpm test:contract`, manual, never in CI). Validates response SHAPES
- * against the zod schemas only: no value assertions on league data, nothing is written to disk,
- * nothing is logged. The league id comes from DEFAULT_LEAGUE_ID (process env or gitignored .env).
+ * Live contract suite (`pnpm test:contract`, manual or gate-only, never in CI). Calls the live
+ * Sleeper API directly with plain fetch (NOT the shared rate limiter), about 20 calls per run.
+ * `/players/nfl` lives in players.contract.test.ts behind CONTRACT_PLAYERS=1 (once per day max).
+ * Validates response SHAPES against the zod schemas only: no value assertions on league data,
+ * nothing is written to disk, nothing is logged. The league id comes from DEFAULT_LEAGUE_ID
+ * (process env or gitignored .env).
  */
 const API = "https://api.sleeper.app";
 const leagueId = readEnvValue("DEFAULT_LEAGUE_ID");
-const players = process.env["CONTRACT_PLAYERS"] === "1";
 
 if (leagueId === undefined) {
-  process.stderr.write(
-    `${"[contract] DEFAULT_LEAGUE_ID is not set in the environment or .env: the whole contract suite is skipped (exit 0). Set it in .env to run it."}\n`,
-  );
-}
-if (!players) {
-  process.stderr.write(
-    `${"[contract] /players/nfl check skipped (large). Set CONTRACT_PLAYERS=1 to run it."}\n`,
-  );
+  // Fail loudly before any test or network call; a silent exit 0 would hide an unrun suite.
+  throw new Error("DEFAULT_LEAGUE_ID is not set; the contract suite needs it (see .env.example)");
 }
 
 async function getJson(pathAndQuery: string): Promise<unknown> {
@@ -46,7 +41,7 @@ function expectAllParse(schema: { safeParse(v: unknown): { success: boolean } },
   expect(bad, "rows failing schema").toBe(0);
 }
 
-describe.skipIf(leagueId === undefined)("contract: Sleeper public API shapes", () => {
+describe("contract: Sleeper public API shapes", () => {
   it("CONTRACT-1: /v1/state/nfl matches RawStateSchema", async () => {
     RawStateSchema.parse(await getJson("/v1/state/nfl"));
   });
@@ -54,19 +49,10 @@ describe.skipIf(leagueId === undefined)("contract: Sleeper public API shapes", (
   it("CONTRACT-2: /v1/players/nfl/trending/add matches RawTrendingSchema", async () => {
     RawTrendingSchema.parse(await getJson("/v1/players/nfl/trending/add?limit=5"));
   });
-
-  it.skipIf(!players)("CONTRACT-3: /v1/players/nfl rows match RawPlayerSchema", async () => {
-    // Once per day at most (PLAN.md 3.1). Parsed in memory, never written.
-    const body = (await getJson("/v1/players/nfl")) as Record<string, unknown>;
-    const rows = Object.values(body);
-    expect(rows.length).toBeGreaterThan(1000);
-    const bad = rows.filter((r) => !RawPlayerSchema.safeParse(r).success).length;
-    expect(bad, "players failing schema").toBe(0);
-  });
 });
 
-describe.skipIf(leagueId === undefined)("contract: league endpoints (DEFAULT_LEAGUE_ID)", () => {
-  const id = leagueId ?? "";
+describe("contract: league endpoints (DEFAULT_LEAGUE_ID)", () => {
+  const id = leagueId;
 
   it("CONTRACT-4: league, users, rosters match their schemas", async () => {
     RawLeagueSchema.parse(await getJson(`/v1/league/${id}`));
