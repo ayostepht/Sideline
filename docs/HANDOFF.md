@@ -20,14 +20,15 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight
 
-- Batch B code review saved (10fc521): 1 Major (M1).
-- T2.2b-fix (backend-engineer): apps/web/lib/server, app/api. M1, m1, m2, m3, m5.
-- ux-reviewer on `/dev/gallery` (seeded `pnpm screens`, captures in `.screens/` only). Save as `docs/reviews/2026-10-02-p2-batchB-ux.md`.
+- T2.2b-fix (backend-engineer): apps/web/lib/server, app/api. Code review M1, m1, m2, m3, m5.
+- T2.1c (frontend-engineer): apps/web/components, globals.css, app/dev. UX review M1, m1 to m6, n1, n2, code m7.
+- T2.5a (qa-engineer): playwright.config.ts, lighthouserc.json, e2e, tests. Seeded servers, fixture worker smoke, route list, gallery axe (UX M2).
+- Reviews saved: batch B code (10fc521), batch B UX (a5e32da).
 
 ## 4. Next steps (in order)
 
-1. Save the UX review; verify and commit T2.2b-fix; dispatch UX fixes (frontend) if Blocker or Major. T2.5a waits until the ux-reviewer's screens run is finished (Playwright rebuilds .next).
-2. Batch C: T2.3a shell (frontend) and T2.5a QA harness (qa). Inputs for T2.5a are in the PROGRESS backlog (seeded Playwright and lhci, fixture worker command, review m2, m3, m12, gallery `?open=` URLs).
+1. Verify and commit each in-flight task separately (exact paths).
+2. Batch C: T2.3a shell (frontend), after T2.1c lands. Then code review plus ux-reviewer on the shell.
 3. Then Batches D to G.
 
 ## 5. Standing rules for every brief
