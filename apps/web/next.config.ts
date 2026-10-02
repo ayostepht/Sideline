@@ -6,7 +6,7 @@ const monorepoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 
 
 // Minimal structural type for the webpack config Next hands us (webpack types are not a dependency).
 interface WebpackConfig {
-  externals?: unknown[];
+  externals?: unknown;
   resolve: { extensionAlias?: Record<string, string[]> };
   module: { parser?: { javascript?: Record<string, unknown> } & Record<string, unknown> };
 }
@@ -22,10 +22,13 @@ const nextConfig: NextConfig = {
   webpack(config: WebpackConfig, { isServer }: { isServer: boolean }) {
     // serverExternalPackages misses better-sqlite3 when it is reached via a workspace package.
     if (isServer) {
-      config.externals = [
-        ...(config.externals ?? []),
-        { "better-sqlite3": "commonjs better-sqlite3" },
-      ];
+      // webpack allows externals to be an array, a single function/object/string/RegExp, or unset.
+      const existing: unknown[] = Array.isArray(config.externals)
+        ? config.externals
+        : config.externals === undefined || config.externals === null
+          ? []
+          : [config.externals];
+      config.externals = [...existing, { "better-sqlite3": "commonjs better-sqlite3" }];
     }
     config.resolve.extensionAlias = {
       ...config.resolve.extensionAlias,

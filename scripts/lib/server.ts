@@ -171,6 +171,9 @@ export async function startStandaloneServer(options: {
     process.removeListener("exit", onExit);
     if (pgid === undefined) return;
     await killProcessGroup(pgid);
+    // Wait for the OS to release the port so the next server (or a stray probe) cannot collide.
+    const deadline = Date.now() + 10_000;
+    while (!(await isPortFree(port)) && Date.now() < deadline) await sleep(100);
   };
   const ready = await waitForStatus(`${baseUrl}/api/health`, {
     timeoutMs: options.timeoutMs ?? 60_000,

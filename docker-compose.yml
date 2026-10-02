@@ -1,0 +1,17 @@
+services:
+  sideline:
+    build: .
+    image: sideline:local
+    container_name: sideline
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      TZ: ${TZ:-UTC}
+      APP_PASSWORD: ${APP_PASSWORD:-}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+    volumes:
+      - sideline-data:/data
+
+volumes:
+  sideline-data:

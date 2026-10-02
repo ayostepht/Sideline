@@ -20,3 +20,4 @@ test-results
 .lighthouseci
 apps/web/next-env.d.ts
 .gate/
+docs/gates/latest.partial.json
