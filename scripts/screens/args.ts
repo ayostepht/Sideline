@@ -45,8 +45,15 @@ export function assertRoute(route: string): void {
   if (!route.startsWith("/")) throw new ScreensArgError(`route must start with "/": ${route}`);
 }
 
-/** "/" becomes "home"; "/lineup/week-3" becomes "lineup-week-3". */
+/** "/" becomes "home"; "/lineup/week-3" becomes "lineup-week-3"; a query adds "__open-why". */
 export function routeSlug(route: string): string {
+  const query = /\?([^#]*)/.exec(route)?.[1] ?? "";
+  const querySlug = query.replace(/[^a-zA-Z0-9._]+/g, "-").replace(/^-+|-+$/g, "");
+  const base = routeBaseSlug(route);
+  return querySlug === "" ? base : `${base}__${querySlug}`;
+}
+
+function routeBaseSlug(route: string): string {
   const slug = route
     .replace(/[?#].*$/, "")
     .split("/")
