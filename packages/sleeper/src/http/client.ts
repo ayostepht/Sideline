@@ -49,6 +49,8 @@ export interface RequestOptions {
   etag?: boolean;
   /** Count this call (and its retries) toward a job's calls_made. */
   counter?: CallCounter;
+  /** Aborts the call (and any retry wait) when fired; no request is sent once aborted. */
+  signal?: AbortSignal;
 }
 
 export interface SleeperResult<T> {
@@ -69,6 +71,12 @@ async function discard(res: Response): Promise<void> {
     await res.body?.cancel();
   } catch {
     // body already consumed or locked; nothing to release
+  }
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw signal.reason instanceof Error ? signal.reason : new Error("request aborted");
   }
 }
 
@@ -134,7 +142,12 @@ export class SleeperHttp {
     const url = (opts.root ? this.o.rootUrl : this.o.baseUrl) + path;
     const store = opts.etag === false ? undefined : this.o.etagStore;
     const cached = store ? await store.get(url) : undefined;
-    const { status, body, etag, attempts } = await this.send(url, cached?.etag, opts.counter);
+    const { status, body, etag, attempts } = await this.send(
+      url,
+      cached?.etag,
+      opts.counter,
+      opts.signal,
+    );
 
     let raw: unknown;
     let notModified = false;
@@ -165,13 +178,17 @@ export class SleeperHttp {
     url: string,
     ifNoneMatch: string | undefined,
     counter: CallCounter | undefined,
+    signal: AbortSignal | undefined,
   ): Promise<{ status: number; body: unknown; etag: string | null; attempts: number }> {
     const headers: Record<string, string> = { accept: "application/json" };
     if (this.o.userAgent) headers["user-agent"] = this.o.userAgent;
     if (ifNoneMatch) headers["if-none-match"] = ifNoneMatch;
 
     for (let attempt = 1; ; attempt++) {
+      throwIfAborted(signal);
       await this.o.limiter.acquire(counter);
+      // The limiter may have queued us for a while: re-check so a lost lease sends nothing.
+      throwIfAborted(signal);
       this.emit({ type: "request", url, attempt });
       const started = this.o.now();
       const controller = new AbortController();
@@ -180,12 +197,15 @@ export class SleeperHttp {
         timedOut = true;
         controller.abort();
       }, this.o.timeoutMs);
+      const onAbort = (): void => controller.abort();
+      signal?.addEventListener("abort", onAbort, { once: true });
       let res: Response;
       let text = "";
       try {
         res = await this.o.fetch(url, { headers, signal: controller.signal });
         if (res.status !== 304 && res.ok) text = await res.text();
       } catch (cause) {
+        throwIfAborted(signal);
         const err = timedOut
           ? new SleeperTimeoutError(url, this.o.timeoutMs, attempt)
           : new SleeperNetworkError(url, attempt, cause);
@@ -193,6 +213,7 @@ export class SleeperHttp {
         throw err;
       } finally {
         cancelTimer();
+        signal?.removeEventListener("abort", onAbort);
       }
       const status = res.status;
       this.emit({ type: "response", url, attempt, status, durationMs: this.o.now() - started });
@@ -231,6 +252,7 @@ export class SleeperHttp {
       const delayMs = Math.min(this.o.retryAfterCapMs, Math.max(retryAfter ?? 0, backoff));
       this.emit({ type: "retry", url, attempt, reason: `status ${status}`, delayMs });
       await this.o.sleep(delayMs);
+      throwIfAborted(signal);
     }
   }
 }

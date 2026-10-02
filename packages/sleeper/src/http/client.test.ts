@@ -312,3 +312,38 @@ describe("SleeperHttp defaults", () => {
     expect(client.limiter.totalCalls).toBe(1);
   });
 });
+
+describe("T1.5b abort signal", () => {
+  it("sends nothing when the signal is already aborted", async () => {
+    let hits = 0;
+    server.use(
+      http.get(`${BASE}/x`, () => {
+        hits += 1;
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    const { client } = setup();
+    const ac = new AbortController();
+    ac.abort(new Error("lease lost"));
+    await expect(client.getJson("/x", schema, { signal: ac.signal })).rejects.toThrow("lease lost");
+    expect(hits).toBe(0);
+  });
+
+  it("aborts an in-flight request with the signal reason and does not retry", async () => {
+    let hits = 0;
+    const ac = new AbortController();
+    server.use(
+      http.get(`${BASE}/slow`, async () => {
+        hits += 1;
+        ac.abort(new Error("lease lost"));
+        await new Promise((r) => setTimeout(r, 50));
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    const { client } = setup();
+    await expect(client.getJson("/slow", schema, { signal: ac.signal })).rejects.toThrow(
+      "lease lost",
+    );
+    expect(hits).toBe(1);
+  });
+});

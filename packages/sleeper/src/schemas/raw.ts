@@ -170,7 +170,8 @@ export const RawStatRowSchema = z.object({
   player_id: z.string(),
   stats: z.record(z.string(), z.unknown()),
   opponent: z.string().nullish(),
-  player: z.looseObject({ position: z.string().nullish() }).nullish(),
+  team: z.string().nullish(),
+  player: z.looseObject({ position: z.string().nullish(), team: z.string().nullish() }).nullish(),
 });
 export type RawStatRow = z.infer<typeof RawStatRowSchema>;
 export const RawStatRowsEnvelopeSchema = z.array(z.unknown());

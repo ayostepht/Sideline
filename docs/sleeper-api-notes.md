@@ -650,3 +650,17 @@ Byes derive from the schedule: a team with no game in a regular-season week has 
 ### 14h. Recorder behavior
 
 `pnpm exec tsx scripts/fixtures/nflverse.ts [--from-cache] [--season N] [--through-week N]`. Defaults to downloading only missing assets (8 calls on a cold cache: 4 release lookups and 4 downloads, 1.1 s apart, `User-Agent: Sideline-fixture-recorder/0.0.0 (self-hosted)`). `--from-cache` makes no network call and fails if the cache is missing. Output (sorted, LF, original column names, trimmed): `schedules/games.csv` (272 rows), `stats_player/stats_player_week_2026.csv` (1,470 rows), `snap_counts/snap_counts_2026.csv` (1,703 rows), `players/players.csv` (644 rows), `manifest.json` (source URLs, asset `updated_at`, `recordedAt` taken from the cache download time so reruns are identical, row counts, columns). Stats and snap rows kept: Sleeper fixture players by trimmed gsis id or normalized name plus team, and every row for KC and SF. No Sleeper API calls; the only Sleeper input is the committed player fixture (ids, names, teams).
+
+## 15. Sync job behavior (2026-10-02, T1.5b)
+
+Worker decisions that follow from the API behavior above (no new endpoint facts):
+
+- Matchups: each run fetches the current week and the previous week (final scores can land after the week rolls over), plus any completed or future week (through `playoff_week_start - 1`, default 15 if unset) that is not stored yet. A week with no stored rows is refetched on every run until Sleeper returns rows.
+- Stats and projections: stats refetch current and previous week; projections fetch current and next week (next week exists a week early, section 4.4). `pre` maps to week 1; `off` and `post` skip.
+- Pregame snapshots join the player's team (`row.team`, `row.player.team`, or the DEF id) to the schedule by team code, mapping Sleeper `LAR` to the schedule's `LA` (section 14e). Without a schedule row (nflverse not synced yet) no snapshot is written and the job note says so.
+- `/players/nfl` is guarded to once per 24 h, always without ETag. A fantasy position whose count drops more than 10% versus the stored set (stored count at least 20) logs a warning; the sync still completes.
+- Backfill stores 2025 regular-season weeks 1 to 18 without ETags (36 calls) and skips weeks already present.
+
+```json
+{ "projections_snapshot_rule": "fetched_at < kickoff_utc (strict)", "players_min_interval_hours": 24 }
+```

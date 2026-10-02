@@ -27,6 +27,10 @@ import { FANTASY_POSITIONS, filterRows, type RowKind, type RowsResult } from "./
 export interface CallOptions {
   /** Counts this call toward a job's calls_made. */
   counter?: CallCounter;
+  /** Aborts the call; no request is sent once aborted. */
+  signal?: AbortSignal;
+  /** Set false to skip the ETag cache (large bodies). Default true. */
+  etag?: boolean;
 }
 
 export interface PlayersResult {
