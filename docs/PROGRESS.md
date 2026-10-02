@@ -12,6 +12,24 @@
 | 5 Matchups and league intelligence | G5 | | Not started |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
 
+## Resume point (read this first after /clear or a new session)
+
+Updated: 2026-10-02, after commit 195826e (T1.3a). The orchestrator rewrites this section after every commit.
+
+- **Branch:** `phase/1-data`. Plan: ADR-005 (approved by Steph with changes), nflverse facts: ADR-006. Full plan text: `~/.claude/plans/fresh-session-after-clear-dazzling-cat.md` (local only; ADR-005 plus the Phase 1 task table below carry everything needed).
+- **Committed and verified:** B0, T1.0, T1.1 (+fix), T1.2a (+fix), T1.4a, T1.3a. Batch A0+A code review saved (part 1); fixes applied.
+- **In flight when this was written (lost if the session ends):**
+  - T1.2b Sleeper endpoints (sleeper-data-engineer), writing `packages/sleeper/src/**` and `docs/sleeper-api-notes.md` section 4.5.
+  - Code review of T1.4a (code-reviewer, read-only), to be saved as `docs/reviews/2026-10-02-p1-batchA-part2-code.md`.
+- **If resuming after an interruption:** run `git status`. Uncommitted files under `packages/sleeper/src` (outside `http/`) or edits to `docs/sleeper-api-notes.md` are a partial T1.2b: either re-dispatch T1.2b with "continue from the existing files" or `git checkout -- docs/sleeper-api-notes.md && git clean -fd packages/sleeper/src` (only the non-http files) and re-dispatch fresh. Re-run the T1.4a review (`git show d5b2200`).
+- **Next steps, in order:**
+  1. Verify and commit T1.2b; save the T1.4a review; fix any Blocker/Major.
+  2. Dispatch T1.4b (nflverse provider; brief must carry ADR-006 join order, alias table, LA/LAR, kickoff conversion, carry share, `rz_touches` null).
+  3. Code review of Batch B (T1.2b, T1.3a, T1.4b); fix Blocker/Major.
+  4. Batch C: T1.3b, T1.5a, T1.6 (see task table and ADR-005). Then D, E, F, G per the table.
+- **Every brief carries:** the Node 24 PATH prefix, `.env`-only identifiers (ADR-000), msw 3, no `.skip`/weakened thresholds, only T1.0/devops changes dependencies (ADR-005 item 15), report-don't-fix failures in other agents' paths, `pnpm run sync` not `pnpm sync`.
+- **Before every commit:** `pnpm verify` (or targeted checks if a parallel agent's files are mid-edit, then full verify before the next batch), identifier scan of the staged diff against `.env`, `pnpm fixtures:check` when fixtures change.
+
 ## Phase 0 tasks
 
 | ID | Title | Agent | Batch | Status | Attempts | Commit |
@@ -32,15 +50,15 @@
 
 | ID | Title | Agent | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|
-| T1.B0 | Branch, ADR-005, PLAN amendments, coverage config | orchestrator | 0 | Done | 1 | |
+| T1.B0 | Branch, ADR-005, PLAN amendments, coverage config | orchestrator | 0 | Done | 1 | e4330e4 |
 | T1.0 | Dependency preinstall, workspace links, script wiring, next.config | devops-engineer | A0 | Done | 1 | b0cf521 |
 | T1.1 | Shared domain types, DTOs, env config | backend-engineer | A | Done | 1 | 4aa4207 |
 | T1.2a | Sleeper HTTP core (limiter, retries, errors, ETag) | sleeper-data-engineer | A | Done | 1 | aab3c0c |
-| T1.1-fix | Review fixes m6-m9 (cron, TZ, transaction fields, timestamp note) | backend-engineer | A-fix | Done | 1 | see log |
-| T1.2a-fix | Review fixes m1-m3, m5, n1 (Retry-After cap, body cancel, monotonic limiter, timer injection) | sleeper-data-engineer | A-fix | Done | 1 | see log |
-| T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Done | 1 | see log |
-| T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | Not started | 0 | |
-| T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Not started | 0 | |
+| T1.1-fix | Review fixes m6-m9 (cron, TZ, transaction fields, timestamp note) | backend-engineer | A-fix | Done | 1 | 133ebef |
+| T1.2a-fix | Review fixes m1-m3, m5, n1 (Retry-After cap, body cancel, monotonic limiter, timer injection) | sleeper-data-engineer | A-fix | Done | 1 | fa96fab |
+| T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Done | 1 | d5b2200 |
+| T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | In progress | 1 | |
+| T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Done | 1 | 195826e |
 | T1.4b | nflverse provider | sleeper-data-engineer | B | Not started | 0 | |
 | T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Not started | 0 | |
 | T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Not started | 0 | |
@@ -81,6 +99,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 - Per-project coverage (`vitest run --coverage --project X`) prints Unknown% because coverage globs are repo-relative; use the whole-repo run. Owner: qa-engineer (T1.7a).
 - T1.2b/T1.5b: pass a `Sideline/<version> (self-hosted)` user agent; `/players/nfl` calls pass `{ etag: false }`; the worker shares one `RateLimiter`.
 - P1: nflverse play-by-play for red-zone touches (TREND-2), ADR-006 item 6.
+- T1.8 (devops): declare zod and tsx in packages/db (imported/used but resolved via root hoisting); bundle `packages/db/drizzle/` migrations into the image or set `SIDELINE_MIGRATIONS_DIR`. `cli/migrate.ts` has no unit test (covered by the CLI run; db total 91.6%).
 - msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
 
 ## Questions for Steph
