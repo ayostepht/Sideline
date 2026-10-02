@@ -20,7 +20,7 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight
 
-- T2.2b-fix (backend-engineer): apps/web/lib/server, app/api. Code review M1, m1, m2, m3, m5.
+- T2.2b-fix done (18628a4).
 - T2.1c (frontend-engineer): apps/web/components, globals.css, app/dev. UX review M1, m1 to m6, n1, n2, code m7.
 - T2.5a (qa-engineer): playwright.config.ts, lighthouserc.json, e2e, tests. Seeded servers, fixture worker smoke, route list, gallery axe (UX M2).
 - Reviews saved: batch B code (10fc521), batch B UX (a5e32da).
