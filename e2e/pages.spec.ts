@@ -75,20 +75,18 @@ test.describe("League (PLAN 6.4 League)", () => {
     await expect(page.locator('[data-testid="standings-you"]:visible')).toHaveCount(1);
   });
 
-  test("LEAGUE-2: every team opens its team page (roster links on desktop, standings cards on mobile)", async ({
-    page,
-  }) => {
+  test("LEAGUE-3: every team in Standings links to its own team page", async ({ page }) => {
     await page.goto(`${L}/league`);
     const desktop = isDesktop(page.viewportSize()?.width);
-    await expect(page.getByTestId("league-rosters")).toBeVisible({ visible: desktop });
-    if (desktop) {
-      const links = page.getByTestId("league-roster-link");
-      await expect(links).toHaveCount(DATA.teamCount);
-      await links.first().click();
-    } else {
-      await expect(page.getByTestId("league-roster-link").first()).toBeHidden();
-      await page.getByTestId("standings-card").first().click();
-    }
+    const links = desktop
+      ? page.getByTestId("standings-row").getByRole("link")
+      : page.getByTestId("standings-card");
+    await expect(links).toHaveCount(DATA.teamCount);
+    const hrefs: string[] = [];
+    for (const link of await links.all()) hrefs.push((await link.getAttribute("href")) ?? "");
+    expect(new Set(hrefs).size, "each team has a distinct link").toBe(DATA.teamCount);
+    for (const h of hrefs) expect(h).toMatch(new RegExp(`${L}/league/teams/\\d+$`));
+    await links.first().click();
     await expect(page).toHaveURL(new RegExp(`${L}/league/teams/\\d+`));
     await expect(page.getByTestId("team-view")).toBeVisible();
   });
@@ -106,6 +104,21 @@ test.describe("Team detail and My Team (PLAN 6.4)", () => {
     await expect(page.getByTestId("team-section-ir")).toBeVisible();
     expect(await page.getByTestId("team-row").count()).toBeGreaterThan(5);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(DATA.myTeamName);
+  });
+
+  test("TEAM-4: team detail back link is named League and returns to the League page", async ({
+    page,
+  }) => {
+    await page.goto(`${L}/league/teams/${DATA.otherRosterId}`);
+    const back = page.getByTestId("team-back-link");
+    await expect(back).toBeVisible();
+    // Scoped to the back link: the desktop sidebar also has a link named "League".
+    await expect(back).toHaveRole("link");
+    await expect(back).toHaveAccessibleName("League");
+    await expect(back).toHaveAttribute("href", `${L}/league`);
+    await back.click();
+    await expect(page).toHaveURL(new RegExp(`${L}/league$`));
+    await expect(page.getByTestId("league-page")).toBeVisible();
   });
 
   test("TEAM-2: ?highlight= marks exactly the requested player row", async ({ page }) => {
