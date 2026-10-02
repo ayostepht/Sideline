@@ -14,21 +14,12 @@
 
 ## Resume point (read this first after /clear or a new session)
 
-Updated: 2026-10-02, after commit 37f1bde. Session paused by Steph at 93% usage; no new tasks were to be launched. The orchestrator rewrites this section after every commit.
+Updated: 2026-10-02, after commit 38ee8a4 (T1.2b). Resumed after the usage pause. The orchestrator rewrites this section after every commit.
 
 - **Branch:** `phase/1-data`. Plan: ADR-005 (approved by Steph with changes); nflverse facts: ADR-006. Phase 1 task table below.
 - **Committed and verified:** B0, T1.0, T1.1 (+fix), T1.2a (+fix), T1.4a, T1.3a. Reviews saved: `docs/reviews/2026-10-02-p1-batchA-part1-code.md` (fixes applied) and `-part2-code.md` (T1.4a, APPROVE; m1/m2 fixed; m3-m5, n1 go into the T1.4b brief; m6, m8 in backlog).
-- **Possibly uncommitted partial work:**
-  - **T1.2b** (Sleeper endpoints) was still running at pause. Check `git status`: new files under `packages/sleeper/src/endpoints/`, `schemas/`, `mappers/`, an edited `packages/sleeper/src/index.ts`, maybe `docs/sleeper-api-notes.md` section 4.5. If its report never arrived, treat it as partial: run `pnpm verify` and the T1.2b acceptance criteria (see the brief summary below). If they all pass, commit. Otherwise re-dispatch T1.2b with "continue from the existing files and finish the acceptance criteria".
-  - **T1.4b** (nflverse provider) was dispatched and then stopped seconds later. Any files under `packages/providers/src/` other than the stub `index.ts`/`index.test.ts` are fragments: discard them (`git checkout -- packages/providers && git clean -fd packages/providers/src`) and re-dispatch T1.4b fresh.
-- **T1.2b acceptance criteria summary:**
-  - Every fixture passes its endpoint schema and mapper, and the mapped output parses with the shared schemas.
-  - Week 5 projections are non-empty after filtering.
-  - Placeholder and leaked-position rows are dropped with counts; placeholder-only or empty responses return `unavailable`.
-  - `getPlayers` sends no If-None-Match.
-  - An invalid player entry is skipped and counted.
-  - api-notes 4.5 documents the stats and projections real-row rules with per-week counts.
-  - Sleeper line coverage is at least 85%.
+- **T1.2b committed (38ee8a4)** after the session limit cut the agent off at its final step. The orchestrator verified the acceptance criteria.
+- **In flight:** T1.4b (nflverse provider, sleeper-data-engineer, re-dispatched 2026-10-02 after the pause), writing `packages/providers/src/**` only. If interrupted, any files beyond the stub `index.ts`/`index.test.ts` are partial: verify against the essentials below, or discard (`git checkout -- packages/providers && git clean -fd packages/providers/src`) and re-dispatch.
 - **T1.4b brief essentials:**
   - Factory `createNflverseProvider({ enabled, dataDir, fetch, now, maxAgeMs })`. Results are typed and the provider never throws.
   - Disk cache in `DATA_DIR/cache/nflverse` with conditional GET, temp-file-then-rename writes, stale-if-error and a 30 s timeout.
@@ -41,10 +32,9 @@ Updated: 2026-10-02, after commit 37f1bde. Session paused by Steph at 93% usage;
   - Providers line coverage at least 85%.
   - Acceptance examples are in api-notes section 14.
 - **Next steps, in order:**
-  1. Resolve T1.2b (above).
-  2. Re-dispatch T1.4b.
-  3. Code review of Batch B (T1.2b, T1.3a, T1.4b); fix Blocker and Major findings.
-  4. Batch C: T1.3b, T1.5a, T1.6. Then batches D, E, F and the G1 gate, per the task table and ADR-005.
+  1. Verify and commit T1.4b.
+  2. Code review of Batch B (T1.2b, T1.3a, T1.4b); fix Blocker and Major findings.
+  3. Batch C: T1.3b, T1.5a, T1.6. Then batches D, E, F and the G1 gate, per the task table and ADR-005.
 - **Every brief carries:**
   - the Node 24 PATH prefix;
   - identifiers only from `.env` (ADR-000);
@@ -86,9 +76,9 @@ Updated: 2026-10-02, after commit 37f1bde. Session paused by Steph at 93% usage;
 | T1.1-fix | Review fixes m6-m9 (cron, TZ, transaction fields, timestamp note) | backend-engineer | A-fix | Done | 1 | 133ebef |
 | T1.2a-fix | Review fixes m1-m3, m5, n1 (Retry-After cap, body cancel, monotonic limiter, timer injection) | sleeper-data-engineer | A-fix | Done | 1 | fa96fab |
 | T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Done | 1 | d5b2200 |
-| T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | In progress | 1 | |
+| T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | Done (agent hit the session limit after finishing; orchestrator verified; 712 non-test lines, mostly schemas, accepted) | 1 | 38ee8a4 |
 | T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Done | 1 | 195826e |
-| T1.4b | nflverse provider | sleeper-data-engineer | B | Stopped at pause (re-dispatch) | 1 | |
+| T1.4b | nflverse provider | sleeper-data-engineer | B | In progress (attempt 1 stopped at pause before writing anything) | 1 | |
 | T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Not started | 0 | |
 | T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Not started | 0 | |
 | T1.6 | Health, sync status, sync run API | backend-engineer | C | Not started | 0 | |
