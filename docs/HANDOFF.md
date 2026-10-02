@@ -20,7 +20,8 @@ Last updated: 2026-10-02, G2 automated checks PASS (gate re-run 11/11 after M1 f
 
 ## 3. In flight
 
-- Nothing. Waiting on Steph's replies to the G2 questions (`docs/gates/G2.md`, Human checkpoint). Do not start Phase 3.
+- G2-B1 (sleeper-data-engineer): worker resolves sleeper_user_id when identity was env-seeded and onboarding skipped (Steph's checkpoint bug: "doesn't know which team is mine"). Uncommitted edits in `apps/worker/src` are this task. After it: verify, commit, re-run the full gate, add to G2.md.
+- Waiting on Steph's replies to the G2 questions (`docs/gates/G2.md`, Human checkpoint). Do not start Phase 3.
 
 ## 4. Next steps (in order)
 
