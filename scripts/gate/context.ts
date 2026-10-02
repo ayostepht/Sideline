@@ -1,5 +1,6 @@
 import path from "node:path";
 import { appendFileSync } from "node:fs";
+import { createSeededDataDir, type SeededDataDir } from "../lib/seed.js";
 import { ServerStartError, startStandaloneServer, type RunningServer } from "../lib/server.js";
 import { runLogged, readTail, type ExecResult } from "./exec.js";
 import type { GateFlags } from "./flags.js";
@@ -21,6 +22,8 @@ export class GateContext {
   readonly logsDir: string;
   build: "unknown" | "ok" | "failed" = "unknown";
   server: RunningServer | null = null;
+  /** Fixture-seeded DATA_DIR shared by every gate step that renders pages. */
+  private seeded: SeededDataDir | null = null;
   /** Set by U1 when it passes, so the report can carry the new lint-warning baseline forward. */
   newEslintBaseline: number | undefined;
 
@@ -71,6 +74,12 @@ export class GateContext {
       : `pnpm build failed (${step.mapped.reason ?? "unknown"})`;
   }
 
+  /** Seeds (once) a temp DATA_DIR from the fixtures; gate steps never render real data. */
+  async seededDataDir(id: string): Promise<string> {
+    this.seeded ??= await createSeededDataDir(this.root, this.logFile(id));
+    return this.seeded.dataDir;
+  }
+
   /** Starts (once) the standalone server shared by the e2e and a11y checks. */
   async ensureServer(id: string): Promise<RunningServer> {
     if (this.server !== null) return this.server;
@@ -78,6 +87,8 @@ export class GateContext {
       this.server = await startStandaloneServer({
         root: this.root,
         logFile: this.logFile("server"),
+        dataDir: await this.seededDataDir(id),
+        env: { SIDELINE_GALLERY: "1" },
       });
     } catch (err) {
       if (err instanceof ServerStartError) {
@@ -96,5 +107,12 @@ export class GateContext {
     const server = this.server;
     this.server = null;
     await server.stop();
+  }
+
+  /** Stops the server and removes the seeded DATA_DIR. */
+  async cleanup(): Promise<void> {
+    await this.stopServer();
+    this.seeded?.cleanup();
+    this.seeded = null;
   }
 }

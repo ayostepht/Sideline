@@ -143,7 +143,12 @@ async function playwrightCheck(
   const jsonFile = path.join(ctx.gateDir, `playwright-${id}.json`);
   rmSync(jsonFile, { force: true });
   const run = await ctx.step(id, "pnpm", [script, "--reporter=list,json"], {
-    env: { E2E_BASE_URL: baseUrl, PLAYWRIGHT_JSON_OUTPUT_NAME: jsonFile },
+    env: {
+      E2E_BASE_URL: baseUrl,
+      E2E_DATA_DIR: await ctx.seededDataDir(id),
+      SIDELINE_GALLERY: "1",
+      PLAYWRIGHT_JSON_OUTPUT_NAME: jsonFile,
+    },
   });
   const summary = existsSync(jsonFile)
     ? summarizePlaywright(readJsonFile(jsonFile), ["UI2", "UI5"])
@@ -156,6 +161,19 @@ async function playwrightCheck(
   const problem = evaluatePlaywright(summary);
   if (problem !== undefined) return fail(problem, metrics);
   return { status: "PASS", metrics: metrics ?? {} };
+}
+
+/** Screens run on a seeded fixture DB; the output must say so, or the check fails. */
+async function ui4(ctx: GateContext): Promise<Outcome> {
+  const buildFailure = await ctx.ensureBuild("UI4");
+  if (buildFailure !== undefined) return { status: "SKIPPED", reason: buildFailure };
+  await ctx.stopServer();
+  const run = await ctx.step("UI4", "pnpm", ["screens"]);
+  const log = readFileSync(ctx.logFile("UI4"), "utf8");
+  if (!/^screens: DATA_DIR \S.* \(seeded fixture\)$/m.test(log)) {
+    return fail("screens output has no 'DATA_DIR <path> (seeded fixture)' line (unverified fails)");
+  }
+  return run.mapped;
 }
 
 /** Prefer an explicit CHROME_PATH, else the Chromium that Playwright installed. */
@@ -183,12 +201,14 @@ async function ui3(ctx: GateContext): Promise<Outcome> {
   const lhciDir = path.join(ctx.root, ".lighthouseci");
   for (const stale of lhrFiles(lhciDir)) rmSync(stale, { force: true });
   const chrome = chromePath();
-  const run = await ctx.step(
-    "UI3",
-    "pnpm",
-    ["lhci"],
-    chrome === undefined ? {} : { env: { CHROME_PATH: chrome } },
-  );
+  // lighthouserc.json must read E2E_DATA_DIR for its server (T2.5a); the gate always offers it.
+  const run = await ctx.step("UI3", "pnpm", ["lhci"], {
+    env: {
+      E2E_DATA_DIR: await ctx.seededDataDir("UI3"),
+      SIDELINE_GALLERY: "1",
+      ...(chrome === undefined ? {} : { CHROME_PATH: chrome }),
+    },
+  });
   const scores = summarizeLhrs(readLhrs(lhciDir));
   const metrics = { scores, budgets: LIGHTHOUSE_BUDGETS, chromePath: chrome ?? null };
   if (run.mapped.status !== "PASS") return { ...run.mapped, metrics };
@@ -330,6 +350,12 @@ export const CHECKS: CheckDef[] = [
     name: "axe accessibility, light and dark",
     slow: "e2e",
     run: (ctx) => playwrightCheck(ctx, "UI2", "test:a11y"),
+  },
+  {
+    id: "UI4",
+    name: "Screenshots at 390/768/1280, light and dark, from the seeded fixture DB",
+    slow: "e2e",
+    run: ui4,
   },
   { id: "UI3", name: "Lighthouse mobile budgets", slow: "e2e", run: ui3 },
   {

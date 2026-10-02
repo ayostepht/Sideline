@@ -24,12 +24,14 @@
     "screens": "tsx scripts/screens.ts",
     "validate:scoring": "tsx scripts/not-implemented.ts T3.1 validate:scoring",
     "backtest": "tsx scripts/not-implemented.ts T3.5 backtest",
-    "sync": "pnpm -C apps/worker run sync",
+    "sync": "tsx scripts/dev-run.ts sync",
     "db:migrate": "pnpm -C packages/db run db:migrate",
     "db:seed:fixtures": "pnpm -C apps/worker run db:seed:fixtures",
     "gate": "tsx scripts/gate.ts",
     "fixtures:record": "tsx scripts/fixtures/record.ts",
-    "fixtures:check": "tsx scripts/fixtures/record.ts --check"
+    "fixtures:check": "tsx scripts/fixtures/record.ts --check",
+    "dev:worker": "tsx scripts/dev-run.ts worker",
+    "dev:lan": "tsx scripts/dev-lan.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

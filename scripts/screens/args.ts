@@ -7,10 +7,24 @@ export type Theme = (typeof THEMES)[number];
 export class ScreensArgError extends Error {}
 
 /** Parses `--routes=/a,/b`; returns undefined when the flag is absent. */
-export function parseScreensArgs(argv: readonly string[]): { routes: string[] | undefined } {
+export function parseScreensArgs(argv: readonly string[]): {
+  routes: string[] | undefined;
+  unverified: boolean;
+  dataDir: string | undefined;
+} {
   let routes: string[] | undefined;
+  let unverified = false;
+  let dataDir: string | undefined;
   for (const arg of argv) {
     if (arg === "--") continue;
+    if (arg === "--unverified") {
+      unverified = true;
+      continue;
+    }
+    if (arg.startsWith("--data-dir=")) {
+      dataDir = arg.slice("--data-dir=".length);
+      continue;
+    }
     if (arg.startsWith("--routes=")) {
       routes = arg
         .slice("--routes=".length)
@@ -24,7 +38,7 @@ export function parseScreensArgs(argv: readonly string[]): { routes: string[] | 
       throw new ScreensArgError(`unknown argument: ${arg}`);
     }
   }
-  return { routes };
+  return { routes, unverified, dataDir };
 }
 
 export function assertRoute(route: string): void {
@@ -43,6 +57,12 @@ export function routeSlug(route: string): string {
 }
 
 /** Repo-relative output path for one screenshot, e.g. .screens/home/390-light.png. */
-export function screenshotPath(root: string, route: string, width: number, theme: Theme): string {
-  return path.join(root, ".screens", routeSlug(route), `${width}-${theme}.png`);
+export function screenshotPath(
+  root: string,
+  route: string,
+  width: number,
+  theme: Theme,
+  subdir = "",
+): string {
+  return path.join(root, ".screens", subdir, routeSlug(route), `${width}-${theme}.png`);
 }

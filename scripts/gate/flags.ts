@@ -19,7 +19,7 @@ Runs every automatable universal check, prints a summary, writes docs/gates/late
 
 Flags:
   --only=U1,U3     Run only these checks. A bare number such as U3 selects U3a, U3b, U3c.
-  --fast           Skip checks that need a browser or docker (UI1, UI2, UI3, U3b, U3c).
+  --fast           Skip checks that need a browser or docker (UI1, UI2, UI3, UI4, U3b, U3c).
   --skip-docker    Skip the docker checks (U3b, U3c).
   --amd64          Also run U3c, the linux/amd64 image (the Unraid deploy target).
                    U3c runs ONLY with this flag (or --only=U3c); otherwise it is SKIPPED.

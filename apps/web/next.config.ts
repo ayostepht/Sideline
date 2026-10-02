@@ -11,7 +11,14 @@ interface WebpackConfig {
   module: { parser?: { javascript?: Record<string, unknown> } & Record<string, unknown> };
 }
 
+// Hosts allowed to load dev assets (for example a phone on the LAN). Set by `pnpm dev:lan`.
+const devOrigins = (process.env["SIDELINE_DEV_ORIGINS"] ?? "")
+  .split(",")
+  .map((h) => h.trim())
+  .filter((h) => h !== "");
+
 const nextConfig: NextConfig = {
+  allowedDevOrigins: devOrigins,
   output: "standalone",
   // Trace from the monorepo root so the standalone bundle includes workspace packages.
   outputFileTracingRoot: monorepoRoot,

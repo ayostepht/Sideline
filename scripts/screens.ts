@@ -4,6 +4,9 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { chromium, type Browser, type BrowserContext } from "@playwright/test";
 import { z } from "zod";
+import { createSeededDataDir, type SeededDataDir } from "./lib/seed.js";
+import { redactHome } from "./lib/paths.js";
+import { planDataDir, type DataDirPlan } from "./screens/datadir.js";
 import { standaloneBuildExists, startStandaloneServer, type RunningServer } from "./lib/server.js";
 import {
   assertRoute,
@@ -28,9 +31,21 @@ function loadConfiguredRoutes(): string[] {
 
 async function main(): Promise<number> {
   let routes: string[];
+  let plan: DataDirPlan;
   try {
-    routes = parseScreensArgs(process.argv.slice(2)).routes ?? loadConfiguredRoutes();
+    const args = parseScreensArgs(process.argv.slice(2));
+    routes = args.routes ?? loadConfiguredRoutes();
+    plan = planDataDir({
+      root,
+      env: process.env,
+      dataDirFlag: args.dataDir,
+      unverified: args.unverified,
+    });
   } catch (err) {
+    if (err instanceof Error && !(err instanceof ScreensArgError)) {
+      process.stderr.write(`screens: ${err.message}\n`);
+      return 1;
+    }
     if (err instanceof ScreensArgError) {
       process.stderr.write(`screens: ${err.message}\n`);
       return 1;
@@ -39,6 +54,8 @@ async function main(): Promise<number> {
   }
 
   let server: RunningServer | undefined;
+  let seeded: SeededDataDir | undefined;
+  let subdir = "";
   let baseUrl = process.env["E2E_BASE_URL"];
   if (baseUrl === undefined || baseUrl === "") {
     if (!standaloneBuildExists(root)) {
@@ -47,10 +64,20 @@ async function main(): Promise<number> {
       );
       return 1;
     }
-    server = await startStandaloneServer({ root });
+    let dataDir: string;
+    if (plan.kind === "given") {
+      dataDir = plan.dataDir;
+    } else {
+      seeded = await createSeededDataDir(root);
+      dataDir = seeded.dataDir;
+    }
+    process.stdout.write(`screens: DATA_DIR ${redactHome(dataDir)} (seeded fixture)\n`);
+    server = await startStandaloneServer({ root, dataDir, env: { SIDELINE_GALLERY: "1" } });
     baseUrl = server.baseUrl;
     process.stdout.write(`screens: started the standalone server at ${baseUrl}\n`);
   } else {
+    subdir = "unverified";
+    process.stdout.write("screens: DATA_DIR unverified\n");
     process.stdout.write(`screens: using the running server at ${baseUrl}\n`);
   }
 
@@ -80,7 +107,7 @@ async function main(): Promise<number> {
               continue;
             }
             await page.evaluate("document.fonts.ready.then(() => true)");
-            const file = screenshotPath(root, route, width, theme);
+            const file = screenshotPath(root, route, width, theme, subdir);
             mkdirSync(path.dirname(file), { recursive: true });
             await page.screenshot({ path: file, fullPage: true });
             written.push(path.relative(root, file));
@@ -98,6 +125,7 @@ async function main(): Promise<number> {
   } finally {
     await browser?.close().catch(() => undefined);
     if (server !== undefined) await server.stop();
+    seeded?.cleanup();
   }
 
   process.stdout.write(`screens: wrote ${written.length} screenshot(s)\n`);
