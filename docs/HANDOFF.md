@@ -20,7 +20,7 @@ Last updated: 2026-10-02, G2 automated checks PASS (gate re-run 11/11 after M1 f
 
 ## 3. In flight
 
-- T2.7a (7dc84e1) and T2.7b (27ae22d) done. T2.7c committed (43ce389). Port 3000 freed. T2.7d (qa-engineer) in flight: TEAM-3 serial, DEVTOOLS-1, full e2e and axe; edits only in `e2e/` and playwright config. Then: `pnpm screens`, ux-reviewer on the redesign, retake `docs/gates/G2/screens/`, full `pnpm gate --amd64`, update G2.md, show Steph.
+- Redesign T2.7a-d committed (last code commit 8fd82a3). Full `pnpm gate --amd64` run 3 in flight (log in scratchpad; rerun if the session died). Then: ux-reviewer on the fresh `.screens/` (no server), retake `docs/gates/G2/screens/`, update G2.md (redesign, B1, ADR-011/012), show Steph for final approval.
 - G2-B1 done and committed (verify 728, integration 23). Full gate re-run still owed: run it once Steph's dev servers are off port 3000, batched with any other checkpoint fixes, then add B1 to G2.md.
 - Waiting on Steph's replies to the G2 questions (`docs/gates/G2.md`, Human checkpoint). Do not start Phase 3.
 
