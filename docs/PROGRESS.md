@@ -45,8 +45,9 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T2.2e | `syncSince` on POST /api/onboarding/league (Batch D review M1, server side) | backend-engineer | D-fix | Done (77 tests; coverage confirmed at the next full coverage run) | 1 | 06a5188 |
 | T2.2f | Fixture seed stores the fixture user identity, league choices, active league (`--no-identity` keeps anonymous) | sleeper-data-engineer | E0 | Done (orchestrator: verify 690, e2e 75) | 1 | 0b3f9f8 |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Done (2 Major: doubled freshness, a11y coverage in T2.5b; 7 Minor to T2.6) | 1 | see docs/reviews/2026-10-02-p2-T2.4-ux.md |
-| T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | In progress | 1 | |
-| T2.6 | Fix round | frontend-engineer | F | Not started | 0 | |
+| T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | Done (attempt 2 fixed a click-then-goto flake; orchestrator: verify 690, integration 23, e2e 273 green; agent: a11y 102, Lighthouse Home and League 0.96/1.00/0.96, script 168,382 B, read p95 under 0.3 ms) | 2 | 976a355 |
+| T2.6a | Fix round part 1: one freshness pattern with Sync now, placeholders' next action, More sheet current item, dark pill contrast, week double-click (T2.4 M1, m6, m7, n1; T2.5b bug 1) | frontend-engineer | F | In progress | 1 | |
+| T2.6b | Fix round part 2: Home issues headline, team detail rows and highlight, League mobile, Settings sync summary, onboarding done view, wide table, soft 404 (T2.4 m1 to m5, n2; T2.5b bug 2) | frontend-engineer | F | Not started (after T2.6a; same pages) | 0 | |
 | G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
 
 Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locally with phone over the LAN; My Team nav entry; screenshots only from a seeded temp DATA_DIR.
@@ -70,6 +71,7 @@ Remove an item when it is done; the archive keeps history.
 - Gallery route JS 189,202 B (budget 204,800): keep additions lean. Gallery jump list (UX m7).
 - Temp seeded DATA_DIRs (e2e, Lighthouse, screens) are never cleaned up. Overlay fade under reduced motion (axe waits on `settleAnimations`).
 - `scripts/lib/seed.ts` may not forward `--no-identity`.
+- T2.5b gaps: NAV-6 mocks the league-switch POST (real switch and "Still syncing" not exercised in e2e); stale and preseason states not in e2e (fixtures are fresh mid-season; unit tests cover them). Empty username submit shows no message (button disabled; accepted).
 
 ### Data and backend
 
