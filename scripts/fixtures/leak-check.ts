@@ -8,7 +8,9 @@
  * Matching:
  *  - ids and avatars: exact substring (also in file paths).
  *  - names of 4+ characters: case-insensitive substring in string values.
- *  - shorter names: case-insensitive whole-value equality.
+ *  - shorter names (under 4 characters): case-insensitive whole-word match (word boundaries) inside
+ *    any string value, and inside the raw text of non-JSON files such as .md. Whole-value equality
+ *    alone is not enough: a short name in a sentence would slip through.
  *  - values under player name keys (full_name, first_name, ...) are public data and are skipped
  *    for names (ids and avatars are still checked everywhere).
  */
@@ -30,6 +32,11 @@ export interface Leak {
 }
 
 const MIN_SUBSTRING_NAME = 4;
+
+function wordRegex(name: string): RegExp {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, "iu");
+}
 
 interface Leaf {
   key: string | null;
@@ -77,9 +84,10 @@ export function findLeaks(files: readonly FixtureFile[], ids: IdentifierSet): Le
     names.forEach((name, index) => {
       if (name.length === 0) return;
       const long = name.length >= MIN_SUBSTRING_NAME;
+      const word = long ? null : wordRegex(name);
       const hit = lowered.some((l) => {
         if (l.key !== null && PLAYER_NAME_KEYS.has(l.key)) return false;
-        return long ? l.text.includes(name) : l.text === name;
+        return word === null ? l.text.includes(name) : word.test(l.text);
       });
       if (hit) leaks.push({ file: file.path, category: "name", index });
     });

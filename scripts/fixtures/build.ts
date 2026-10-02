@@ -11,6 +11,8 @@ import {
   fakeLeagueId,
   fakeManagerName,
   sanitizeDoc,
+  sanitizeLeague,
+  sanitizeRosters,
   sanitizeDrafts,
   sanitizeUser,
   sanitizeUserLeagues,
@@ -145,9 +147,9 @@ export function buildFixtureFiles(input: RecordedInput): BuildResult {
     stringifyStable(sanitizeUserLeagues(input.userLeagues, mapping)),
   );
   const leagueBase = `v1/league/${leagueId}`;
-  put(`${leagueBase}.json`, stringifyStable(sanitizeDoc(input.league, mapping)));
+  put(`${leagueBase}.json`, stringifyStable(sanitizeLeague(input.league, mapping)));
   put(`${leagueBase}/users.json`, stringifyStable(sanitizeUsers(input.users, mapping)));
-  const rosters = sanitizeDoc(input.rosters, mapping);
+  const rosters = sanitizeRosters(input.rosters, mapping);
   put(`${leagueBase}/rosters.json`, stringifyStable(rosters));
   const matchups: unknown[] = [];
   for (const w of matchupWeeks) {

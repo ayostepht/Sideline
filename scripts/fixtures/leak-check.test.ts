@@ -46,7 +46,20 @@ describe("findLeaks", () => {
     ]);
   });
 
-  it("matches short names only as whole values", () => {
+  it("matches short names as whole words inside text files (3 characters, .md)", () => {
+    const ids = collectIdentifiers(syntheticRaw(), REAL.leagueId, { names: ["Zed"] });
+    const files = [
+      { path: "docs/a.md", text: "Notes: thanks to zed for the help." },
+      { path: "docs/b.md", text: "Zedong and Hazed are different words." },
+    ];
+    expect(findLeaks(files, ids)).toEqual([
+      { file: "docs/a.md", category: "name", index: ids.names.indexOf("Zed") },
+    ]);
+    const json = [{ path: "x.json", text: JSON.stringify({ note: "ask Zed." }) }];
+    expect(findLeaks(json, ids)).toHaveLength(1);
+  });
+
+  it("matches short names only as whole words", () => {
     const hit = findLeaks(
       [{ path: "a.json", text: JSON.stringify({ v: REAL.displayC }) }],
       identifiers,

@@ -10,6 +10,8 @@
  *   pnpm exec tsx scripts/fixtures/record.ts --check            fail if any original identifier is
  *                                                               present anywhere in the repo
  *   pnpm exec tsx scripts/fixtures/record.ts --check --root DIR scan only that directory
+ *   --max-age-hours N                                           cache reuse window (positive number)
+ *   --root must resolve under tests/fixtures; unknown flags and missing values are errors.
  *
  * Reads SLEEPER_USERNAME and DEFAULT_LEAGUE_ID from the gitignored .env. Never writes them.
  */
@@ -22,7 +24,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { buildFixtureFiles, type RecordedInput } from "./build.js";
 import { API_ROOT, createFetcher, maxCallsPerMinute, type Fetcher } from "./fetch-cache.js";
 import { findLeaks, type FixtureFile } from "./leak-check.js";
@@ -31,7 +33,6 @@ import { collectIdentifiers, type RawLeagueData } from "./sanitize.js";
 
 const REPO_ROOT = process.cwd();
 const CACHE_DIR = join(REPO_ROOT, ".spike-cache");
-const DEFAULT_OUT = join(REPO_ROOT, "tests", "fixtures", "sleeper");
 const POSITIONS =
   "season_type=regular&position[]=QB&position[]=RB&position[]=WR&position[]=TE&position[]=K&position[]=DEF";
 
@@ -43,11 +44,21 @@ export interface Args {
   maxAgeHours: number;
 }
 
-export function parseArgs(argv: readonly string[]): Args {
+function valueOf(argv: readonly string[], i: number, flag: string): string {
+  const v = argv[i + 1];
+  if (v === undefined || v.startsWith("--")) throw new Error(`${flag} needs a value`);
+  return v;
+}
+
+/**
+ * Parses and validates arguments. Throws before anything touches the disk. `--root` must resolve
+ * to a directory strictly under `<repoRoot>/tests/fixtures`.
+ */
+export function parseArgs(argv: readonly string[], repoRoot: string = REPO_ROOT): Args {
   const args: Args = {
     check: false,
     refresh: false,
-    root: DEFAULT_OUT,
+    root: join(repoRoot, "tests", "fixtures", "sleeper"),
     rootGiven: false,
     maxAgeHours: 2,
   };
@@ -56,10 +67,22 @@ export function parseArgs(argv: readonly string[]): Args {
     if (a === "--check") args.check = true;
     else if (a === "--refresh") args.refresh = true;
     else if (a === "--root") {
-      args.root = resolve(argv[(i += 1)] ?? "");
+      const root = resolve(repoRoot, valueOf(argv, i, a));
+      i += 1;
+      const rel = relative(join(repoRoot, "tests", "fixtures"), root);
+      if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
+        throw new Error("--root must be a directory under tests/fixtures");
+      }
+      args.root = root;
       args.rootGiven = true;
-    } else if (a === "--max-age-hours") args.maxAgeHours = Number(argv[(i += 1)]);
-    else throw new Error(`unknown argument: ${a ?? ""}`);
+    } else if (a === "--max-age-hours") {
+      const hours = Number(valueOf(argv, i, a));
+      i += 1;
+      if (!Number.isFinite(hours) || hours <= 0) {
+        throw new Error("--max-age-hours must be a positive number");
+      }
+      args.maxAgeHours = hours;
+    } else throw new Error(`unknown argument: ${a ?? ""}`);
   }
   return args;
 }

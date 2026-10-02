@@ -58,11 +58,26 @@ function listFiles(dir: string): string[] {
 }
 
 describe("manifest", () => {
-  it("lists completed and partial weeks", () => {
-    expect(manifest.weeks).toEqual([1, 2, 3]);
-    expect(manifest.partialWeeks).toEqual([4]);
-    expect(manifest.currentWeek).toBe(4);
-    expect(manifest.futureMatchupWeeks).toEqual([5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+  it("has internally consistent weeks, partialWeeks and currentWeek", () => {
+    const { weeks, partialWeeks, currentWeek, futureMatchupWeeks } = manifest;
+    const range = (to: number): number[] => Array.from({ length: to }, (_, i) => i + 1);
+    expect(Number.isInteger(currentWeek) && currentWeek >= 1).toBe(true);
+    // Weeks are exactly the completed weeks below currentWeek (or through it once it is scored).
+    const currentIsPartial = partialWeeks.includes(currentWeek);
+    expect(weeks).toEqual(range(currentIsPartial ? currentWeek - 1 : currentWeek));
+    expect(weeks.filter((w) => partialWeeks.includes(w))).toEqual([]);
+    for (const w of partialWeeks) expect(w).toBeLessThanOrEqual(currentWeek);
+    for (const w of futureMatchupWeeks) expect(w).toBeGreaterThan(currentWeek);
+
+    // The current week is partial when its stats are empty or do not cover every starter.
+    const stats = load<StatsRow[]>(`stats/${manifest.season}/${currentWeek}.json`);
+    const have = new Set(stats.map((r) => r.player_id));
+    const matchups = load<MatchupRow[]>(`${leagueBase}/matchups/${currentWeek}.json`);
+    const complete =
+      stats.length > 0 && matchups.every((row) => row.starters.every((id) => have.has(id)));
+    if (!complete) expect(partialWeeks).toContain(currentWeek);
+    if (weeks.includes(currentWeek)) expect(complete).toBe(true);
+
     expect(manifest.leagueId).toMatch(/^1000\d{15}$/);
     expect(Number.isNaN(Date.parse(manifest.recordedAt))).toBe(false);
     expect(manifest.sanitizerVersion).toBeGreaterThanOrEqual(1);
@@ -72,6 +87,7 @@ describe("manifest", () => {
     for (const w of [...manifest.weeks, ...manifest.partialWeeks, ...manifest.futureMatchupWeeks]) {
       expect(Array.isArray(load(`${leagueBase}/matchups/${w}.json`))).toBe(true);
     }
+    for (const w of manifest.weeks) load(`stats/${manifest.season}/${w}.json`);
     for (const w of manifest.projectionWeeks) load(`projections/${manifest.season}/${w}.json`);
     for (const w of manifest.statsWeeks) load(`stats/${manifest.season}/${w}.json`);
     for (const id of manifest.draftIds) load(`v1/draft/${id}/picks.json`);
@@ -179,7 +195,7 @@ describe("scoring sanity from fixtures only", () => {
         }
       }
     }
-    expect(starters).toBe(300);
+    expect(starters).toBeGreaterThan(0);
     expect(matched).toBe(starters);
     expect(allMatched).toBe(allEntries);
   });

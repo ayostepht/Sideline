@@ -44,6 +44,53 @@ const NULLED_KEYS: ReadonlySet<string> = new Set([
   "last_message_attachment",
 ]);
 
+/**
+ * Leaf keys whose values are free display text. Only these get name replacement (exact or
+ * substring); enum-like fields (status, type, season_type, position, ...) are never rewritten,
+ * even when a manager is named like an enum value.
+ */
+export const DISPLAY_TEXT_KEYS: ReadonlySet<string> = new Set([
+  "display_name",
+  "username",
+  "team_name",
+  "name",
+  "description",
+  "notes",
+  "note",
+  "title",
+  "text",
+  "message",
+  "nickname",
+  "last_author_display_name",
+]);
+
+/**
+ * Metadata allowlists. Free-text metadata objects keep only these keys; every other key is dropped
+ * (a user can type anything into an unknown key). `null`-valued or missing metadata stays as-is.
+ */
+const USER_META_KEYS: ReadonlySet<string> = new Set(["team_name", "avatar"]);
+const USER_META_FLAG = /^[a-z]+(_[a-z]+)*_(pn|sms)$/;
+const LEAGUE_META_KEYS: ReadonlySet<string> = new Set([
+  "auto_continue",
+  "keeper_deadline",
+  "latest_league_winner_roster_id",
+]);
+const ROSTER_META_KEYS: ReadonlySet<string> = new Set(["record", "streak"]);
+const DRAFT_META_KEYS: ReadonlySet<string> = new Set([
+  "description",
+  "league_type",
+  "name",
+  "scoring_type",
+  "show_team_names",
+]);
+
+function pickMeta(meta: unknown, allowed: (key: string) => boolean): unknown {
+  if (!isRecord(meta)) return meta;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(meta)) if (allowed(k)) out[k] = v;
+  return out;
+}
+
 /** Allowlist for the `GET /user/{username}` object. */
 const USER_KEEP_KEYS = ["avatar", "display_name", "is_bot", "user_id", "username"] as const;
 
@@ -451,16 +498,18 @@ function sanitizeString(s: string, m: Mapping, key: string | null): string {
   if (id !== undefined) return id;
   const av = m.avatars.get(s);
   if (av !== undefined) return av;
-  const nameExempt = key !== null && PLAYER_NAME_KEYS.has(key);
-  if (nameExempt) return s;
-  const exactName = m.exactNames.get(s.toLowerCase());
-  if (exactName !== undefined) return exactName;
+  if (key !== null && PLAYER_NAME_KEYS.has(key)) return s;
+  const displayText = key !== null && DISPLAY_TEXT_KEYS.has(key);
+  if (displayText) {
+    const exactName = m.exactNames.get(s.toLowerCase());
+    if (exactName !== undefined) return exactName;
+  }
   let out = s;
   if (out.length >= 16) out = out.replace(ID_RUN, (x) => m.ids.get(x) ?? x);
   if (m.avatarRegex !== null && out.length >= MIN_AVATAR_TOKEN) {
     out = out.replace(m.avatarRegex, (x) => m.avatars.get(x) ?? x);
   }
-  if (m.nameRegex !== null && out.length >= MIN_SUBSTRING_NAME) {
+  if (displayText && m.nameRegex !== null && out.length >= MIN_SUBSTRING_NAME) {
     out = out.replace(m.nameRegex, (x) => m.exactNames.get(x.toLowerCase()) ?? x);
   }
   return out;
@@ -519,10 +568,15 @@ export function sanitizeUsers(doc: unknown, m: Mapping): unknown {
     if (slot !== undefined) {
       if (typeof u.display_name === "string") out.display_name = `manager_${pad(slot, 2)}`;
       if (isRecord(u.metadata)) {
-        const meta: Record<string, unknown> = { ...u.metadata };
+        const meta = pickMeta(
+          u.metadata,
+          (k) => USER_META_KEYS.has(k) || USER_META_FLAG.test(k),
+        ) as Record<string, unknown>;
         if (typeof meta.team_name === "string") meta.team_name = `Team ${pad(slot, 2)}`;
         out.metadata = meta;
       }
+    } else if (isRecord(u.metadata)) {
+      out.metadata = pickMeta(u.metadata, (k) => USER_META_FLAG.test(k));
     }
     return out;
   });
@@ -535,12 +589,34 @@ export function sanitizeDrafts(doc: unknown, m: Mapping): unknown {
   if (!Array.isArray(out)) return out;
   return (out as unknown[]).map((d) => {
     if (!isRecord(d) || !isRecord(d.metadata)) return d;
-    const meta: Record<string, unknown> = { ...d.metadata };
+    const meta = pickMeta(d.metadata, (k) => DRAFT_META_KEYS.has(k)) as Record<string, unknown>;
     if (typeof meta.description === "string" && meta.description.length > 0) {
       meta.description = "Example draft description";
     }
     return { ...d, metadata: meta };
   });
+}
+
+function withMeta(doc: unknown, allowed: ReadonlySet<string>, m: Mapping): unknown {
+  const out = walk(doc, m, null);
+  if (!isRecord(out) || !("metadata" in out)) return out;
+  return { ...out, metadata: pickMeta(out.metadata, (k) => allowed.has(k)) };
+}
+
+/** `GET /league/{id}`: generic rewrite, then allowlisted metadata. */
+export function sanitizeLeague(doc: unknown, m: Mapping): unknown {
+  return withMeta(doc, LEAGUE_META_KEYS, m);
+}
+
+/** `GET /league/{id}/rosters`: generic rewrite, metadata limited to record and streak. */
+export function sanitizeRosters(doc: unknown, m: Mapping): unknown {
+  const out = walk(doc, m, null);
+  if (!Array.isArray(out)) return out;
+  return (out as unknown[]).map((r) =>
+    isRecord(r) && "metadata" in r
+      ? { ...r, metadata: pickMeta(r.metadata, (k) => ROSTER_META_KEYS.has(k)) }
+      : r,
+  );
 }
 
 /**
@@ -550,7 +626,7 @@ export function sanitizeDrafts(doc: unknown, m: Mapping): unknown {
 export function sanitizeUserLeagues(doc: unknown, m: Mapping): unknown[] {
   const primary = asRecords(doc).find((l) => l.league_id === m.primaryLeagueId);
   if (primary === undefined) return [];
-  const first = walk(primary, m, null) as Record<string, unknown>;
+  const first = sanitizeLeague(primary, m) as Record<string, unknown>;
   const second: Record<string, unknown> = {
     ...first,
     league_id: SYNTHETIC_LEAGUE_ID,

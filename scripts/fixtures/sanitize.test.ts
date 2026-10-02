@@ -7,6 +7,8 @@ import {
   fakeManagerName,
   sanitizeDoc,
   sanitizeDrafts,
+  sanitizeLeague,
+  sanitizeRosters,
   sanitizeUser,
   sanitizeUserLeagues,
   sanitizeUsers,
@@ -209,9 +211,9 @@ describe("sanitizeDoc on rosters, transactions, drafts", () => {
   });
 
   it("matches short names only as whole values", () => {
-    expect(sanitizeDoc({ a: REAL.displayC, b: "Quick" }, mapping)).toEqual({
-      a: "manager_03",
-      b: "Quick",
+    expect(sanitizeDoc({ name: REAL.displayC, text: "Quick" }, mapping)).toEqual({
+      name: "manager_03",
+      text: "Quick",
     });
   });
 
@@ -256,5 +258,86 @@ describe("collectIdentifiers", () => {
   it("de-duplicates names case-insensitively", () => {
     const lower = ids.names.map((n) => n.toLowerCase());
     expect(new Set(lower).size).toBe(lower.length);
+  });
+});
+
+describe("metadata allowlists and display-text-only name replacement", () => {
+  it("drops an unknown users[].metadata key that holds a name, keeps flags and rewritten team_name", () => {
+    const r = syntheticRaw();
+    const users = r.users as Record<string, unknown>[];
+    users[1] = {
+      ...users[1],
+      metadata: {
+        team_name: REAL.teamA,
+        allow_pn: "on",
+        allow_sms: "off",
+        mention_pn: "on",
+        bio: `Hi I am ${REAL.displayB}`,
+        p_nick_4046: "Some Nickname",
+      },
+    };
+    const m = buildMapping(r, REAL.leagueId);
+    const out = asRec(
+      (sanitizeUsers(r.users, m) as Record<string, unknown>[]).find(
+        (u) => u.user_id === fakeId(m, REAL.userA),
+      ),
+    );
+    expect(asRec(out.metadata)).toEqual({
+      team_name: "Team 02",
+      allow_pn: "on",
+      allow_sms: "off",
+      mention_pn: "on",
+    });
+    expect(JSON.stringify(out)).not.toContain(REAL.displayB);
+  });
+
+  it("limits league, roster and draft metadata to allowlisted keys", () => {
+    const m = buildMapping(syntheticRaw(), REAL.leagueId);
+    const league = asRec(
+      sanitizeLeague({ metadata: { auto_continue: "on", motto: REAL.teamA }, name: "x" }, m),
+    );
+    expect(league.metadata).toEqual({ auto_continue: "on" });
+    const rosters = sanitizeRosters(
+      [{ roster_id: 1, metadata: { record: "WL", streak: "1W", p_nick_1: REAL.displayB } }],
+      m,
+    ) as Record<string, unknown>[];
+    expect(rosters[0]?.metadata).toEqual({ record: "WL", streak: "1W" });
+    const drafts = sanitizeDrafts(
+      [{ metadata: { name: REAL.leagueName, scoring_type: "ppr", secret: REAL.teamB } }],
+      m,
+    ) as Record<string, unknown>[];
+    expect(drafts[0]?.metadata).toEqual({ name: "Example League", scoring_type: "ppr" });
+  });
+
+  it("leaves null metadata alone", () => {
+    const m = buildMapping(syntheticRaw(), REAL.leagueId);
+    expect(asRec(sanitizeLeague({ metadata: null }, m)).metadata).toBeNull();
+  });
+
+  it("does not corrupt status or type fields when a manager is named like an enum value", () => {
+    const r = syntheticRaw();
+    const users = r.users as Record<string, unknown>[];
+    users[0] = { ...users[0], display_name: "draft" };
+    users[1] = { ...users[1], display_name: "complete" };
+    users[2] = { ...users[2], display_name: "snake" };
+    const m = buildMapping(r, REAL.leagueId);
+    const doc = [
+      {
+        status: "complete",
+        type: "snake",
+        season_type: "draft",
+        description: "complete",
+        metadata: { notes: "the draft is complete" },
+      },
+    ];
+    const out = asRec((sanitizeDoc(doc, m) as unknown[])[0]);
+    expect(out.status).toBe("complete");
+    expect(out.type).toBe("snake");
+    expect(out.season_type).toBe("draft");
+    // Display-text keys still get replaced.
+    expect(String(out.description)).toMatch(/^manager_\d{2}$/);
+    expect(asRec(out.metadata).notes).toMatch(/manager_\d{2}/);
+    const d = asRec((sanitizeDrafts([{ status: "complete", type: "snake" }], m) as unknown[])[0]);
+    expect(d).toEqual({ status: "complete", type: "snake" });
   });
 });
