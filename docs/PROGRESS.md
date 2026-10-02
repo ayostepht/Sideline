@@ -80,7 +80,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.2b-fix | Batch B review M1 (league switch sync), m1, m2, m3, m5 | backend-engineer | B-fix | Done (targeted checks; 639 tests at agent run) | 1 | 18628a4 |
 | T2.1c | Gallery UX review fixes M1, m1 to m6, n1, n2 plus code m7 | frontend-engineer | B-fix | Done (gallery 185,352 B) | 1 | 17cab8b |
 | T2.3a | Layout shell, switcher, week selector, search, placeholders | frontend-engineer | C | Done (`/l/[leagueId]` 155.0 KB, `/` 136.6 KB; overlays and cmdk lazy) | 1 | 0a45a4a |
-| T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker; plus UX M2 gallery axe) | qa-engineer | C | In progress | 1 | |
+| T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker; plus UX M2 gallery axe) | qa-engineer | C | Done (e2e 75, a11y 36 at agent run; full e2e re-run by orchestrator before Batch D) | 1 | 94a04f3 |
 | T2.0b-fix2 | Route-size check on dynamic routes; screens slugs for query routes | devops-engineer | C | Done (`/` 139,863 B; `/l/*` 158,754 B; gallery 189,202 B) | 1 | 494e0bd |
 | T2.3a-fix | Batch C review M1 (404 loop), M2 (layout errors), m1, m2, m3 | frontend-engineer | C-fix | In progress | 1 | |
 | T2.2b-fix2 | Batch C review m4, m5; getLeagueChoices tests | backend-engineer | C-fix | Done (lib/server and app/api 98.4% lines) | 1 | cfb098d |
@@ -166,6 +166,8 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - T2.3a: `scripts/gate/routes-size.ts` fails on dynamic routes (manifests use `%5BleagueId%5D`, disk has `[leagueId]`); devops fix needed before any gate run. Multi-league switch path untested (fixtures have one league for the user's season in the seed); T2.5b covers it. Concurrent `next build` runs by parallel agents clobber `.next`; sequence builds in future batches.
 
 - Gallery route JS is 189,202 B (budget 204,800). Any new gallery content must stay lean, or split the gallery into sections.
+
+- T2.5a: onboarding e2e server on port 3101 (3001 is taken locally); onboarding state is shared across projects (serial spec). axe runs after `settleAnimations` on overlays (mid-fade contrast); consider skipping overlay fade under reduced motion. Temp seeded dirs are never cleaned up (teardown follow-up). Helpers for T2.5b: `e2e/helpers/servers.ts` (seededBaseUrl, onboardingBaseUrl, FIXTURE), `e2e/routes.ts` (existingRoutes, phase2PageRoutes, overlayRoutes), `useTheme`/`expectThemeApplied`.
 
 ## Questions for Steph
 
