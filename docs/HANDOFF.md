@@ -18,15 +18,17 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
-## 3. In flight
+## 3. In flight (Batch B1)
 
-- code-reviewer on Batch A0+A (diff 3327dae..775680b). Report to save as `docs/reviews/2026-10-02-p2-batchA-code.md`.
+- T2.2a-fix (backend-engineer): packages/shared, packages/db. Review m4, m5, m6, m8, m9.
+- T2.1b (frontend-engineer): apps/web/components, app/dev, globals.css, lib/client. Plus m10.
+- T2.0b-fix (devops-engineer): scripts/lib/seed.ts, paths.ts and tests. m1, n1.
 
 ## 4. Next steps (in order)
 
-1. Save the Batch A review; fix any Blocker or Major before Batch B.
-2. Batch B: T2.1b (frontend), T2.2b (backend), T2.2c (sleeper-data). T2.2c must handle onboarding jobs in the request poller (`parseParamsForJob`) and swap `jobs/db-reads.ts` to the T2.2a helpers (mapping in the T2.2a report: readState->readNflState etc.).
-3. Then ux-reviewer on `/dev/gallery` (seeded `pnpm screens`, captures in `.screens/` only), Batches C to G.
+1. Verify and commit each B1 task separately (stage exact paths only).
+2. Batch B2: T2.2b (backend) and T2.2c (sleeper-data) after T2.2a-fix lands. T2.2c handles m7 (fail unknown jobs, honor `paramsError`), onboarding jobs via `parseParamsForJob`, and swaps `jobs/db-reads.ts` to the T2.2a helpers (readState->readNflState, readPlayoffWeekStart->readLeaguePlayoffWeekStart, storedMatchupWeeks->readStoredMatchupWeeks, positionCounts->readPlayerPositionCounts, storedStatsWeeks->readStoredStatsWeeks, storedProjectionWeeks->readStoredProjectionWeeks, kickoffsByTeam->readKickoffsByTeam, readStateFetchedAt->readNflStateFetchedAt, touchStateFetchedAt->touchNflStateFetchedAt; scheduleTeamCode stays).
+3. Code review of B1+B2, ux-reviewer on `/dev/gallery` (seeded screens, captures in `.screens/` only), then Batches C to G.
 
 ## 5. Standing rules for every brief
 
