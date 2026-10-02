@@ -3,7 +3,7 @@
  * `/players/nfl` once-a-day guard. Every helper takes `now: Date` (never reads the clock).
  * Write transactions are short, and read-modify-write sequences use IMMEDIATE transactions.
  */
-import { and, asc, desc, eq, inArray, max, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, max, or, sql } from "drizzle-orm";
 import {
   SyncRequestSchema,
   SyncRunSchema,
@@ -18,6 +18,10 @@ import type { DbHandle } from "./connection.js";
 import { appSettings, syncRequests, syncRuns } from "./schema.js";
 
 const iso = (now: Date): string => now.toISOString();
+
+/** Default age after which a `running` row is presumed orphaned (15 minutes). */
+export const DEFAULT_STALE_MS = 15 * 60 * 1000;
+export const INTERRUPTED_ERROR = "interrupted (worker restart)";
 
 // ---------- app_settings helpers ----------
 
@@ -120,6 +124,34 @@ export function lastSuccessAt(h: DbHandle, job: SyncJobName): string | null {
   return row?.finishedAt ?? null;
 }
 
+/**
+ * Marks `sync_requests` and `sync_runs` stuck in `running` for longer than `olderThanMs` as
+ * `failed` ("interrupted (worker restart)"). Call on worker start and periodically.
+ */
+export function reapStale(
+  h: DbHandle,
+  now: Date,
+  olderThanMs: number,
+): { requests: number; runs: number } {
+  const cutoff = iso(new Date(now.getTime() - olderThanMs));
+  return h.db.transaction(
+    (tx) => {
+      const requests = tx
+        .update(syncRequests)
+        .set({ status: "failed", error: INTERRUPTED_ERROR, finishedAt: iso(now) })
+        .where(and(eq(syncRequests.status, "running"), lt(syncRequests.startedAt, cutoff)))
+        .run().changes;
+      const runs = tx
+        .update(syncRuns)
+        .set({ status: "failed", error: INTERRUPTED_ERROR, finishedAt: iso(now) })
+        .where(and(eq(syncRuns.status, "running"), lt(syncRuns.startedAt, cutoff)))
+        .run().changes;
+      return { requests, runs };
+    },
+    { behavior: "immediate" },
+  );
+}
+
 // ---------- heartbeat ----------
 
 const HeartbeatSchema = z.object({ at: z.string(), info: z.record(z.string(), z.unknown()) });
@@ -156,20 +188,31 @@ function toRequest(row: typeof syncRequests.$inferSelect): SyncRequest {
 /**
  * Queues a manual sync. If a pending or running request for the same job (`all` counts as its
  * own job) exists, returns it instead of adding a duplicate. Check and insert share one IMMEDIATE
- * transaction so two processes cannot both insert.
+ * transaction so two processes cannot both insert. A `running` request that started more than
+ * `staleMs` ago (default 15 min) is presumed orphaned by a crash and does not block a new one.
  */
 export function enqueue(
   h: DbHandle,
   job: SyncRequest["job"],
   source: SyncRequest["source"],
   now: Date,
+  staleMs: number = DEFAULT_STALE_MS,
 ): SyncRequest {
+  const cutoff = iso(new Date(now.getTime() - staleMs));
   return h.db.transaction(
     (tx) => {
       const existing = tx
         .select()
         .from(syncRequests)
-        .where(and(eq(syncRequests.job, job), inArray(syncRequests.status, ["pending", "running"])))
+        .where(
+          and(
+            eq(syncRequests.job, job),
+            or(
+              eq(syncRequests.status, "pending"),
+              and(eq(syncRequests.status, "running"), gte(syncRequests.startedAt, cutoff)),
+            ),
+          ),
+        )
         .orderBy(asc(syncRequests.id))
         .limit(1)
         .get();
@@ -296,7 +339,12 @@ function leaseTx<T>(
   );
 }
 
-/** Succeeds when no lease exists, it expired, or `holder` already holds it. */
+/**
+ * Holder ids must be unique per process (for example `${hostname}:${pid}:${random}`): the same
+ * holder id is treated as the same owner and may re-acquire or renew, so two processes sharing an
+ * id would both believe they hold the lease.
+ *
+ * Succeeds when no lease exists, it expired, or `holder` already holds it. */
 export function acquireLease(h: DbHandle, holder: string, ttlMs: number, now: Date): boolean {
   const nowMs = now.getTime();
   return leaseTx(h, (cur) => {

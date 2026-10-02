@@ -18,6 +18,7 @@ import {
   readHeartbeat,
   readLease,
   readPlayersFetchedAt,
+  reapStale,
   releaseLease,
   renewLease,
   startRun,
@@ -181,5 +182,47 @@ describe("T1.3a sync_runs, heartbeat and players guard", () => {
     writePlayersFetchedAt(a, t(1));
     writePlayersFetchedAt(a, t(2));
     expect(readPlayersFetchedAt(b)).toBe(t(2).toISOString());
+  });
+});
+
+describe("M3: stale running rows", () => {
+  const STALE = 15 * 60 * 1000;
+
+  it("a stale running request no longer blocks enqueue", () => {
+    const first = enqueue(a, "all", "api", t(0));
+    claimNext(a, t(0));
+    const again = enqueue(a, "all", "api", t(STALE - 1));
+    expect(again.id).toBe(first.id);
+    const fresh = enqueue(a, "all", "api", t(STALE + 1));
+    expect(fresh.id).not.toBe(first.id);
+    expect(fresh.status).toBe("pending");
+  });
+
+  it("reapStale fails stale running rows and leaves fresh ones", () => {
+    const oldReq = enqueue(a, "players", "api", t(0));
+    claimNext(a, t(0));
+    const oldRun = startRun(a, "players", t(0));
+    const newReq = enqueue(a, "all", "api", t(STALE));
+    claimNext(a, t(STALE));
+    const newRun = startRun(a, "league", t(STALE));
+    const counts = reapStale(a, t(STALE + 1000), STALE / 2);
+    expect(counts).toEqual({ requests: 1, runs: 1 });
+    expect(getRequest(a, oldReq.id)).toMatchObject({
+      status: "failed",
+      error: "interrupted (worker restart)",
+    });
+    expect(getRequest(a, newReq.id)?.status).toBe("running");
+    const runs = latestRunPerJob(a);
+    expect(runs.find((r) => r.id === oldRun)?.status).toBe("failed");
+    expect(runs.find((r) => r.id === newRun)?.status).toBe("running");
+    expect(reapStale(a, t(STALE + 1000), STALE / 2)).toEqual({ requests: 0, runs: 0 });
+  });
+});
+
+describe("m1: lease holder identity", () => {
+  it("a distinct holder is rejected while the lease is held", () => {
+    expect(acquireLease(a, "host:1:abc", 1000, t(0))).toBe(true);
+    expect(acquireLease(b, "host:2:def", 1000, t(10))).toBe(false);
+    expect(renewLease(b, "host:2:def", 1000, t(10))).toBe(false);
   });
 });

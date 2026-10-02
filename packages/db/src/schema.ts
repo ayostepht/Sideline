@@ -38,6 +38,21 @@ export const leagues = sqliteTable("leagues", {
   /** JSON string[]: `roster_positions`. */
   rosterPositionsJson: text("roster_positions_json").notNull(),
   previousLeagueId: text("previous_league_id"),
+  totalRosters: integer("total_rosters").notNull(),
+  playoffWeekStart: integer("playoff_week_start"),
+  playoffTeams: integer("playoff_teams"),
+  tradeDeadline: integer("trade_deadline"),
+  waiverType: integer("waiver_type"),
+  /** "rolling" | "faab" | "reverse_standings" | "unknown" (shared WaiverMode). */
+  waiverMode: text("waiver_mode").notNull().default("unknown"),
+  waiverDayOfWeek: integer("waiver_day_of_week"),
+  waiverClearDays: integer("waiver_clear_days"),
+  dailyWaivers: integer("daily_waivers", { mode: "boolean" }).notNull().default(false),
+  waiverBudget: real("waiver_budget"),
+  divisions: integer("divisions"),
+  reserveSlots: integer("reserve_slots").notNull().default(0),
+  taxiSlots: integer("taxi_slots").notNull().default(0),
+  leagueAverageMatch: integer("league_average_match", { mode: "boolean" }).notNull().default(false),
   /** ISO 8601. */
   syncedAt: text("synced_at").notNull(),
 });
@@ -72,7 +87,9 @@ export const rosters = sqliteTable(
     ties: integer("ties").notNull().default(0),
     fpts: real("fpts").notNull().default(0),
     fptsAgainst: real("fpts_against").notNull().default(0),
-    waiverBudgetUsed: integer("waiver_budget_used").notNull().default(0),
+    /** 1 = first claim priority; null when unset. */
+    waiverPosition: integer("waiver_position"),
+    waiverBudgetUsed: real("waiver_budget_used").notNull().default(0),
     /** ISO 8601. */
     syncedAt: text("synced_at").notNull(),
   },
@@ -217,6 +234,10 @@ export const matchups = sqliteTable(
     matchupId: integer("matchup_id"),
     /** JSON string[]. */
     startersJson: text("starters_json").notNull(),
+    /** JSON number[] aligned with starters. */
+    startersPointsJson: text("starters_points_json").notNull().default("[]"),
+    /** JSON string[] of all player ids on the roster that week. */
+    playersJson: text("players_json").notNull().default("[]"),
     /** JSON object: player id to points. */
     playersPointsJson: text("players_points_json").notNull(),
     points: real("points").notNull(),

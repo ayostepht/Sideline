@@ -60,6 +60,20 @@ CREATE TABLE `leagues` (
 	`scoring_json` text NOT NULL,
 	`roster_positions_json` text NOT NULL,
 	`previous_league_id` text,
+	`total_rosters` integer NOT NULL,
+	`playoff_week_start` integer,
+	`playoff_teams` integer,
+	`trade_deadline` integer,
+	`waiver_type` integer,
+	`waiver_mode` text DEFAULT 'unknown' NOT NULL,
+	`waiver_day_of_week` integer,
+	`waiver_clear_days` integer,
+	`daily_waivers` integer DEFAULT false NOT NULL,
+	`waiver_budget` real,
+	`divisions` integer,
+	`reserve_slots` integer DEFAULT 0 NOT NULL,
+	`taxi_slots` integer DEFAULT 0 NOT NULL,
+	`league_average_match` integer DEFAULT false NOT NULL,
 	`synced_at` text NOT NULL
 );
 --> statement-breakpoint
@@ -69,6 +83,8 @@ CREATE TABLE `matchups` (
 	`roster_id` integer NOT NULL,
 	`matchup_id` integer,
 	`starters_json` text NOT NULL,
+	`starters_points_json` text DEFAULT '[]' NOT NULL,
+	`players_json` text DEFAULT '[]' NOT NULL,
 	`players_points_json` text NOT NULL,
 	`points` real NOT NULL,
 	PRIMARY KEY(`league_id`, `week`, `roster_id`)
@@ -165,7 +181,8 @@ CREATE TABLE `rosters` (
 	`ties` integer DEFAULT 0 NOT NULL,
 	`fpts` real DEFAULT 0 NOT NULL,
 	`fpts_against` real DEFAULT 0 NOT NULL,
-	`waiver_budget_used` integer DEFAULT 0 NOT NULL,
+	`waiver_position` integer,
+	`waiver_budget_used` real DEFAULT 0 NOT NULL,
 	`synced_at` text NOT NULL,
 	PRIMARY KEY(`league_id`, `roster_id`)
 );
