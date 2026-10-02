@@ -48,7 +48,7 @@ export function PlayerRow({
 }: PlayerRowProps) {
   const interactive = href !== undefined || onClick !== undefined;
   const cls = cn(
-    "flex min-h-11 w-full min-w-0 items-center gap-3 rounded-[8px] border-l-4 px-3 py-1 text-left md:max-w-2xl",
+    "flex min-h-11 w-full min-w-0 items-center gap-2 rounded-control border-l-4 px-2 py-1 text-left md:max-w-2xl",
     highlighted ? "border-primary bg-accent-soft" : "border-transparent bg-transparent",
     interactive && "transition-colors duration-150 hover:bg-muted active:bg-border",
     className,
@@ -72,7 +72,7 @@ export function PlayerRow({
           {highlighted ? (
             <span
               aria-hidden
-              className="shrink-0 rounded-[6px] bg-primary px-1.5 py-0.5 text-xs font-semibold leading-4 text-primary-foreground"
+              className="shrink-0 rounded-control bg-primary px-1.5 py-0.5 text-[11px] font-bold uppercase tracking-wider leading-4 text-primary-foreground"
               data-testid="player-row-highlight-tag"
             >
               {highlightLabel}
@@ -88,9 +88,11 @@ export function PlayerRow({
       </span>
       {stat !== undefined ? (
         <span className="shrink-0 text-right">
-          <span className="block text-base font-semibold tabular-nums">{stat}</span>
+          <span className="block text-base font-bold tabular-nums">{stat}</span>
           {statLabel ? (
-            <span className="block text-xs text-muted-foreground">{statLabel}</span>
+            <span className="block text-[11px] uppercase tracking-wider text-muted-foreground">
+              {statLabel}
+            </span>
           ) : null}
         </span>
       ) : null}

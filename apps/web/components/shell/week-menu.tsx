@@ -34,7 +34,7 @@ export default function WeekMenu({
                 aria-current={w === week ? "true" : undefined}
                 data-testid={`week-option-${w}`}
                 className={cn(
-                  "flex min-h-11 w-full items-center justify-center rounded-[8px] text-sm tabular-nums hover:bg-muted",
+                  "flex min-h-11 w-full items-center justify-center rounded-control text-sm tabular-nums hover:bg-muted",
                   w === week
                     ? "bg-primary font-semibold text-primary-foreground hover:bg-primary"
                     : "",

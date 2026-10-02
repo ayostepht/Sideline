@@ -39,16 +39,10 @@ export default function MoreSheet({
                   aria-current={active ? "page" : undefined}
                   data-testid={`nav-more-${item.key}`}
                   className={cn(
-                    "relative flex min-h-12 items-center gap-3 rounded-[8px] px-3 text-base hover:bg-muted",
-                    active ? "bg-accent-soft font-semibold text-accent-soft-foreground" : "",
+                    "relative flex min-h-12 items-center gap-2 rounded-control px-3 text-base",
+                    active ? "bg-primary font-bold text-primary-foreground" : "hover:bg-muted",
                   )}
                 >
-                  {active ? (
-                    <span
-                      aria-hidden
-                      className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-primary"
-                    />
-                  ) : null}
                   <Icon className="size-5" aria-hidden />
                   {item.label}
                 </Link>

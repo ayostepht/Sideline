@@ -13,7 +13,7 @@ import {
 
 const WeekMenu = lazy(() => import("./week-menu"));
 const iconBtn =
-  "inline-flex size-11 shrink-0 items-center justify-center rounded-[8px] text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:bg-transparent";
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-control text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:bg-transparent";
 
 export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
   const router = useRouter();
@@ -34,7 +34,7 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
       <div
         data-testid="week-selector"
         aria-disabled="true"
-        className="inline-flex min-h-11 items-center rounded-[8px] px-3 text-sm text-muted-foreground"
+        className="inline-flex min-h-11 items-center rounded-control px-3 text-sm text-muted-foreground"
       >
         Preseason
       </div>
@@ -58,7 +58,7 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
       data-testid="week-menu"
       aria-label={`Week ${week}, choose week`}
       onClick={() => setArmed(true)}
-      className="inline-flex min-h-11 min-w-[4.5rem] items-center justify-center rounded-[8px] px-2 text-sm font-semibold tabular-nums hover:bg-muted"
+      className="inline-flex min-h-11 min-w-[4.5rem] items-center justify-center rounded-control px-2 text-sm font-semibold tabular-nums hover:bg-muted"
     >
       Week {week}
     </button>

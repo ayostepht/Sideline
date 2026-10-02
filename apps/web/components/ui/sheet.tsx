@@ -12,14 +12,14 @@ export const SheetTrigger = DialogPrimitive.Trigger;
 export const SheetClose = DialogPrimitive.Close;
 
 const sheetVariants = cva(
-  "fixed z-50 flex flex-col gap-2 border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-card-foreground shadow-lg sl-anim-sheet",
+  "fixed z-50 flex flex-col gap-2 border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-card-foreground sl-anim-sheet",
   {
     variants: {
       side: {
         // bottom sheet under 1024px, right drawer from 1024px
         responsive:
-          "inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-[12px] border-b-0 lg:inset-y-0 lg:left-auto lg:right-0 lg:max-h-none lg:w-[440px] lg:rounded-none lg:border-y-0 lg:border-r-0",
-        bottom: "inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-[12px] border-b-0",
+          "inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-card border-b-0 lg:inset-y-0 lg:left-auto lg:right-0 lg:max-h-none lg:w-[440px] lg:rounded-none lg:border-y-0 lg:border-r-0",
+        bottom: "inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-card border-b-0",
         right: "inset-y-0 right-0 w-[min(440px,100vw)] overflow-y-auto border-y-0 border-r-0",
       },
     },
@@ -41,7 +41,7 @@ export function SheetContent({
           <span
             aria-hidden
             className={cn(
-              "mx-auto -mt-1 mb-1 h-1 w-8 shrink-0 rounded-full bg-muted-foreground/40",
+              "mx-auto -mt-1 mb-1 h-1 w-8 shrink-0 bg-muted-foreground/40",
               side === undefined || side === "responsive" ? "lg:hidden" : "",
             )}
           />
@@ -49,7 +49,7 @@ export function SheetContent({
         {children}
         <DialogPrimitive.Close
           aria-label="Close"
-          className="absolute right-2 top-2 inline-flex size-11 items-center justify-center rounded-[8px] text-muted-foreground hover:bg-muted"
+          className="absolute right-2 top-2 inline-flex size-11 items-center justify-center rounded-control text-muted-foreground hover:bg-muted"
         >
           <X className="size-4" aria-hidden />
         </DialogPrimitive.Close>

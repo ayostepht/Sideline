@@ -43,7 +43,7 @@ export function LeagueSwitcher({ leagueId, leagueName, leagues, variant, classNa
       onClick={() => setArmed(true)}
       aria-label={`League: ${leagueName}. Switch league`}
       className={cn(
-        "flex min-h-11 w-full min-w-0 items-center gap-2 rounded-[8px] px-3 text-left text-sm font-semibold hover:bg-muted",
+        "flex min-h-11 w-full min-w-0 items-center gap-2 rounded-control px-3 text-left text-sm font-semibold hover:bg-muted",
         className,
       )}
     >

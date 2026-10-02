@@ -31,7 +31,7 @@ export function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         className={cn(
-          "sl-anim-fade fixed left-1/2 top-1/2 z-50 w-[calc(100vw-32px)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[12px] border bg-card p-6 text-card-foreground shadow-lg",
+          "sl-anim-fade fixed left-1/2 top-1/2 z-50 w-[calc(100vw-32px)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-card border bg-card p-4 text-card-foreground",
           className,
         )}
         {...props}
@@ -39,7 +39,7 @@ export function DialogContent({
         {children}
         <DialogPrimitive.Close
           aria-label="Close"
-          className="absolute right-2 top-2 inline-flex size-11 items-center justify-center rounded-[8px] text-muted-foreground hover:bg-muted"
+          className="absolute right-2 top-2 inline-flex size-11 items-center justify-center rounded-control text-muted-foreground hover:bg-muted"
         >
           <X className="size-4" aria-hidden />
         </DialogPrimitive.Close>

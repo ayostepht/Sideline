@@ -9,7 +9,7 @@ export function ReasonChip({ reason }: { reason: Reason }) {
   return (
     <li
       className={cn(
-        "inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border bg-muted px-2.5 py-1.5 text-[13px] leading-4 sm:py-1 sm:text-xs",
+        "inline-flex max-w-full min-w-0 items-center gap-1 rounded-control border bg-muted px-2 py-1.5 text-[13px] leading-4 sm:py-1 sm:text-xs",
         imp.sign === "up" && "text-positive",
         imp.sign === "down" && "text-negative",
         imp.sign === "none" && "text-foreground",

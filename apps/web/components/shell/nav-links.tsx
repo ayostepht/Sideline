@@ -37,18 +37,12 @@ export function SidebarNav({ leagueId }: Props) {
             aria-current={active ? "page" : undefined}
             data-testid={`nav-link-${item.key}`}
             className={cn(
-              "relative flex min-h-11 items-center gap-3 rounded-[8px] px-3 text-sm transition-colors hover:bg-muted",
+              "relative flex min-h-11 items-center gap-2 rounded-control px-3 text-sm transition-colors",
               active
-                ? "bg-accent-soft font-semibold text-accent-soft-foreground"
-                : "text-foreground",
+                ? "bg-primary font-bold text-primary-foreground"
+                : "text-foreground hover:bg-muted",
             )}
           >
-            {active ? (
-              <span
-                aria-hidden
-                className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-primary"
-              />
-            ) : null}
             <Icon className="size-5 shrink-0" aria-hidden />
             {item.label}
           </Link>
@@ -86,7 +80,7 @@ function Tab({
 const tabClass = (active: boolean) =>
   cn(
     "relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-xs",
-    active ? "font-semibold text-accent-soft-foreground" : "text-muted-foreground",
+    active ? "font-bold text-foreground" : "text-muted-foreground",
   );
 
 function TabInner({
@@ -100,13 +94,11 @@ function TabInner({
 }) {
   return (
     <>
-      {active ? (
-        <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-primary" />
-      ) : null}
+      {active ? <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] bg-primary" /> : null}
       <span
         className={cn(
-          "flex h-7 w-12 items-center justify-center rounded-full",
-          active ? "bg-accent-soft" : "",
+          "flex h-7 w-12 items-center justify-center rounded-control",
+          active ? "bg-primary text-primary-foreground" : "",
         )}
       >
         {icon}

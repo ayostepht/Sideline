@@ -7,7 +7,7 @@ import { cn } from "../../lib/client/cn";
 export function ToggleGroup({ className, ...props }: ComponentProps<typeof TogglePrimitive.Root>) {
   return (
     <TogglePrimitive.Root
-      className={cn("inline-flex max-w-full gap-1 rounded-[8px] bg-muted p-1", className)}
+      className={cn("inline-flex max-w-full gap-0.5 rounded-control bg-muted p-0.5", className)}
       {...props}
     />
   );
@@ -20,7 +20,7 @@ export function ToggleGroupItem({
   return (
     <TogglePrimitive.Item
       className={cn(
-        "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-[6px] px-3 text-sm font-medium text-muted-foreground transition-colors duration-150 data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm data-[state=on]:ring-2 data-[state=on]:ring-inset data-[state=on]:ring-primary",
+        "inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-control px-3 text-sm font-medium text-muted-foreground transition-colors duration-150 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground ",
         className,
       )}
       {...props}

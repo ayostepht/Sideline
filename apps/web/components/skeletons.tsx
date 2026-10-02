@@ -23,9 +23,9 @@ const bar = (cls: string) => <div className={cn("sl-skeleton", cls)} aria-hidden
 
 export function CardSkeleton({ className }: { className?: string }) {
   return (
-    <Card className={cn("flex flex-col gap-3 p-4", className)}>
+    <Card className={cn("flex flex-col gap-2 p-3", className)}>
       <Busy testid="skeleton-card">
-        <div className="flex flex-col gap-3" aria-hidden>
+        <div className="flex flex-col gap-2" aria-hidden>
           {bar("h-4 w-1/3")}
           {bar("h-6 w-2/3")}
           {bar("h-4 w-full")}
@@ -46,7 +46,7 @@ export function PlayerRowSkeleton({
     <Busy testid="skeleton-player-rows" className={cn("flex flex-col", className)}>
       {Array.from({ length: count }, (_, i) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
-        <div key={i} className="flex min-h-11 items-center gap-3 px-3 py-2" aria-hidden>
+        <div key={i} className="flex min-h-11 items-center gap-2 px-2 py-1" aria-hidden>
           {bar("h-4 w-9 shrink-0")}
           <div className="flex min-w-0 flex-1 flex-col gap-1">
             {bar("h-4 w-2/3")}
@@ -72,7 +72,7 @@ export function TableSkeleton({
     <Busy testid="skeleton-table" className={cn("flex flex-col gap-2", className)}>
       {Array.from({ length: rows }, (_, r) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
-        <div key={r} className="flex gap-3" aria-hidden>
+        <div key={r} className="flex gap-2" aria-hidden>
           {Array.from({ length: cols }, (_, c) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders
             <div key={c} className={cn("sl-skeleton h-5", c === 0 ? "flex-[2]" : "flex-1")} />
@@ -85,7 +85,7 @@ export function TableSkeleton({
 
 export function StatCardSkeleton({ className }: { className?: string }) {
   return (
-    <Card className={cn("p-4", className)}>
+    <Card className={cn("p-3", className)}>
       <Busy testid="skeleton-stat-card">
         <div className="flex flex-col gap-2" aria-hidden>
           {bar("h-3 w-1/3")}

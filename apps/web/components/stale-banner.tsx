@@ -22,7 +22,7 @@ export function StaleBanner({ freshness, now, action, className }: StaleBannerPr
       role="status"
       data-testid="stale-banner"
       className={cn(
-        "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[8px] border bg-warning-soft px-3 py-2 text-sm",
+        "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border bg-warning-soft px-3 py-2 text-sm",
         className,
       )}
     >

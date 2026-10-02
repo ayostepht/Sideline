@@ -2,80 +2,89 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ADR-011 palette. Core: #FFFFFF, #2A2A2A, #D9D9D9, lime #D5FC51.
+   Extensions: electric blue (info, links, light focus ring), neon purple (data highlight).
+   Lime is a fill (text on it is #2A2A2A); as text or ring it is only used on the dark ground. */
 :root {
-  --background: #fafaf9;
-  --foreground: #1c1917;
+  --background: #ffffff;
+  --foreground: #2a2a2a;
   --card: #ffffff;
-  --card-foreground: #1c1917;
-  --muted: #f0efed;
-  --muted-foreground: #57534e;
-  --border: #e0ddda;
-  --input: #78716c;
-  --primary: #4f46e5;
-  --primary-foreground: #ffffff;
-  --accent-soft: #eef0ff;
-  --accent-soft-foreground: #3730a3;
-  --ring: #4f46e5;
+  --card-foreground: #2a2a2a;
+  --muted: #f2f2f2;
+  --muted-foreground: #5a5a5a;
+  --border: #d9d9d9;
+  --input: #767676;
+  --primary: #d5fc51;
+  --primary-foreground: #2a2a2a;
+  --primary-text: #2a2a2a;
+  --accent-soft: #f1fdc4;
+  --accent-soft-foreground: #2a2a2a;
+  --ring: #2147e8;
+  --link: #2147e8;
+  --highlight: #7c2ae8;
   --positive: #166534;
   --negative: #b91c1c;
-  --warning: #92400e;
-  --info: #0369a1;
-  --positive-soft: #e7f6ec;
+  --warning: #8a4b08;
+  --info: #2147e8;
+  --positive-soft: #e6f4ea;
   --negative-soft: #fdecec;
-  --warning-soft: #fdf3dc;
-  --info-soft: #e3f2fb;
+  --warning-soft: #fdf1d6;
+  --info-soft: #e8ecfe;
 
-  --pos-qb: #b91c1c;
-  --pos-rb: #15803d;
-  --pos-wr: #1d4ed8;
-  --pos-te: #a16207;
-  --pos-k: #7e22ce;
-  --pos-def: #44403c;
-  --pos-dl: #0f766e;
-  --pos-lb: #be185d;
-  --pos-db: #0e7490;
-  --pos-flex: #57534e;
+  --pos-qb: #2147e8;
+  --pos-rb: #7c2ae8;
+  --pos-wr: #2a2a2a;
+  --pos-te: #0f6b5e;
+  --pos-k: #5a5a5a;
+  --pos-def: #3f3f46;
+  --pos-dl: #8a4b08;
+  --pos-lb: #a31d6b;
+  --pos-db: #0b5c80;
+  --pos-flex: #6b6b6b;
   --pos-fg: #ffffff;
 
-  --radius-card: 12px;
-  --radius-control: 8px;
+  --radius-card: 4px;
+  --radius-control: 2px;
   --motion: 160ms;
 }
 
 .dark {
-  --background: #0c0a09;
-  --foreground: #fafaf9;
-  --card: #231f1d;
-  --card-foreground: #fafaf9;
-  --muted: #2d2927;
-  --muted-foreground: #a8a29e;
-  --border: #4a4440;
-  --input: #8a837d;
-  --primary: #818cf8;
-  --primary-foreground: #0c0a09;
-  --accent-soft: #23244a;
-  --accent-soft-foreground: #e0e3ff;
-  --ring: #818cf8;
-  --positive: #4ade80;
-  --negative: #f87171;
+  --background: #2a2a2a;
+  --foreground: #ffffff;
+  --card: #333333;
+  --card-foreground: #ffffff;
+  --muted: #3a3a3a;
+  --muted-foreground: #d9d9d9;
+  --border: #4a4a4a;
+  --input: #8c8c8c;
+  --primary: #d5fc51;
+  --primary-foreground: #2a2a2a;
+  --primary-text: #d5fc51;
+  --accent-soft: #3f4a1a;
+  --accent-soft-foreground: #ffffff;
+  --ring: #d5fc51;
+  --link: #8fa8ff;
+  --highlight: #b794ff;
+  --positive: #6ee7a0;
+  --negative: #ff8a8a;
   --warning: #fbbf24;
-  --info: #38bdf8;
-  --positive-soft: #11291a;
-  --negative-soft: #331616;
-  --warning-soft: #33260c;
-  --info-soft: #0f2536;
+  --info: #8fa8ff;
+  --positive-soft: #1f3a2a;
+  --negative-soft: #4a2424;
+  --warning-soft: #443316;
+  --info-soft: #26305a;
 
-  --pos-qb: #fca5a5;
-  --pos-rb: #86efac;
-  --pos-wr: #93c5fd;
-  --pos-te: #fcd34d;
-  --pos-k: #d8b4fe;
-  --pos-def: #d6d3d1;
-  --pos-dl: #5eead4;
-  --pos-lb: #f9a8d4;
-  --pos-db: #67e8f9;
-  --pos-flex: #a8a29e;
-  --pos-fg: #0c0a09;
+  --pos-qb: #8fa8ff;
+  --pos-rb: #b794ff;
+  --pos-wr: #ffffff;
+  --pos-te: #5eead4;
+  --pos-k: #bdbdbd;
+  --pos-def: #d9d9d9;
+  --pos-dl: #f5c26b;
+  --pos-lb: #f59ac8;
+  --pos-db: #7dd3fc;
+  --pos-flex: #a3a3a3;
+  --pos-fg: #2a2a2a;
 }
 
 @theme inline {
@@ -92,6 +101,8 @@
   --color-accent-soft: var(--accent-soft);
   --color-accent-soft-foreground: var(--accent-soft-foreground);
   --color-ring: var(--ring);
+  --color-link: var(--link);
+  --color-highlight: var(--highlight);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-warning: var(--warning);
@@ -112,8 +123,7 @@
   --color-pos-db: var(--pos-db);
   --color-pos-flex: var(--pos-flex);
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --text-xs: 12px;
   --text-sm: 14px;
@@ -122,8 +132,8 @@
   --text-2xl: 24px;
   --text-3xl: 30px;
 
-  --radius-card: 12px;
-  --radius-control: 8px;
+  --radius-card: 4px;
+  --radius-control: 2px;
 }
 
 @layer base {
@@ -146,6 +156,22 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+}
+
+/* Pages not yet migrated use text-primary for links and spinners. Lime text fails on white,
+   so route it to --primary-text (dark text in light, lime in dark). Migrate to text-link in T2.7b. */
+.text-primary {
+  color: var(--primary-text);
+}
+
+/* Scoreboard section label: small, uppercase, tracked. */
+@utility sl-label {
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
 }
 
 @utility tabular-nums {

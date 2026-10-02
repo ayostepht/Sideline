@@ -24,7 +24,7 @@ export function MatchupGrade({ grade, value, compact = false, className }: Match
     <span
       data-testid="matchup-grade"
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[6px] px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1.5 rounded-control px-2 py-0.5 text-xs font-medium whitespace-nowrap",
         TONE_CLASS[tone],
         className,
       )}

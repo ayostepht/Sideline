@@ -10,7 +10,7 @@ export function TabsList({ className, ...props }: ComponentProps<typeof TabsPrim
   return (
     <TabsPrimitive.List
       className={cn(
-        "inline-flex max-w-full gap-1 overflow-x-auto rounded-[8px] bg-muted p-1",
+        "inline-flex max-w-full gap-0.5 overflow-x-auto rounded-control bg-muted p-0.5",
         className,
       )}
       {...props}
@@ -22,7 +22,7 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsP
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-[6px] px-4 text-sm font-medium text-muted-foreground transition-colors duration-150 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+        "inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-control px-3 text-sm font-medium text-muted-foreground transition-colors duration-150 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:ring-1 data-[state=active]:ring-inset data-[state=active]:ring-border",
         className,
       )}
       {...props}

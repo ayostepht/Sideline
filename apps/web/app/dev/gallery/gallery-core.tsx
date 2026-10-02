@@ -12,8 +12,8 @@ import { Card } from "../../../components/ui/card";
 
 export function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-3" aria-labelledby={`g-${title}`}>
-      <h2 id={`g-${title}`} className="text-xl font-semibold">
+    <section className="flex flex-col gap-2" aria-labelledby={`g-${title}`}>
+      <h2 id={`g-${title}`} className="sl-label">
         {title}
       </h2>
       {children}
@@ -45,7 +45,7 @@ export function GalleryCore() {
         </div>
       </Section>
       <Section title="StatCard">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Projected points"
             value="112.4"

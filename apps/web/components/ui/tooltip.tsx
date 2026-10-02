@@ -27,7 +27,7 @@ export function TooltipContent({
       <TooltipPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          "sl-anim-fade z-50 max-w-[260px] rounded-[8px] bg-foreground px-3 py-2 text-xs text-background",
+          "sl-anim-fade z-50 max-w-[260px] rounded-control bg-foreground px-2 py-1.5 text-xs text-background",
           className,
         )}
         {...props}

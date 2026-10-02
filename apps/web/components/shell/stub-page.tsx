@@ -29,7 +29,7 @@ export function StubPage({
             key={l.id}
             href={l.href}
             data-testid={`stub-link-${l.id}`}
-            className="inline-flex min-h-11 items-center rounded-[8px] border bg-card px-4 text-sm font-medium hover:bg-muted"
+            className="inline-flex min-h-11 items-center rounded-control border bg-card px-4 text-sm font-medium hover:bg-muted"
           >
             {l.label}
           </Link>

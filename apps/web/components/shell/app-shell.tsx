@@ -22,7 +22,7 @@ interface Props {
 }
 
 const iconBtn =
-  "inline-flex size-11 shrink-0 items-center justify-center rounded-[8px] text-foreground hover:bg-muted";
+  "inline-flex size-11 shrink-0 items-center justify-center rounded-control text-foreground hover:bg-muted";
 
 function pageTitle(pathname: string, leagueId: string): string {
   const base = `/l/${encodeURIComponent(leagueId)}/league/teams/`;
@@ -68,12 +68,12 @@ export function AppShell({ leagueId, leagueName, currentWeek, leagues, children 
     <div className="min-h-dvh">
       <a
         href="#main-content"
-        className="sr-only z-[60] rounded-[8px] bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-2 focus:top-2"
+        className="sr-only z-[60] rounded-control bg-primary px-4 py-3 text-primary-foreground focus:not-sr-only focus:fixed focus:left-2 focus:top-2"
       >
         Skip to content
       </a>
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col gap-4 border-r bg-background p-3 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col gap-3 border-r bg-background p-3 lg:flex">
         <LeagueSwitcher
           leagueId={leagueId}
           leagueName={leagueName}
@@ -84,11 +84,11 @@ export function AppShell({ leagueId, leagueName, currentWeek, leagues, children 
           type="button"
           onClick={openSearch}
           data-testid="search-trigger-desktop"
-          className="flex min-h-11 items-center gap-2 rounded-[8px] border border-input bg-background px-3 text-sm text-muted-foreground hover:bg-muted"
+          className="flex min-h-11 items-center gap-2 rounded-control border border-input bg-background px-3 text-sm text-muted-foreground hover:bg-muted"
         >
           <Search className="size-4" aria-hidden />
           <span className="flex-1 text-left">Search players</span>
-          <kbd className="rounded-[4px] border px-1.5 text-xs">
+          <kbd className="rounded-control border px-1.5 text-xs">
             <span className="sr-only">Command or Control </span>
             <span aria-hidden>Ctrl K</span>
           </kbd>

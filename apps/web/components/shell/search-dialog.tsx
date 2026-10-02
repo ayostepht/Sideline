@@ -109,7 +109,7 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
                       value={r.playerId}
                       onSelect={() => select(r)}
                       data-testid="search-result"
-                      className="flex min-h-12 cursor-pointer items-center gap-3 rounded-[8px] px-3 py-2 data-[selected=true]:bg-muted"
+                      className="flex min-h-12 cursor-pointer items-center gap-2 rounded-control px-3 py-1 data-[selected=true]:bg-muted"
                     >
                       <PositionBadge position={r.position} />
                       <span className="min-w-0 flex-1">
@@ -182,7 +182,7 @@ function Status({
         <button
           type="button"
           onClick={onRetry}
-          className="mt-1 inline-flex min-h-11 items-center px-3 text-primary underline underline-offset-4"
+          className="mt-1 inline-flex min-h-11 items-center px-3 text-link underline underline-offset-4"
         >
           Retry
         </button>

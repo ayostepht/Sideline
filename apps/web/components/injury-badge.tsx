@@ -35,7 +35,7 @@ export function InjuryBadge({ status, detail, className }: InjuryBadgeProps) {
       aria-label={`Injury status: ${info.full}${note ? `, ${note}` : ""}`}
       title={info.full}
       className={cn(
-        "inline-flex items-center gap-1 rounded-[6px] px-1.5 py-0.5 text-xs font-semibold leading-4 whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-control px-1.5 py-0.5 text-xs font-semibold leading-4 whitespace-nowrap",
         TONE_CLASS[info.tone],
         className,
       )}

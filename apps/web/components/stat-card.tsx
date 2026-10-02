@@ -27,9 +27,9 @@ export function StatCard({
 }: StatCardProps) {
   if (loading) {
     return (
-      <Card className={cn("p-4", className)} data-testid="stat-card" aria-busy="true">
+      <Card className={cn("p-3", className)} data-testid="stat-card" aria-busy="true">
         <div className="sl-skeleton h-4 w-20" />
-        <div className="sl-skeleton mt-3 h-8 w-28" />
+        <div className="sl-skeleton mt-2 h-8 w-28" />
         <div className="sl-skeleton mt-2 h-4 w-16" />
         <span className="sr-only">Loading {label}</span>
       </Card>
@@ -41,9 +41,9 @@ export function StatCard({
     dir === "up" ? "text-positive" : dir === "down" ? "text-negative" : "text-muted-foreground";
   const dirWord = dir === "up" ? "Up" : dir === "down" ? "Down" : "No change";
   return (
-    <Card className={cn("p-4", className)} data-testid="stat-card">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-3xl font-semibold leading-9 tabular-nums">{value}</p>
+    <Card className={cn("p-3", className)} data-testid="stat-card">
+      <p className="sl-label">{label}</p>
+      <p className="mt-1 text-3xl font-bold leading-9 tracking-tight tabular-nums">{value}</p>
       <div className="mt-1 flex flex-wrap items-center gap-x-2 text-sm">
         {delta ? (
           <span className={cn("inline-flex items-center gap-1 font-medium tabular-nums", dirCls)}>

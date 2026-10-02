@@ -20,7 +20,7 @@ export function PopoverContent({
         align={align}
         collisionPadding={8}
         className={cn(
-          "sl-anim-fade z-50 w-72 max-w-[calc(100vw-16px)] rounded-[12px] border bg-card p-4 text-sm text-card-foreground shadow-md",
+          "sl-anim-fade z-50 w-72 max-w-[calc(100vw-16px)] rounded-card border bg-card p-3 text-sm text-card-foreground",
           className,
         )}
         {...props}

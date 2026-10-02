@@ -68,7 +68,7 @@ function LeagueList({
                 aria-current={current ? "true" : undefined}
                 data-testid="league-switcher-option"
                 className={cn(
-                  "flex min-h-11 w-full items-center gap-2 rounded-[8px] px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-60",
+                  "flex min-h-11 w-full items-center gap-2 rounded-control px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-60",
                   current ? "font-semibold" : "",
                 )}
               >

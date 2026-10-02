@@ -2,7 +2,7 @@ import { ErrorState } from "./empty-state";
 
 export function DbError({ retryHref }: { retryHref: string }) {
   return (
-    <main className="mx-auto max-w-xl p-4">
+    <main className="mx-auto max-w-xl p-3">
       <h1 className="sr-only">Sideline</h1>
       <ErrorState
         title="Sideline can't reach its database"

@@ -10,7 +10,7 @@ import { Button } from "../ui/button";
 export function SyncingState() {
   const router = useRouter();
   return (
-    <main className="mx-auto max-w-xl p-4" data-testid="league-syncing">
+    <main className="mx-auto max-w-xl p-3" data-testid="league-syncing">
       <EmptyState
         icon={RefreshCw}
         title="Still syncing this league"

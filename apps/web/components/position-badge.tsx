@@ -13,7 +13,7 @@ export function PositionBadge({ position, className }: PositionBadgeProps) {
     <span
       data-testid="position-badge"
       className={cn(
-        "inline-flex min-w-9 items-center justify-center rounded-[6px] px-1.5 py-1 text-[13px] font-semibold sm:py-0.5 sm:text-xs leading-4 text-pos-fg",
+        "inline-flex min-w-9 items-center justify-center rounded-control px-1.5 py-1 text-[13px] font-semibold sm:py-0.5 sm:text-xs leading-4 text-pos-fg",
         positionClass(key),
         className,
       )}
