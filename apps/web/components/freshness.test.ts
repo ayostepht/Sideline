@@ -16,15 +16,20 @@ describe("formatAge", () => {
     expect(formatAge(ago(-5 * MIN), NOW)).toBe("just now");
   });
   it("minutes", () => {
-    expect(formatAge(ago(MIN), NOW)).toBe("1 min ago");
-    expect(formatAge(ago(59 * MIN), NOW)).toBe("59 min ago");
+    expect(formatAge(ago(MIN), NOW)).toBe("1 minute ago");
+    expect(formatAge(ago(2 * MIN), NOW)).toBe("2 minutes ago");
+    expect(formatAge(ago(5 * MIN), NOW)).toBe("5 minutes ago");
+    expect(formatAge(ago(59 * MIN), NOW)).toBe("59 minutes ago");
   });
   it("hours", () => {
-    expect(formatAge(ago(60 * MIN), new Date(NOW))).toBe("1 h ago");
-    expect(formatAge(ago(23 * 60 * MIN + 59 * MIN), NOW)).toBe("23 h ago");
+    expect(formatAge(ago(60 * MIN), new Date(NOW))).toBe("1 hour ago");
+    expect(formatAge(ago(120 * MIN), NOW)).toBe("2 hours ago");
+    expect(formatAge(ago(23 * 60 * MIN + 59 * MIN), NOW)).toBe("23 hours ago");
   });
   it("days", () => {
-    expect(formatAge(ago(24 * 60 * MIN), NOW)).toBe("1 d ago");
-    expect(formatAge(ago(50 * 60 * MIN), NOW)).toBe("2 d ago");
+    expect(formatAge(ago(24 * 60 * MIN), NOW)).toBe("1 day ago");
+    expect(formatAge(ago(47 * 60 * MIN), NOW)).toBe("1 day ago");
+    expect(formatAge(ago(50 * 60 * MIN), NOW)).toBe("2 days ago");
+    expect(formatAge(ago(72 * 60 * MIN), NOW)).toBe("3 days ago");
   });
 });

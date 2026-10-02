@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   activeNavKey,
+  stepWeek,
   clampWeek,
   isNavActive,
   navHref,
@@ -98,5 +99,19 @@ describe("switchLeagueHref", () => {
   });
   it("falls back to home for foreign paths", () => {
     expect(switchLeagueHref("/onboarding", "", "A", "B")).toBe("/l/B");
+  });
+});
+
+describe("stepWeek", () => {
+  it("stacks steps from the latest requested week", () => {
+    const first = stepWeek(6, -1);
+    expect(first).toBe(5);
+    expect(stepWeek(first ?? 0, -1)).toBe(4);
+  });
+  it("respects bounds 1 to 18", () => {
+    expect(stepWeek(1, -1)).toBeNull();
+    expect(stepWeek(18, 1)).toBeNull();
+    expect(stepWeek(2, -1)).toBe(1);
+    expect(stepWeek(17, 1)).toBe(18);
   });
 });

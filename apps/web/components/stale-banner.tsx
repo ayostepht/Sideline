@@ -3,11 +3,12 @@ import { AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../lib/client/cn";
 import { formatAge } from "./freshness";
+import { SyncNowLazy } from "./sync-now-lazy";
 
 export interface StaleBannerProps {
   freshness: Freshness;
   now: Date | number;
-  /** Optional action, such as a Sync now button. */
+  /** Replaces the default Sync now button. */
   action?: ReactNode;
   className?: string;
 }
@@ -31,7 +32,7 @@ export function StaleBanner({ freshness, now, action, className }: StaleBannerPr
           ? "Data may be out of date. This league has not synced yet."
           : `Data may be out of date. Last updated ${formatAge(freshness.updatedAt, now)}.`}
       </p>
-      {action ? <div className="shrink-0">{action}</div> : null}
+      <div className="shrink-0">{action ?? <SyncNowLazy />}</div>
     </div>
   );
 }

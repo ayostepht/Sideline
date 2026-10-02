@@ -46,6 +46,12 @@ export function clampWeek(n: number): number {
   return Math.min(MAX_WEEK, Math.max(1, Math.trunc(n)));
 }
 
+/** Week after moving `delta` from `base`, or null when that leaves 1 to 18. */
+export function stepWeek(base: number, delta: number): number | null {
+  const next = base + delta;
+  return next < 1 || next > MAX_WEEK ? null : next;
+}
+
 /** Selected week: explicit ?week= wins, else the league's current week, else null (preseason). */
 export function resolveWeek(
   raw: string | null | undefined,

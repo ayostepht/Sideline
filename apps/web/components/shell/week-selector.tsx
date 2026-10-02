@@ -2,8 +2,8 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { lazy, Suspense, useState } from "react";
-import { MAX_WEEK, resolveWeek, withWeekParam } from "../../lib/client/nav";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { MAX_WEEK, resolveWeek, stepWeek, withWeekParam } from "../../lib/client/nav";
 
 const WeekMenu = lazy(() => import("./week-menu"));
 const iconBtn =
@@ -15,6 +15,11 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
   const params = useSearchParams();
   const [armed, setArmed] = useState(false);
   const week = resolveWeek(params.get("week"), currentWeek);
+  // Latest requested week. Updated on click so fast double clicks stack before the URL catches up.
+  const requested = useRef<number | null>(week);
+  useEffect(() => {
+    requested.current = week;
+  }, [week]);
 
   if (week === null) {
     return (
@@ -30,7 +35,13 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
 
   const go = (next: number) => {
     if (next < 1 || next > MAX_WEEK) return;
+    requested.current = next;
     router.replace(`${pathname}?${withWeekParam(params.toString(), next)}`, { scroll: false });
+  };
+
+  const step = (delta: number) => {
+    const next = stepWeek(requested.current ?? week, delta);
+    if (next !== null) go(next);
   };
 
   const trigger = (
@@ -55,7 +66,7 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
       <button
         type="button"
         className={iconBtn}
-        onClick={() => go(week - 1)}
+        onClick={() => step(-1)}
         disabled={week <= 1}
         aria-label="Previous week"
         data-testid="week-prev"
@@ -72,7 +83,7 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
       <button
         type="button"
         className={iconBtn}
-        onClick={() => go(week + 1)}
+        onClick={() => step(1)}
         disabled={week >= MAX_WEEK}
         aria-label="Next week"
         data-testid="week-next"

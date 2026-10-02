@@ -21,7 +21,7 @@ export function DataFreshness({ freshness, now, className }: DataFreshnessProps)
       {freshness.stale ? (
         <>
           <AlertTriangle className="size-3 shrink-0 text-warning" aria-hidden />
-          <span className="font-medium">Stale:</span>
+          <span className="sr-only">Out of date.</span>
         </>
       ) : null}
       {freshness.updatedAt === null ? (
