@@ -17,6 +17,7 @@ Read this list at session start. Open a full ADR below only when a task touches 
 - **App (ADR-009):** identity and active league in `app_settings` (env seeds them; then the DB wins). Routes under `/l/[leagueId]`. Server components call `lib/server`; route handlers only for client interactions. Stale means older than 2x `SYNC_CADENCE_MS`. `/dev/gallery` needs `SIDELINE_GALLERY=1`. Route JS target 170 KB.
 - **UI checks (ADR-004):** the no-horizontal-scroll check compares `scrollWidth` with `clientWidth`.
 - **Ownership (ADR-000, ADR-005, ADR-008, ADR-009):** dependencies, `next.config.ts` and `postcss.config.mjs` belong to devops-engineer; `components/ui/` to frontend-engineer; fixture output under `tests/fixtures/` is written by the sleeper-data-engineer recorder.
+- **Visual identity (ADR-011):** palette #FFFFFF, #2A2A2A, #D9D9D9, lime #D5FC51 (fill, never text on light), plus at most a blue and a purple; Inter; corners at most 4px; denser spacing; scoreboard feel.
 - **Session reading (ADR-010):** HANDOFF, PROGRESS, this list, latest gate report; PLAN by section; briefs point to `docs/brief-rules.md`.
 - **Coverage (ADR-005 item 8):** `lib/server`, `app/api`, db and worker at least 75% lines; sleeper and providers at least 85%.
 
@@ -253,3 +254,21 @@ Date: 2026-10-02
 **Alternatives considered:** splitting PLAN.md into per-phase files (rejected: breaks section references used throughout the docs).
 
 **Consequences:** the "Rules in force" list must be updated with every new ADR. Full ADRs, reviews and the archive stay available on demand.
+
+## ADR-011: Visual identity from the G2 checkpoint
+
+Date: 2026-10-02. Status: accepted (Steph's direction at the G2 human checkpoint).
+
+**Decision.**
+1. **Palette.** Core colors: `#FFFFFF`, `#2A2A2A`, `#D9D9D9`, accent `#D5FC51` (lime), used in both themes. Light: white ground, `#2A2A2A` text, `#D9D9D9` lines and muted surfaces. Dark: `#2A2A2A` ground, white text, `#D9D9D9` muted text. Extension, at most two: an electric blue and a neon purple, for secondary highlights and data. Shades of the neutrals (tints between the core grays) are allowed where a theme needs a second surface or a muted text that passes AA. Red and amber stay as functional colors for injury, error and warning states only, tuned to sit with the palette.
+2. **Lime is a fill, not a text color on light grounds** (about 1.1:1 on white). On lime, text is `#2A2A2A`. On the dark ground, lime may be used as text or line color.
+3. **Font:** Inter (via `next/font/google`, self-hosted at build time) replaces Geist Sans. Tabular numerals for stats.
+4. **Shape:** far fewer rounded corners. Cards and controls at most 4px; no pill shapes except small status dots and avatars.
+5. **Density:** tighter spacing; roughly one Tailwind step less padding and gap across cards, lists and sections.
+6. **Character:** less generic. Direction chosen by the orchestrator for Steph's review: a sports data, scoreboard feel (bold numbers, small uppercase tracked labels, thin dividers, lime used sparingly as the one loud color).
+
+**Context.** At the G2 checkpoint Steph found the UI generic, too rounded and too airy. G2 stays open until the refresh passes the UI checks and Steph approves the screenshots.
+
+**Alternatives.** Keep the indigo palette with smaller tweaks (rejected by Steph's direction). Lime as the only accent with no extension (kept open: blue and purple are optional).
+
+**Consequences.** WCAG AA still applies; axe must stay at 0 serious or critical. Position badge colors are redrawn from the new palette. `next/font/google` needs network at build time, including Docker builds (checked at the gate). Screens archived for G2 are retaken after the refresh.
