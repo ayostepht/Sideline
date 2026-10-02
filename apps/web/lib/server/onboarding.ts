@@ -28,7 +28,12 @@ export type StartOnboardingResult =
   | { kind: "worker_offline"; status: OnboardingStatus };
 
 /** Stores the username and queues the `user` job. Enqueues nothing when the worker is offline. */
-export function startOnboarding(h: DbHandle, username: string, now: Date): StartOnboardingResult {
+export function startOnboarding(
+  h: DbHandle,
+  username: string,
+  now: Date,
+  env: Record<string, string | undefined> = process.env,
+): StartOnboardingResult {
   const parsed = UserJobParamsSchema.safeParse({ username });
   if (!parsed.success) return { kind: "invalid_username" };
   if (!isWorkerLive(h, now)) return { kind: "worker_offline", status: { phase: "worker_offline" } };
@@ -37,7 +42,11 @@ export function startOnboarding(h: DbHandle, username: string, now: Date): Start
     // A different person: forget the previous user id so the new lookup decides.
     setSleeperUserId(h, null);
     // And forget their league so Home never shows it for the new user.
-    if (previous !== null) setActiveLeagueId(h, null);
+    // First run (nothing stored) with the env username keeps the env-seeded league.
+    const envUser = UserJobParamsSchema.safeParse({ username: env["SLEEPER_USERNAME"]?.trim() });
+    const firstRunEnv =
+      previous === null && envUser.success && envUser.data.username === parsed.data.username;
+    if (!firstRunEnv) setActiveLeagueId(h, null);
   }
   setSleeperUsername(h, parsed.data.username);
   const { created } = enqueueWithParams(h, "user", parsed.data, "api", now);

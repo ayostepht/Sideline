@@ -13,7 +13,7 @@ import {
 } from "@sideline/db";
 import { OnboardingStatusSchema } from "@sideline/shared";
 import { afterEach, describe, expect, it } from "vitest";
-import { getIdentity, getSettings } from "./identity";
+import { getIdentity, getLeagueChoices, getSettings } from "./identity";
 import { getOnboardingStatus, selectLeague, startOnboarding } from "./onboarding";
 import { SEED_NOW } from "./test-seed";
 import { useTempDb, type TempDb } from "./test-utils";
@@ -241,6 +241,18 @@ describe("onboarding", () => {
     expect(getSleeperUserId(h)).toBe("u1");
     expect(getActiveLeagueId(h)).toBe("L1");
   });
+  it("clears the league when the stored username is null and a different one is given", () => {
+    const h = setup();
+    setActiveLeagueId(h, "STALE");
+    startOnboarding(h, "new_user", SEED_NOW, { SLEEPER_USERNAME: "env_user" });
+    expect(getActiveLeagueId(h)).toBeNull();
+  });
+  it("keeps the env-seeded league when stored is null and the env username is given", () => {
+    const h = setup();
+    setActiveLeagueId(h, "ENVLEAGUE");
+    startOnboarding(h, "Env_User", SEED_NOW, { SLEEPER_USERNAME: " env_user " });
+    expect(getActiveLeagueId(h)).toBe("ENVLEAGUE");
+  });
   it("stays loading_leagues and queues state until nfl state exists", () => {
     const h = setup();
     startOnboarding(h, "fake_user", SEED_NOW);
@@ -313,5 +325,50 @@ describe("selectLeague", () => {
     workerFinish(h, "done");
     expect(selectLeague(h, "L1", SEED_NOW)).toMatchObject({ sync: "rate_limited" });
     expect(allCount(h, "pending")).toBe(0);
+  });
+});
+
+describe("getLeagueChoices", () => {
+  const league = (leagueId: string, season: number) => ({
+    leagueId,
+    name: `League ${leagueId}`,
+    season,
+    totalRosters: 12,
+    status: "in_season",
+    avatar: null,
+  });
+  const requests = (h: DbHandle) =>
+    (h.sqlite.prepare("SELECT COUNT(*) AS n FROM sync_requests").get() as { n: number }).n;
+
+  it("returns [] without a user id", () => {
+    const h = setup();
+    expect(getLeagueChoices(h, {})).toEqual([]);
+  });
+  it("returns only the current nfl_state season", () => {
+    const h = setup();
+    setSleeperUserId(h, "u1");
+    seedNfl(h, 2026);
+    saveUserLeagues(h, "u1", 2025, [league("OLD", 2025)], SEED_NOW);
+    saveUserLeagues(h, "u1", 2026, [league("NEW", 2026)], SEED_NOW);
+    expect(getLeagueChoices(h, {}).map((l) => l.leagueId)).toEqual(["NEW"]);
+  });
+  it("returns all seasons when nfl_state is missing", () => {
+    const h = setup();
+    setSleeperUserId(h, "u1");
+    saveUserLeagues(h, "u1", 2025, [league("OLD", 2025)], SEED_NOW);
+    saveUserLeagues(h, "u1", 2026, [league("NEW", 2026)], SEED_NOW);
+    expect(
+      getLeagueChoices(h, {})
+        .map((l) => l.leagueId)
+        .sort(),
+    ).toEqual(["NEW", "OLD"]);
+  });
+  it("never enqueues", () => {
+    const h = setup();
+    setSleeperUserId(h, "u1");
+    seedNfl(h, 2026);
+    const before = requests(h);
+    getLeagueChoices(h, { SLEEPER_USERNAME: "fake_user" });
+    expect(requests(h)).toBe(before);
   });
 });

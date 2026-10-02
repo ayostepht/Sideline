@@ -115,6 +115,8 @@ function runBody(request: z.input<typeof SyncRunResponseSchema>["request"], dedu
   return SyncRunResponseSchema.parse({ request, deduplicated });
 }
 
+const PendingIdRow = z.object({ id: z.number().int() });
+
 /**
  * Queue an `all` sync after the active league changed. Skips the manual debounce. A pending
  * `all` is reused (it reads the active league when it runs); a running one already read the old
@@ -126,9 +128,10 @@ export function requestSyncForLeagueChange(h: DbHandle, now: Date): ApiResult {
       .prepare(
         "SELECT id FROM sync_requests WHERE job = 'all' AND status = 'pending' ORDER BY id LIMIT 1",
       )
-      .get() as { id: number } | undefined;
-    if (pending !== undefined) {
-      const existing = getRequest(h, pending.id);
+      .get();
+    const pendingRow = PendingIdRow.safeParse(pending);
+    if (pendingRow.success) {
+      const existing = getRequest(h, pendingRow.data.id);
       if (existing === null) throw new Error("sync_requests row not readable");
       return { request: existing, created: false };
     }
