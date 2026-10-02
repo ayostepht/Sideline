@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 2 Batch F (T2.6a and T2.6b done; T2.6c and code review in flight). Plan: ADR-009 and the PROGRESS Phase 2 table.
+Last updated: 2026-10-02, Phase 2 Batch F (T2.6a, b, c done; Batch F code review saved; T2.6d next). Plan: ADR-009 and the PROGRESS Phase 2 table.
 
 ## 1. Resume in five steps
 
@@ -15,16 +15,16 @@ Last updated: 2026-10-02, Phase 2 Batch F (T2.6a and T2.6b done; T2.6c and code 
 ## 2. Where things stand
 
 - **Phase 1 done** (G1 PASS, tag `gate-G1`). **Phase 2 in progress** on `phase/2-shell`; T2.0 to T2.5b committed.
-- **Baseline:** `pnpm verify` 690 unit tests; integration 23; e2e 273; a11y 102. Route JS: `/l/[leagueId]` about 161.6 KB, settings 168.5 KB, gallery 189.2 KB.
+- **Baseline:** `pnpm verify` 693 unit tests; integration 23; e2e 285; a11y 102. Route JS: `/l/[leagueId]` about 161.6 KB, settings 168.5 KB, gallery 189.2 KB.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
-## 3. In flight (Batch F)
+## 3. In flight
 
-- T2.6c (qa-engineer): `e2e/**`, `tests/README.md`. Updates HOME-1, LEAGUE-2, SET-3 for intended UI changes; adds week double-click, 404 status, placeholder links, More sheet current item, Search result tag.
+- Nothing. Clean point to `/clear`.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit T2.6c. Then T2.6d (frontend): Batch F review M1, m1 to m5, n1 (docs/reviews/2026-10-02-p2-batchF-code.md); it may need small e2e follow-ups. Then a ux-reviewer recheck (also capture not-found, More sheet open).
+1. T2.6d (frontend-engineer), brief from docs/reviews/2026-10-02-p2-batchF-code.md: M1 (give Settings and the four stub pages a loading boundary via route groups; team detail stays without one, ADR-009 item 18), m1 (week ref resync race), m2 (refresh after Sync now), m3 (cooldown copy "about a minute"; server debounce 60 s), m4 (`syncSummary` edge cases plus unit tests), m5 (move `app/onboarding/_components/schemas.ts` to `lib/client/`), n1 (test Retry-After parsing). Plus the T2.6c bug: `/l/1000000000000000001/league/teams/9999` intermittently renders a blank not-found page (status 404, `<html id="__next_error__">`, a CSS request aborted) under parallel load; repro `pnpm exec playwright test e2e/pages.spec.ts -g "TEAM-3" --repeat-each=15` (about 5 of 45 fail). Acceptance: that repro 45 of 45, full e2e green twice. If M1 moves pages, e2e may need a small qa follow-up. Then a ux-reviewer recheck (also capture not-found, More sheet open).
 2. G2 gate: `pnpm gate --amd64`; code-reviewer on `git diff main...phase/2-shell`; full coverage run; live onboarding by the orchestrator (about 22 calls); LAN check (`pnpm dev:lan` plus a request with a non-localhost Origin); archive 390 and 1280 px screenshots from the seeded dir to `docs/gates/G2/screens/` after eyeballing each; write `docs/gates/G2.md`; stop for Steph with run instructions (LAN URL, `dev:lan` and worker commands, macOS firewall prompt) and questions.
 
 ## 5. Briefs
