@@ -44,4 +44,4 @@ Every Task Brief says: "Read `docs/brief-rules.md` first." Restate in the brief 
 4. Run `pnpm fixtures:check` when `tests/fixtures/` changed.
 5. Stage exact paths only (never `git add docs` or `git add .`).
 6. Commit with the task id and the attribution line, update the PROGRESS.md task table, then update sections 2 to 4 of this file and commit it.
-7. After each batch's reviews are saved and committed, suggest `/clear` to Steph: this file is enough to resume.
+7. After each batch's reviews are saved and committed, suggest `/clear` to Steph: this file is enough to resume. After `/clear`, the SessionStart hook loads this file automatically; Steph types `go`.
