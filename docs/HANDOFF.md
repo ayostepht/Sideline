@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, after commit 8433f87 (T1.5c). Batch D reviewed (9882a5d); Batch E committed; Batch E code review in flight.
+Last updated: 2026-10-02, after commit 8433f87 (T1.5c). Batch D reviewed (9882a5d); Batch E reviewed (0 Blocker/Major); Batch F (T1.7b) in flight.
 
 ## 1. Resume in five steps
 
@@ -34,11 +34,11 @@ Last updated: 2026-10-02, after commit 8433f87 (T1.5c). Batch D reviewed (9882a5
 
 | Task | Agent | Writes to | Done when |
 |---|---|---|---|
-| Batch E code review (`git show 8433f87`) | code-reviewer | nothing (read-only) | Report returned; save it as `docs/reviews/2026-10-02-p1-batchE-code.md`, then fix Blocker and Major findings before Batch F. If lost, re-dispatch the review. |
+| T1.7b integration suites | qa-engineer | `tests/integration/`, `tests/helpers/`, `tests/msw/`, test configs | Report DONE, then verify with `pnpm test:integration` and `pnpm verify`; commit. Uncommitted files under `tests/` are partial work. |
 
 ## 4. Next steps (in order)
 
-1. **Batch E review fixes**: Blocker and Major findings, dispatched to sleeper-data-engineer.
+1. **Batch E review**: saved, 0 Blocker/Major, Minors in backlog. Nothing to fix.
 2. **Batch F: T1.7b** (qa-engineer), integration suites:
    - a full sync from fixtures with per-table counts;
    - idempotency: the second run has `rows_changed = 0`;
