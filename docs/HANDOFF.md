@@ -2,45 +2,35 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on `phase/2-shell`. Plan file: `~/.claude/plans/fresh-session-after-clear-radiant-umbrella.md` (ADR-009 and the PROGRESS Phase 2 table hold the same content).
+Last updated: 2026-10-02, Phase 2 Batch E (T2.5b in flight). Plan: ADR-009 and the PROGRESS Phase 2 table.
 
 ## 1. Resume in five steps
 
-1. Read `CLAUDE.md`, then this file. Read `docs/PROGRESS.md` (Phase 2 table, backlog) and `docs/DECISIONS.md` (ADR-009) as needed.
+1. Read `CLAUDE.md`, then this file, then `docs/PROGRESS.md` and the "Rules in force" list at the top of `docs/DECISIONS.md`. Read PLAN.md only by section: section 9 for the current phase, section 10 for gates, and whatever sections the next task cites. Open full ADRs, reviews and `docs/archive/` only when a task needs them.
 2. Run `git status` and `git log --oneline -10` on branch `phase/2-shell`.
 3. Check every task listed under "In flight" (section 3). Agents die with the session, so any uncommitted files in their paths are partial work. Verify and commit, or discard and re-dispatch.
-4. Run `pnpm verify` (Node 24 PATH prefix, section 6) to confirm a green baseline.
+4. Run `pnpm verify` (Node 24 PATH prefix, `docs/brief-rules.md`) to confirm a green baseline. Show only counts and failures.
 5. Continue with "Next steps" (section 4), in order.
 
 ## 2. Where things stand
 
-- **Phase 1 done** (G1 PASS, tag `gate-G1`). **Phase 2 in progress** on `phase/2-shell`.
-- **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
+- **Phase 1 done** (G1 PASS, tag `gate-G1`). **Phase 2 in progress** on `phase/2-shell`; T2.0 to T2.4 committed.
+- **Baseline:** `pnpm verify` 690 unit tests; e2e 75; a11y 36. Route JS: `/l/[leagueId]` about 161.6 KB, settings 168.5 KB, gallery 189.2 KB.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
 ## 3. In flight (Batch E)
 
-- T2.4 saved: docs/reviews/2026-10-02-p2-T2.4-ux.md (M1 doubled freshness to T2.6; M2 a11y routes in T2.5b).
-- T2.5b (qa-engineer): e2e/**, tests/**, playwright.config.ts, lighthouserc.json. Onboarding e2e, navigation, pages, search, settings, axe on all routes, Lighthouse, perf integration test, requirements trace. Waits for the screens run before building.
+- T2.5b (qa-engineer): `e2e/**`, `tests/**`, `playwright.config.ts`, `lighthouserc.json`. Onboarding e2e, navigation, pages, search, Settings, axe on every Phase 2 route in both themes, Lighthouse on Home and League, perf integration test (p95 at most 300 ms), requirements trace, e2e run twice. Reports app bugs separately.
 
 ## 4. Next steps (in order)
 
-1. Save T2.4; verify and commit T2.5b. Batch F (T2.6): fix Blocker and Major from T2.4 and app bugs from T2.5b (frontend; backend split out). Then G2 gate: full `pnpm gate --amd64`, code review of `git diff main...phase/2-shell`, final UX check, live onboarding by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan` plus a non-localhost Origin request), archive 390 and 1280 screenshots from the seeded dir to docs/gates/G2/screens/ after eyeballing each, then stop for Steph.
-2. Batch E: T2.4 UX review (all routes; capture Syncing, not-found, More sheet, search states) and T2.5b (e2e onboarding on the fixture server, navigation, pages into `existingRoutes` for axe and no-hscroll, Lighthouse on `/l/1000000000000000001` and League, data function perf on the fixture DB, review items in PROGRESS backlog).
-3. Batch F fix round, then G2 gate: live onboarding run by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan`, non-localhost origin), screenshots archived from the seeded dir only, then stop for Steph.
+1. Verify and commit T2.5b.
+2. Batch F (T2.6, frontend; backend split out if needed): T2.4 M1 (one freshness pattern: quiet "Updated 1 day ago" line with an icon when stale, no "Stale:" prefix; the banner keeps the PLAN 3.4 rule and gets Sync now; "1 day ago", not "1 d ago"), T2.4 m1 to m7, n1, n2, plus app bugs from T2.5b. Then code-reviewer and a ux-reviewer recheck.
+3. G2 gate: `pnpm gate --amd64`; code-reviewer on `git diff main...phase/2-shell`; full coverage run; live onboarding by the orchestrator (about 22 calls); LAN check (`pnpm dev:lan` plus a request with a non-localhost Origin); archive 390 and 1280 px screenshots from the seeded dir to `docs/gates/G2/screens/` after eyeballing each; write `docs/gates/G2.md`; stop for Steph with run instructions (LAN URL, `dev:lan` and worker commands, macOS firewall prompt) and questions.
 
-## 5. Standing rules for every brief
+## 5. Briefs
 
-- Node 24: prefix shell commands with `export PATH="$HOME/.local/share/fnm/node-versions/v24.21.0/installation/bin:$PATH"`.
-- Real identifiers (username, league id, league name, user ids, manager and team names) come only from `.env` and never go into tracked files (ADR-000).
-- Use msw 3 APIs. No `.skip` or `.only`, no weakened thresholds, no unjustified lint disables.
-- Only devops-engineer changes dependencies (ADR-005 item 15). Agents report missing dependencies instead of installing them.
-- Agents report failures in other agents' paths rather than fixing them.
-- The CLI is `pnpm run sync`, not `pnpm sync` (pnpm 12 has a built-in `sync`).
-- Partial week 4 is excluded from golden expectations and SCORE-2.
-- Screenshots only from a fixture-seeded temp DATA_DIR; ux-reviewer captures stay in `.screens/` (ADR-009 item 17).
-- UI copy plain and short, no em dashes; WCAG 2.1 AA; color never the only signal; 44 px targets; route JS target 170 KB (ADR-009 item 6).
-- Tell agents the token budget is tight: work efficiently and keep reports short.
+Every Task Brief says: "Read `docs/brief-rules.md` first." Restate in the brief only the rules that matter most for that task (for example identifiers for fixture work, the migrations manifest for backend schema work).
 
 ## 6. Before every commit (orchestrator)
 
@@ -52,4 +42,6 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
    ```
    It must print 0.
 4. Run `pnpm fixtures:check` when `tests/fixtures/` changed.
-5. Commit with the task id and the attribution line, update the PROGRESS.md task table, then update sections 2 to 4 of this file and commit it.
+5. Stage exact paths only (never `git add docs` or `git add .`).
+6. Commit with the task id and the attribution line, update the PROGRESS.md task table, then update sections 2 to 4 of this file and commit it.
+7. After each batch's reviews are saved and committed, suggest `/clear` to Steph: this file is enough to resume.

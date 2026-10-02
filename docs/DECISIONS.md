@@ -1,6 +1,24 @@
 # Decisions (ADR-lite)
 
-Format: number, date, decision, context, alternatives considered, consequences. ADR-001 (stack) and ADR-002 (data sources) are reserved for T0.6, per PLAN.md section 9.
+Format: number, date, decision, context, alternatives considered, consequences.
+
+## Rules in force (summary)
+
+Read this list at session start. Open a full ADR below only when a task touches it. Keep this list in sync when an ADR is added or superseded.
+
+- **Process (ADR-000):** delegate only to the 8 project agents plus Explore. The current week always comes from `/v1/state/nfl`. Stub scripts exit non-zero and the gate reports them SKIPPED. Lockfile and generated fixtures don't count toward the 400-line task size.
+- **Privacy (ADR-000, ADR-009 item 17):** real identifiers only in `.env`; staged diffs scanned before every commit, the whole repo at gates. Spike data in `.spike-cache/`. Screenshots only from a fixture-seeded temp DATA_DIR; `scripts/screens` refuses anything else.
+- **Stack (ADR-001, ADR-007):** exact pins (table in ADR-001). TypeScript 6.0.3 until typescript-eslint supports 7. Webpack builds, not Turbopack (`.js` extension alias). Deployable images are linux/amd64.
+- **Sleeper (ADR-002, ADR-005, ADR-009):** the worker is the only Sleeper caller, through one shared limiter; the web enqueues `sync_requests`, including onboarding jobs `user` and `user_leagues`. `/players/nfl` at most once per day. No live calls during development; the orchestrator makes the gate's live run. Projections keep only real rows; the last pre-kickoff snapshot is kept per player-week.
+- **Scoring (ADR-002):** `sum(stats[k] * scoring_settings[k])`; SCORE-3 exceptions listed in ADR-002 item 3. Partial weeks stay out of golden tests and SCORE-2.
+- **nflverse (ADR-006):** primary kickoff source (America/New_York wall time); fallback lock times per ADR-002 item 6; join by trimmed gsis_id, then name plus team; `LA` maps to `LAR`; no red-zone touches (P1).
+- **Waivers (ADR-003):** rolling waivers are P0 (WAIVER-6a to 6d); FAAB recommender is P2.
+- **Data layer (ADR-005):** idempotent upserts count real changes only. `/api/health` returns 503 only when SQLite fails. The web never runs migrations. A DB lease prevents overlapping syncs.
+- **App (ADR-009):** identity and active league in `app_settings` (env seeds them; then the DB wins). Routes under `/l/[leagueId]`. Server components call `lib/server`; route handlers only for client interactions. Stale means older than 2x `SYNC_CADENCE_MS`. `/dev/gallery` needs `SIDELINE_GALLERY=1`. Route JS target 170 KB.
+- **UI checks (ADR-004):** the no-horizontal-scroll check compares `scrollWidth` with `clientWidth`.
+- **Ownership (ADR-000, ADR-005, ADR-008, ADR-009):** dependencies, `next.config.ts` and `postcss.config.mjs` belong to devops-engineer; `components/ui/` to frontend-engineer; fixture output under `tests/fixtures/` is written by the sleeper-data-engineer recorder.
+- **Session reading (ADR-010):** HANDOFF, PROGRESS, this list, latest gate report; PLAN by section; briefs point to `docs/brief-rules.md`.
+- **Coverage (ADR-005 item 8):** `lib/server`, `app/api`, db and worker at least 75% lines; sleeper and providers at least 85%.
 
 ## ADR-000: Process, privacy, and ownership decisions for Phase 0
 
@@ -219,3 +237,15 @@ Date: 2026-10-02
 **Alternatives considered:** the web calling `/user` and `/user/leagues` with its own limiter (rejected: two limiters, against ADR-005 item 3); pulling the T4.3 supervisor forward so G2 runs on Unraid (rejected by Steph in favor of local review); no My Team nav entry (Steph chose to add one).
 
 **Consequences:** the worker must run for onboarding, so Docker onboarding waits for T4.3. E2E needs a fixture-mode worker. Screens and gate runs always use seeded temp data.
+
+## ADR-010: Smaller session-start reading
+
+Date: 2026-10-02
+
+**Decision:** sessions read HANDOFF, PROGRESS, the "Rules in force" summary at the top of this file and the latest gate report; PLAN.md is read by section (whole phase section at a phase start). Finished phases' task tables and done backlog items move to `docs/archive/`. Standing brief rules live in `docs/brief-rules.md`, which every brief points to. The orchestrator suggests `/clear` after each batch's reviews are committed.
+
+**Context:** Steph's token budget is limited. Session start read about 125 KB (about 32k tokens), and mid-session compaction is the most expensive event.
+
+**Alternatives considered:** splitting PLAN.md into per-phase files (rejected: breaks section references used throughout the docs).
+
+**Consequences:** the "Rules in force" list must be updated with every new ADR. Full ADRs, reviews and the archive stay available on demand.
