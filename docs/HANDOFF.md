@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 2 Batch F (T2.6a done, T2.6b in flight). Plan: ADR-009 and the PROGRESS Phase 2 table.
+Last updated: 2026-10-02, Phase 2 Batch F (T2.6a and T2.6b done; T2.6c and code review in flight). Plan: ADR-009 and the PROGRESS Phase 2 table.
 
 ## 1. Resume in five steps
 
@@ -20,11 +20,12 @@ Last updated: 2026-10-02, Phase 2 Batch F (T2.6a done, T2.6b in flight). Plan: A
 
 ## 3. In flight (Batch F)
 
-- T2.6b (frontend-engineer): `apps/web/app/**` (not `app/api`), `components/**`, `lib/client/**`. T2.4 m1 to m5, n2; T2.5b bug 2 (soft 404, time-boxed); move `apiJson` to `lib/client/api.ts`. May list e2e assertions qa must update.
+- T2.6c (qa-engineer): `e2e/**`, `tests/README.md`. Updates HOME-1, LEAGUE-2, SET-3 for intended UI changes; adds week double-click, 404 status, placeholder links, More sheet current item, Search result tag.
+- Batch F code review (code-reviewer, read-only) on `git diff 976a355..d5d52f4 -- apps/web`. Save to `docs/reviews/2026-10-02-p2-batchF-code.md`.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit T2.6b (if it lists e2e assertions changed by intended UI changes, a short qa task updates them). Then code-reviewer on Batch F and a ux-reviewer recheck (also capture not-found, More sheet open).
+1. Verify and commit T2.6c; save the Batch F code review and route Blocker/Major. Then a ux-reviewer recheck (also capture not-found, More sheet open).
 2. G2 gate: `pnpm gate --amd64`; code-reviewer on `git diff main...phase/2-shell`; full coverage run; live onboarding by the orchestrator (about 22 calls); LAN check (`pnpm dev:lan` plus a request with a non-localhost Origin); archive 390 and 1280 px screenshots from the seeded dir to `docs/gates/G2/screens/` after eyeballing each; write `docs/gates/G2.md`; stop for Steph with run instructions (LAN URL, `dev:lan` and worker commands, macOS firewall prompt) and questions.
 
 ## 5. Briefs
