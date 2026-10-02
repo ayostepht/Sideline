@@ -21,7 +21,7 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 ## 3. In flight (Batch D)
 
 - T2.3b (frontend-engineer): app/onboarding/**, app/l/[leagueId]/settings/**, `_components/` under them, new pure helpers in lib/client.
-- T2.3c (frontend-engineer): app/l/[leagueId]/page.tsx (Home), team/**, league/** (incl. teams/[rosterId]), `_components/` under them, new pure helpers in lib/client.
+- T2.3c done (fbc6204).
 - Both treat apps/web/components as read-only and wait on `pgrep -f "[n]ext build"` before building.
 
 ## 4. Next steps (in order)

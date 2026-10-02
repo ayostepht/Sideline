@@ -86,7 +86,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.2b-fix2 | Batch C review m4, m5; getLeagueChoices tests | backend-engineer | C-fix | Done (lib/server and app/api 98.4% lines) | 1 | cfb098d |
 | T2.3a-fix2 | Shell UX review M1 (768 layout, sidebar stays at 1024 per PLAN 6.3), M2 (desktop header title and week label), m1 to m4, n1 | frontend-engineer | C-fix | Done (orchestrator: verify 662, e2e 75; `/l/[leagueId]` 161,725 B) | 1 | 41fd0c1 |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | In progress | 1 | |
-| T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | In progress | 1 | |
+| T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Done (targeted checks; routes about 161.6 KB) | 1 | fbc6204 |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
 | T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | Not started | 0 | |
 | T2.6 | Fix round | frontend-engineer | F | Not started | 0 | |
@@ -173,6 +173,8 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - T2.3a-fix: the layout's DB-error catch and `app/error.tsx` are untested at runtime (no way to force a read error in the scratch check); add an e2e or unit test in T2.5b if feasible. "Still syncing" has no auto refresh. Test ids changed: `league-switcher-desktop|mobile`, `league-name-desktop|mobile`, `search-trigger-desktop|mobile`, `league-syncing`.
 
 - Shell UX review (docs/reviews/2026-10-02-p2-batchC-ux.md): M3 (single-league mobile name has no settings route from the top bar) accepted as Minor, Settings is in More; m5 onboarding wordmark goes to T2.3b; add `/l/<id>` shell routes to axe and capture Syncing, not-found, More sheet and search states in T2.5b/T2.4.
+
+- T2.3c: Home team card, "You" row, Bye badge and highlight were never seen with a stored user (seeded DB has none); T2.5b should exercise them on the onboarding server after onboarding. Stale freshness text and StaleBanner show together (redundant; T2.4 to judge). Home issue count = starters Out, IR, PUP or on bye in the selected week. test ids listed in the T2.3c report: standings-*, home-*, team-*, no-team-*, league-rosters.
 
 ## Questions for Steph
 
