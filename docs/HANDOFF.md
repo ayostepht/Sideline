@@ -20,12 +20,13 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight
 
-- code-reviewer on Batch D (diff 41fd0c1..9490c57). Save as `docs/reviews/2026-10-02-p2-batchD-code.md`.
+- Batch D code review saved (0d7b0d8): M1 browser vs server clock in first-sync, M2 ignores sync result, M3 unbounded poll.
+- T2.3b-fix (frontend-engineer): onboarding, settings, team pages (m9). M2, M3, minors. Waits for a follow-up message with M1.
 - T2.2d (backend-engineer): packages/db, apps/web/lib/server. Standalone migrated detection.
 
 ## 4. Next steps (in order)
 
-1. Save the Batch D review; fix Blocker and Major. Also investigate the standalone `db.migrated: false` issue (PROGRESS backlog, T2.3b).
+1. When T2.2d lands: dispatch T2.2e (backend: POST /api/onboarding/league returns `syncSince`, server clock ISO of the queued or reused `all` request's requested_at, null for rate_limited); then SendMessage the T2.3b-fix agent to use it for M1 (or a fresh frontend task if that agent is gone).
 2. Batch E: T2.4 UX review (all routes; capture Syncing, not-found, More sheet, search states) and T2.5b (e2e onboarding on the fixture server, navigation, pages into `existingRoutes` for axe and no-hscroll, Lighthouse on `/l/1000000000000000001` and League, data function perf on the fixture DB, review items in PROGRESS backlog).
 3. Batch F fix round, then G2 gate: live onboarding run by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan`, non-localhost origin), screenshots archived from the seeded dir only, then stop for Steph.
 
