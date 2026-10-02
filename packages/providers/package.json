@@ -7,5 +7,10 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sideline/shared": "workspace:*",
+    "csv-parse": "7.0.3",
+    "zod": "4.6.5"
   }
 }

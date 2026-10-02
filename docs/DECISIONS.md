@@ -54,7 +54,9 @@ Date: 2026-10-01
 | Logging | pino 10.3.1, pino-pretty 13.1.3 | |
 | Scripts | tsx | 4.23.15 |
 
-Still to pin when first installed (owning task records the version here): Tailwind CSS, shadcn/ui, Radix, lucide-react, Recharts, TanStack Table (T2.1); better-sqlite3, Drizzle ORM, drizzle-kit (T1.3); croner or node-cron (T1.5).
+Still to pin when first installed (owning task records the version here): Tailwind CSS, shadcn/ui, Radix, lucide-react, Recharts, TanStack Table (T2.1).
+
+Pinned in T1.0 (2026-10-02): better-sqlite3 13.0.3 (SQLite 3.53.4), drizzle-orm 0.45.3, drizzle-kit 0.31.11, @types/better-sqlite3 9.6.0, croner 10.0.1, csv-parse 7.0.3; zod 4.6.5 and pino 10.3.1 also as runtime dependencies of the packages that use them.
 
 **Context:** Phase 0 scaffold (T0.1, T0.2), current stable releases on 2026-10-01.
 
@@ -111,3 +113,76 @@ Date: 2026-10-01
 **Alternatives considered:** comparing against the device viewport width from the Playwright project (works, but duplicates config and breaks on zoomed layouts).
 
 **Consequences:** any script that checks UI5 (including the T0.5 gate script) must use `e2e/helpers/no-hscroll.ts` or the same formula.
+
+## ADR-005: Phase 1 plan decisions (data layer and sync)
+
+Date: 2026-10-02
+
+**Decision**
+
+1. **Task splits for the 400-line target.** T1.2, T1.3, T1.4, T1.5 and T1.7 are split into lettered subtasks. T1.0 (dependency preinstall, devops-engineer) and T1.8 (Docker and build with SQLite, devops-engineer) are added. PLAN.md section 9 is amended.
+2. **Contract placement.** `packages/shared` holds domain types, our API DTOs (health, sync status, sync run request), sync job names, the `Reason` type and the zod env config schema (PLAN 4.4). `packages/sleeper` holds raw response schemas plus pure mappers from raw responses to shared domain types.
+3. **One Sleeper caller, enforced.** The web process never calls Sleeper in Phase 1; `POST /api/sync/run` queues a `sync_requests` row that the worker polls. `pnpm sync --once` checks the worker heartbeat: with a live worker it enqueues requests and waits for them; only with no live worker does it run jobs itself. A sync lease in the DB (holder plus expiry, taken atomically) prevents overlapping runs between CLI runs and the worker. The holder renews the lease on a timer well inside the expiry while jobs run, and stops before the next job if a renewal finds the lease lost, so slow runs (including the 2025 backfill) can't lose it mid-job. Phase 2 onboarding (username lookup from web) gets its own decision in the T2.2 brief.
+4. **Data model additions to PLAN 4.5:** `player_week_projection_snapshots` (last fetch before each player's kickoff, ADR-002 item 1), `nfl_state`, `http_cache` for ETags (not used for `/players/nfl`), `sync_requests`, and `app_settings` keys for the worker heartbeat, the sync lease and the last `/players/nfl` fetch (the once-per-day guard survives restarts).
+5. **Idempotent upserts count real changes only** (`ON CONFLICT DO UPDATE ... WHERE` a column differs), so a second identical sync reports `rows_changed = 0`.
+6. **Health semantics.** `/api/health` returns 200 with `status` `ok` or `degraded`, a DB check, worker heartbeat state (`ok`, `stale`, `never`) and the last sync summary; 503 only when SQLite can't be opened or queried. A missing worker or unmigrated schema is `degraded`. The web process never runs migrations. Revisit in T4.3 once the supervisor exists (a heartbeat stale beyond a threshold should probably fail the Docker healthcheck).
+7. **`db:seed:fixtures` moves from T1.3 to T1.5c.** It runs the real worker sync against a fixture-backed fetch, so mapping logic is not duplicated.
+8. **Coverage (closes G0 review m4).** Route handlers stay thin and logic lives in `apps/web/lib/server`. `apps/web/app/api/**` and `apps/worker/**` are added to coverage at 75% lines. PLAN 10.5 and `vitest.config.ts` amended.
+9. **Ownership extensions.** ADR-000 item 5 extends to `tests/fixtures/nflverse/` (written by the sleeper-data-engineer recorder). `apps/web/next.config.ts` belongs to devops-engineer.
+10. **Dependency installs.** Only T1.0 runs `pnpm add` in Phase 1; other agents report missing dependencies.
+11. **Live API budget.** No Sleeper calls during development. At G1: `pnpm test:contract` (about 20 calls, `/players/nfl` excluded unless `CONTRACT_PLAYERS=1`) and one orchestrator live `pnpm sync --once` into gitignored `./data` (the day's single `/players/nfl` fetch).
+12. **Projection filter sanity.** T1.2b documents the real-row rule separately for stats and projections (checked against fixtures), tests that week 5 projections are non-empty after filtering, and reports dropped-row counts by reason. Bye-week players are handled through the schedule, never silently dropped.
+13. **Red-zone touches.** If nflverse needs play-by-play for them, TREND-2 ships without red-zone touches (nullable column) and play-by-play goes to the P1 backlog.
+14. **`pnpm run sync`, not `pnpm sync`.** pnpm 12 has a built-in `sync` command that shadows the root script, so the CLI is invoked as `pnpm run sync --once [--job=name]`. Root scripts delegate with `pnpm -C <dir> run` because `--filter` turns the stub exit code 2 into 1. PLAN 10.6 amended.
+15. **Package manifests.** Dependency changes in any workspace `package.json` belong to devops-engineer (it owns the lockfile). Package owners may add or change `scripts` entries in their own package's manifest.
+
+**Context:** Phase 1 planning on 2026-10-02, approved by Steph with changes (items 3, 6, 12, 13).
+
+**Alternatives considered:** web calling Sleeper directly with its own limiter (rejected: two limiters can't enforce one budget); a separate seed script mapping fixtures to rows (rejected: duplicates the worker's mapping); 503 on a missing worker heartbeat (deferred to T4.3: no worker runs in the container until then).
+
+**Consequences:** the worker is the single gate to Sleeper. Health stays green in the Phase 1 to 3 container. The idempotency check measures real changes.
+
+## ADR-006: nflverse data decisions from the T1.4a spike
+
+Date: 2026-10-02
+
+**Decision**
+
+1. **Assets:** `https://github.com/nflverse/nflverse-data/releases/download/<tag>/<asset>.csv.gz` for `schedules/games`, `stats_player/stats_player_week_<season>` and `snap_counts/snap_counts_<season>`. The 2.5 MB `players` asset isn't needed by the provider.
+2. **Kickoff:** `gameday` plus `gametime` are America/New_York wall time, including international games. Convert with the IANA zone (DST ends 2026-11-01), never a fixed offset. A missing `gametime` uses the ADR-002 fallback with `kickoffApproximate: true`. Games can fall on any weekday (Wednesday, Friday, Saturday seen), so no code may assume Thu/Sun/Mon.
+3. **Spread sign:** positive `spread_line` means the home team is favored (moneylines agree in 280 of 285 2025 games and 75 of 77 2026 games). Implied totals: home = total/2 + spread/2, away = total/2 - spread/2. Lines exist for played weeks and roughly the next 1 to 2 weeks; later weeks are blank, and null means no implied total.
+4. **Team codes:** the only difference is nflverse `LA` to Sleeper `LAR`.
+5. **Player join:** Sleeper `gsis_id` covers only about 26% of relevant players and often has a leading space. Join order: trimmed `gsis_id`, then normalized name plus team (plus position), else null usage. Name plus team matched 242 of 244 fixture players; misses are nicknames, handled by a small alias table. Snap counts join the same way.
+6. **Usage:** `target_share`, `air_yards_share` and snap `offense_pct` are provided as 0 to 1 fractions. `carry_share` is computed as player carries divided by the team's total carries in that game. Red-zone touches need play-by-play, so per ADR-005 item 13 TREND-2 ships without them (`rz_touches` null) and play-by-play goes to the P1 backlog.
+7. **Byes:** derived from the schedule (team absent in a week).
+8. **Freshness:** weekly assets lag about a day; a missing week means "no usage yet", not an error.
+
+**Context:** T1.4a spike, `docs/sleeper-api-notes.md` section 14.
+
+**Alternatives considered:** joining through the nflverse `players` asset (works for snaps via pfr id, but adds 2.5 MB downloads for no gain over name plus team).
+
+**Consequences:** T1.4b implements the join order, the alias table, the LA/LAR map, kickoff conversion and carry share. The Sleeper players table keeps a trimmed `gsis_id`.
+
+## ADR-007: Web build uses webpack instead of Turbopack
+
+Date: 2026-10-02
+
+**Decision:** `next build --webpack` and `next dev --webpack`, with `resolve.extensionAlias` mapping `.js` to `.ts`/`.tsx`/`.js`, `module.parser.javascript.url = false` (so webpack does not try to bundle the migrations folder URL in `packages/db`), and better-sqlite3 as a server external.
+
+**Context:** workspace packages use `.js`-suffixed relative imports (TS `moduleResolution: bundler`, `verbatimModuleSyntax`). Turbopack in Next 16.3.8 has no extension-alias option, so `pnpm build` failed as soon as the web app imported `@sideline/shared` (T1.6). ADR-001 listed Turbopack as the builder.
+
+**Alternatives considered:** dropping `.js` suffixes from every workspace package (works with Turbopack, but is a cross-package convention change touching code owned by four agents); `experimental.extensionAlias` (webpack-only, Turbopack ignored it).
+
+**Consequences:** builds are slower than Turbopack. Revisit when Turbopack gains extension aliasing, or if the packages switch to extensionless imports. The Docker image (T1.8) must ship the better-sqlite3 native module and `packages/db/drizzle`.
+
+## ADR-008: Ownership of apps/web/next.config.ts and package manifests
+
+Date: 2026-10-02
+
+**Decision:** `apps/web/next.config.ts` belongs to devops-engineer (build tooling, ADR-007). Dependency entries in any `package.json` remain devops-engineer only (ADR-005 item 15), including `packages/db`.
+
+**Context:** the Batch D review (m8) flagged devops edits to `next.config.ts` and `packages/db/package.json`. Neither path is in the CLAUDE.md roster for devops.
+
+**Alternatives considered:** giving `next.config.ts` to frontend-engineer. Rejected because the config is about bundling and server externals, not UI.
+
+**Consequences:** frontend briefs that need config changes are split out to devops-engineer.

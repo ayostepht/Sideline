@@ -16,7 +16,6 @@ COPY packages/db/package.json packages/db/package.json
 COPY packages/providers/package.json packages/providers/package.json
 COPY packages/shared/package.json packages/shared/package.json
 COPY packages/sleeper/package.json packages/sleeper/package.json
-# TODO(T4.3): install worker deps and native toolchain for better-sqlite3 when the worker joins the image
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --filter "@sideline/web..."
 
@@ -30,7 +29,9 @@ FROM node:24.21.0-bookworm-slim AS runtime
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    DATA_DIR=/data \
+    SIDELINE_MIGRATIONS_DIR=/app/packages/db/drizzle
 RUN apt-get update \
     && apt-get install -y --no-install-recommends tini \
     && rm -rf /var/lib/apt/lists/* \
@@ -41,6 +42,8 @@ WORKDIR /app
 COPY --from=build --chown=node:node /app/apps/web/.next/standalone ./
 COPY --from=build --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build --chown=node:node /app/apps/web/public ./apps/web/public
+# Migrations are plain files the bundler cannot trace, so ship them and point the migrator at them.
+COPY --from=build --chown=node:node /app/packages/db/drizzle ./packages/db/drizzle
 USER node
 EXPOSE 3000
 VOLUME /data

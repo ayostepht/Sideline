@@ -9,11 +9,19 @@ import { themes } from "./helpers/theme";
  */
 const routes = ["/"];
 
-test("HOST-3: GET /api/health returns 200 with status ok", async ({ request }) => {
+// The e2e server runs on a fresh, unmigrated DATA_DIR with no worker, which ADR-005 item 6 defines
+// as 200 "degraded" with a working DB.
+test("HOST-3: GET /api/health returns 200, degraded on an empty DATA_DIR", async ({ request }) => {
   const res = await request.get("/api/health");
   expect(res.status()).toBe(200);
-  const body = (await res.json()) as { status?: unknown };
-  expect(body.status).toBe("ok");
+  const body = (await res.json()) as {
+    status?: unknown;
+    db?: { ok?: unknown };
+    worker?: { status?: unknown };
+  };
+  expect(body.status).toBe("degraded");
+  expect(body.db?.ok).toBe(true);
+  expect(body.worker?.status).toBe("never");
 });
 
 test("HOST-3: / references /_next/static assets and they are served (standalone asset layout)", async ({

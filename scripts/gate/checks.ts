@@ -136,7 +136,7 @@ async function playwrightCheck(
   if (buildFailure !== undefined) return { status: "SKIPPED", reason: buildFailure };
   let baseUrl: string;
   try {
-    baseUrl = (await ctx.ensureServer()).baseUrl;
+    baseUrl = (await ctx.ensureServer(id)).baseUrl;
   } catch (err) {
     return fail(err instanceof Error ? err.message : String(err));
   }

@@ -84,3 +84,17 @@ describe("waitForStatus", () => {
     expect(r.ok).toBe(false);
   });
 });
+
+describe("server start diagnostics", () => {
+  it("picks the first error-looking line, else the first non-empty line", async () => {
+    const { firstErrorLine } = await import("./server.js");
+    expect(firstErrorLine("\nready\nError: EADDRINUSE\nmore")).toBe("Error: EADDRINUSE");
+    expect(firstErrorLine("\n hello \nworld")).toBe("hello");
+    expect(firstErrorLine("")).toBeUndefined();
+  });
+
+  it("returns the last lines of a log, and empty text for a missing file", async () => {
+    const { tailLines } = await import("./server.js");
+    expect(tailLines("/nonexistent/sideline.log")).toBe("");
+  });
+});

@@ -1,3 +1,6 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 /**
@@ -61,6 +64,12 @@ function onlyHelperSpecRequested(): boolean {
   return files.length > 0 && files.every((a) => /(^|\/)helpers\.spec(\.ts)?$/.test(a));
 }
 
+// The web server needs a DATA_DIR (/api/health answers 503 without one). Use a fresh temp dir,
+// never the developer's real data. The main process creates it once and exports it so worker
+// processes that re-import this config see the same value instead of creating more.
+const dataDir = process.env["E2E_DATA_DIR"] ?? mkdtempSync(path.join(tmpdir(), "sideline-e2e-"));
+process.env["E2E_DATA_DIR"] = dataDir;
+
 const startServer =
   externalBaseUrl === undefined &&
   process.env["E2E_SKIP_SERVER"] !== "1" &&
@@ -100,8 +109,10 @@ export default defineConfig({
           command:
             "pnpm --filter @sideline/web build && pnpm --filter @sideline/web start:standalone",
           url: `${baseURL}/api/health`,
-          env: { PORT: String(PORT), HOSTNAME: HOST },
-          reuseExistingServer: !process.env["CI"],
+          env: { PORT: String(PORT), HOSTNAME: HOST, DATA_DIR: dataDir },
+          // Never reuse: a stale local server (old build, real DATA_DIR) would silently be tested.
+          // To test a running server on purpose, set E2E_BASE_URL.
+          reuseExistingServer: false,
           timeout: 180_000,
           stdout: "pipe",
           stderr: "pipe",

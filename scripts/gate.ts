@@ -116,8 +116,12 @@ async function main(): Promise<number> {
     checks: results,
     summary,
   };
-  mkdirSync(path.dirname(latestFile), { recursive: true });
-  writeFileSync(latestFile, `${JSON.stringify(report, null, 2)}\n`);
+  // A partial (--only) run must not overwrite the full report other tooling relies on.
+  const outFile =
+    flags.only === undefined ? latestFile : path.join(root, "docs/gates/latest.partial.json");
+  const outName = path.relative(root, outFile);
+  mkdirSync(path.dirname(outFile), { recursive: true });
+  writeFileSync(outFile, `${JSON.stringify(report, null, 2)}\n`);
 
   const idWidth = Math.max(...results.map((r) => r.id.length), 2);
   process.stdout.write("\nGate summary\n");
@@ -128,7 +132,7 @@ async function main(): Promise<number> {
     );
   }
   process.stdout.write(
-    `\n${summary.pass} passed, ${summary.fail} failed, ${summary.skipped} skipped. Report: docs/gates/latest.json\n`,
+    `\n${summary.pass} passed, ${summary.fail} failed, ${summary.skipped} skipped. Report: ${outName}\n`,
   );
   if (flags.strict) {
     const blocked = disallowedSkips(results, flags.allowSkip);

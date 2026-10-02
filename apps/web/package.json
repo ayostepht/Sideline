@@ -4,17 +4,22 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "start:standalone": "node scripts/start-standalone.mjs",
     "typecheck": "next typegen && tsc --noEmit -p tsconfig.json",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@sideline/db": "workspace:*",
+    "@sideline/shared": "workspace:*",
+    "better-sqlite3": "13.0.3",
     "next": "16.3.8",
+    "pino": "10.3.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

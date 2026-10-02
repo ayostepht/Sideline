@@ -171,6 +171,7 @@ Worker jobs call the Sleeper client (rate-limited, zod-validated), upsert into S
 - `trending(player_id, type, count, lookback_hours, fetched_at)`
 - `sync_runs(id, job, started_at, finished_at, status, calls_made, rows_changed, error)`
 - `computed_cache(league_id, week, kind, inputs_hash, payload_json, computed_at)`
+- Added in ADR-005: `player_week_projection_snapshots` (last fetch before each player's kickoff), `nfl_state`, `http_cache` (ETags), `sync_requests` (manual runs queued for the worker), and `app_settings` keys for the worker heartbeat, the sync lease and the last `/players/nfl` fetch.
 
 ## 5. Analytics specification (`packages/core`)
 
@@ -343,15 +344,25 @@ Objective: working skeleton, tooling, and verified ground truth about the Sleepe
 
 ### Phase 1: Data layer and sync (Gate G1)
 
+Tasks were split for size in ADR-005 (original IDs T1.2 to T1.5 and T1.7 became lettered subtasks; T1.0 and T1.8 were added).
+
 | ID | Task | Agent | Depends | Batch |
 |---|---|---|---|---|
-| T1.1 | `packages/shared`: domain types and DTOs (league, roster, player, matchup, transaction, stats, projections, sync job types) | backend-engineer | G0 | A |
-| T1.2 | `packages/sleeper`: typed client; zod schemas per endpoint (require used fields, tolerate extras); token-bucket rate limiter (default 5 req/s, hard cap 300/min); retries with exponential backoff and jitter on 429 and 5xx only; 10 s timeout; typed errors; unit tests with MSW | sleeper-data-engineer | T1.1 | B |
-| T1.3 | `packages/db`: Drizzle schema per 4.5; migrations; WAL and `busy_timeout`; indexes; query helpers; `db:seed:fixtures` | backend-engineer | T1.1 | B |
-| T1.4 | `packages/providers`: nflverse provider (schedules, weekly player stats and usage, snap counts) with download cache in `DATA_DIR`, schema validation, feature flag, graceful failure | sleeper-data-engineer | T1.1 | B |
-| T1.5 | `apps/worker`: scheduler and jobs (state, league, users, rosters, matchups current plus backfill, transactions, players daily, trending, stats, projections, nflverse); `sync_runs` logging; game-window cadence; idempotent upserts; derived-table recompute hook; CLI `pnpm sync --once [--job=name]` | sleeper-data-engineer | T1.2, T1.3, T1.4 | C |
-| T1.6 | Web: `/api/health` (DB, worker heartbeat), `GET /api/sync/status`, `POST /api/sync/run` (debounced, rate-limited) | backend-engineer | T1.3 | C |
-| T1.7 | Integration tests: full sync from fixtures into temp SQLite; idempotency (two runs, identical row counts and no changed rows); failure handling under MSW 500s and 429s; call-rate compliance in a simulated game-window hour; live contract suite `pnpm test:contract` (schema validation only, manual) | qa-engineer | T1.5, T1.6 | D |
+| T1.0 | Preinstall Phase 1 dependencies, workspace links, `allowBuilds` for better-sqlite3, root script wiring, `next.config.ts` for workspace packages and better-sqlite3 | devops-engineer | G0 | A0 |
+| T1.1 | `packages/shared`: domain types and DTOs (league, roster, player, matchup, transaction, stats, projections, schedule, usage, sync job types, health and sync DTOs, `Reason`, env config schema per 4.4) | backend-engineer | T1.0 | A |
+| T1.2a | `packages/sleeper` HTTP core: token-bucket rate limiter (default 5 req/s, hard cap 300/min); retries with exponential backoff and jitter on 429 and 5xx only; 10 s timeout; typed errors; ETag store and `If-None-Match`; unit tests with MSW | sleeper-data-engineer | T1.0 | A |
+| T1.4a | nflverse spike (asset URLs, columns, kickoff time zone, spread sign, team codes, gsis join, red-zone availability) documented in the API notes; recorder for trimmed nflverse fixtures | sleeper-data-engineer | T1.0 | A |
+| T1.2b | `packages/sleeper` endpoints: typed client; zod schemas per endpoint (require used fields, tolerate extras); real-row filtering for projections and stats (ADR-002); mappers to shared domain types | sleeper-data-engineer | T1.1, T1.2a | B |
+| T1.3a | `packages/db`: Drizzle schema per 4.5; migrations; WAL and `busy_timeout`; indexes; `sync_runs`, heartbeat, `sync_requests` and sync lease helpers | backend-engineer | T1.1 | B |
+| T1.4b | `packages/providers`: nflverse provider (schedules, weekly player stats and usage, snap counts) with download cache in `DATA_DIR`, schema validation, feature flag, graceful failure | sleeper-data-engineer | T1.1, T1.4a | B |
+| T1.3b | `packages/db`: idempotent upserts that count real changes only; projection snapshots; ETag store; `computed_cache`; read helpers | backend-engineer | T1.3a | C |
+| T1.5a | `apps/worker` framework: scheduler; `sync_runs` logging; heartbeat; `sync_requests` poller; sync lease; game-window cadence; CLI `pnpm sync --once [--job=name]` (enqueues to a live worker instead of calling Sleeper) | sleeper-data-engineer | T1.2a, T1.3a | C |
+| T1.6 | Web: `/api/health` (DB, worker heartbeat), `GET /api/sync/status`, `POST /api/sync/run` (debounced, rate-limited, queued for the worker) | backend-engineer | T1.3a | C |
+| T1.5b | Sleeper jobs (state, league, users, rosters, matchups current plus backfill and future weeks, transactions, players daily, trending, stats, projections with pregame snapshots, 2025 backfill) | sleeper-data-engineer | T1.2b, T1.3b, T1.5a | D |
+| T1.7a | QA harness: integration and contract Vitest projects, temp SQLite and MSW helpers, live contract suite `pnpm test:contract` (schema validation only, manual) | qa-engineer | T1.2b, T1.3a | D |
+| T1.8 | Docker and build with SQLite: better-sqlite3 in the standalone image (amd64 and arm64), writable `/data`, health in the container | devops-engineer | T1.6 | D |
+| T1.5c | nflverse job; derived-table recompute hook; `db:seed:fixtures` (worker sync from fixtures) | sleeper-data-engineer | T1.4b, T1.5b | E |
+| T1.7b | Integration tests: full sync from fixtures into temp SQLite; idempotency (two runs, identical row counts and no changed rows); failure handling under MSW 500s and 429s; call-rate compliance in a simulated game-window hour; single-caller and sync lease cases | qa-engineer | T1.5c, T1.6, T1.7a | F |
 
 **G1 phase checks:** all tables populated from fixtures; idempotency passes; limiter never exceeds configured rate in tests; worker survives API failures and logs failed `sync_runs`; contract suite passes once against the live API (run by qa-engineer, output attached to gate report).
 
@@ -469,7 +480,7 @@ Listed under each phase in section 9.
 ### 10.5 Test strategy
 
 - **Pyramid:** many unit tests in `packages/core`, `sleeper`, `providers`; integration tests for sync and data functions against temp SQLite; focused e2e for core flows.
-- **Coverage thresholds:** `packages/core` at least 90% lines and 85% branches; `sleeper` and `providers` at least 85% lines; `db` and `apps/web/lib/server` at least 75% lines. UI is covered by e2e, not line coverage.
+- **Coverage thresholds:** `packages/core` at least 90% lines and 85% branches; `sleeper` and `providers` at least 85% lines; `db`, `apps/worker`, `apps/web/lib/server` and `apps/web/app/api` at least 75% lines (worker and api added in ADR-005). UI is covered by e2e, not line coverage.
 - **Golden tests:** hand-built scenarios with documented expected outputs for the optimizer, waiver engine, and waiver priority advisor. Partial (in-progress) weeks are never used for golden expectations or SCORE-2.
 - **Property tests (fast-check):** optimizer invariants (LINEUP-8); scoring linearity; simulation probabilities within [0, 1].
 - **Fixtures:** recorded from Steph's real league in Phase 0 and sanitized: usernames, display names, team names, avatars, and the league name replaced with deterministic fakes. Player DB fixture trimmed to rostered players plus the top 400 by `search_rank` plus anything referenced. Synthetic fixtures for edge cases: superflex, IDP, no FAAB, divisions, preseason state, offseason state, week 18, empty transactions. Never commit unsanitized data.
@@ -487,7 +498,7 @@ Listed under each phase in section 9.
 | `pnpm screens` | screenshots of configured routes at 390/768/1280 in light and dark into `.screens/` |
 | `pnpm validate:scoring` | SCORE-2 report |
 | `pnpm backtest` | MATCH-3 report |
-| `pnpm sync --once [--job=name]` | run sync jobs manually |
+| `pnpm run sync --once [--job=name]` | run sync jobs manually (`run` is required: pnpm 12 has a built-in `sync`, ADR-005) |
 | `pnpm db:migrate` / `db:seed:fixtures` | database utilities |
 | `pnpm gate` | verify, coverage, integration, build, e2e, a11y, lhci, docker build, container health smoke; writes `docs/gates/latest.json` |
 

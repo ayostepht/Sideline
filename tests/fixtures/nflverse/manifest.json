@@ -1,0 +1,118 @@
+{
+  "season": 2026,
+  "throughWeek": 3,
+  "keepTeams": [
+    "KC",
+    "SF"
+  ],
+  "note": "Trimmed copies of nflverse release assets (original header names and CSV format). Stats and snaps keep rows for Sleeper fixture players (gsis id or normalized name plus team) and all rows for keepTeams.",
+  "assets": {
+    "games.csv.gz": {
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv.gz",
+      "updatedAt": "2026-10-02T03:49:54Z",
+      "size": 514219
+    },
+    "players.csv.gz": {
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/players/players.csv.gz",
+      "updatedAt": "2026-10-01T15:10:58Z",
+      "size": 2498878
+    },
+    "snap_counts_2026.csv.gz": {
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz",
+      "updatedAt": "2026-09-29T11:01:26Z",
+      "size": 84888
+    },
+    "stats_player_week_2026.csv.gz": {
+      "url": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv.gz",
+      "updatedAt": "2026-10-01T16:26:23Z",
+      "size": 217939
+    }
+  },
+  "recordedAt": "2026-10-02T04:16:32.515Z",
+  "files": {
+    "schedules/games.csv": {
+      "rows": 272,
+      "columns": [
+        "game_id",
+        "season",
+        "game_type",
+        "week",
+        "gameday",
+        "weekday",
+        "gametime",
+        "away_team",
+        "away_score",
+        "home_team",
+        "home_score",
+        "location",
+        "result",
+        "total",
+        "spread_line",
+        "total_line",
+        "home_moneyline",
+        "away_moneyline",
+        "roof",
+        "stadium"
+      ],
+      "source": "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv.gz"
+    },
+    "stats_player/stats_player_week_2026.csv": {
+      "rows": 1470,
+      "columns": [
+        "player_id",
+        "player_display_name",
+        "position",
+        "position_group",
+        "season",
+        "week",
+        "season_type",
+        "game_id",
+        "team",
+        "opponent_team",
+        "completions",
+        "attempts",
+        "passing_yards",
+        "carries",
+        "rushing_yards",
+        "receptions",
+        "targets",
+        "receiving_yards",
+        "receiving_air_yards",
+        "target_share",
+        "air_yards_share",
+        "wopr",
+        "fantasy_points_ppr"
+      ],
+      "source": "https://github.com/nflverse/nflverse-data/releases/download/stats_player/stats_player_week_2026.csv.gz"
+    },
+    "snap_counts/snap_counts_2026.csv": {
+      "rows": 1703,
+      "columns": [
+        "game_id",
+        "season",
+        "game_type",
+        "week",
+        "player",
+        "pfr_player_id",
+        "position",
+        "team",
+        "opponent",
+        "offense_snaps",
+        "offense_pct"
+      ],
+      "source": "https://github.com/nflverse/nflverse-data/releases/download/snap_counts/snap_counts_2026.csv.gz"
+    },
+    "players/players.csv": {
+      "rows": 644,
+      "columns": [
+        "gsis_id",
+        "pfr_id",
+        "display_name",
+        "position",
+        "latest_team",
+        "last_season"
+      ],
+      "source": "https://github.com/nflverse/nflverse-data/releases/download/players/players.csv.gz"
+    }
+  }
+}

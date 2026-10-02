@@ -1,10 +1,8 @@
-import pkg from "../../../package.json";
+import { getHealth } from "../../../lib/server/health";
+import { toResponse } from "../../../lib/server/http";
 
 export const dynamic = "force-dynamic";
 
 export function GET(): Response {
-  return Response.json(
-    { status: "ok", version: pkg.version, time: new Date().toISOString() },
-    { status: 200, headers: { "Cache-Control": "no-store" } },
-  );
+  return toResponse(getHealth());
 }

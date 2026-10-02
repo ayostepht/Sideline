@@ -13,15 +13,15 @@ everything here is cross-cutting.
 
 ## Suites
 
-| Suite                       | Command                                  | Notes                                                              |
-| --------------------------- | ---------------------------------------- | ------------------------------------------------------------------ |
-| Unit and harness self-tests | `pnpm test:unit` (part of `pnpm verify`) | Vitest projects per package plus `harness` (`tests/harness/`)      |
-| Coverage                    | `pnpm test:coverage`                     | Thresholds in `vitest.config.ts` match PLAN.md 10.5                |
-| Integration                 | `pnpm test:integration`                  | MSW + temp SQLite, from T1.7. Project goes in `tests/integration/` |
-| E2E                         | `pnpm test:e2e`                          | Playwright, 3 projects, needs a production build                   |
-| Accessibility               | `pnpm test:a11y`                         | Axe checks (the same specs, see below)                             |
-| Lighthouse                  | `pnpm lhci`                              | Needs `pnpm build` first; lhci starts the standalone server itself |
-| Contract                    | `pnpm test:contract`                     | Live Sleeper, schema only, manual                                  |
+| Suite                       | Command                                  | Notes                                                                 |
+| --------------------------- | ---------------------------------------- | --------------------------------------------------------------------- |
+| Unit and harness self-tests | `pnpm test:unit` (part of `pnpm verify`) | Vitest projects per package plus `harness` (`tests/harness/`)         |
+| Coverage                    | `pnpm test:coverage`                     | Thresholds in `vitest.config.ts` match PLAN.md 10.5                   |
+| Integration                 | `pnpm test:integration`                  | Vitest project `integration`: MSW + temp SQLite, `tests/integration/` |
+| E2E                         | `pnpm test:e2e`                          | Playwright, 3 projects, needs a production build                      |
+| Accessibility               | `pnpm test:a11y`                         | Axe checks (the same specs, see below)                                |
+| Lighthouse                  | `pnpm lhci`                              | Needs `pnpm build` first; lhci starts the standalone server itself    |
+| Contract                    | `pnpm test:contract`                     | Vitest project `contract`: live Sleeper, schema only, manual          |
 
 ### Playwright
 
@@ -32,7 +32,7 @@ Config: `playwright.config.ts`. Projects: `desktop-chromium` (1280x800), `mobile
 - `E2E_BASE_URL=http://host:port` tests an already running server; nothing is started.
 - Without it, the config builds and starts the production standalone server (the one Docker
   ships, `pnpm --filter @sideline/web start:standalone`) on 127.0.0.1:3000
-  (`reuseExistingServer` locally, never in CI; 180 s timeout). `E2E_SKIP_SERVER=1` never
+  (`reuseExistingServer: false`, so a stale server on the port is an error, not silently tested; 180 s timeout) with `DATA_DIR` set to a fresh temp dir (`E2E_DATA_DIR` overrides). `E2E_SKIP_SERVER=1` never
   starts one.
 - `e2e/helpers.spec.ts` is the helpers' own self-test (uses `page.setContent`, needs no app, so
   the server is not started when it is the only spec named on the command line).
@@ -59,7 +59,8 @@ Config: `playwright.config.ts`. Projects: `desktop-chromium` (1280x800), `mobile
    itself (`startServerCommand`, ready when the log shows "Ready in") and needs the existing
    build. Budgets (PLAN.md 6.6, error level, median of 3 runs, mobile emulation which is the
    Lighthouse default): performance >= 0.85, accessibility >= 0.95, best-practices >= 0.95.
-   Lighthouse needs Chrome (`CHROME_PATH` if it is not auto-detected).
+   Units: `resource-summary:script:size` is in bytes (204800 = 200 KB); category scores are 0 to 1
+   (0.85 = 85). Lighthouse needs Chrome (`CHROME_PATH` if it is not auto-detected).
 
 ### Route JS budget (200 KB gzipped, PLAN.md 6.6)
 
@@ -68,6 +69,28 @@ Asserted per URL in `lighthouserc.json` as `resource-summary:script:size` (error
 size on the wire, so this is the "200 KB gzipped" budget. The server must compress responses
 for this to be meaningful (the Next standalone server does by default). A build-time check of
 first-load JS from `next build` output may still be added in the T0.5 gate script.
+
+## Integration and contract projects
+
+`integration` and `contract` are Vitest projects registered in `vitest.config.ts` only when named
+with `--project`, so `pnpm test:unit` and `pnpm verify` never run them.
+
+- Integration: `vitest run --project integration`. Helpers in `tests/helpers/`:
+  `createTempDb()` (fresh migrated SQLite in an OS temp `DATA_DIR`; call `cleanup()` in
+  `afterEach`/`afterAll`), `synthetic2025Root` and `readFixtureJson`, plus the MSW server above.
+  Import workspace code by relative path (`../../packages/db/src/index.js`); the root has no
+  `@sideline/*` deps.
+- Contract: `vitest run --project contract`. Live Sleeper, shapes only (no value assertions, no
+  files written, nothing logged). Reads `DEFAULT_LEAGUE_ID` from the environment or the gitignored
+  `.env`; the run FAILS with a clear message when it is absent (no skips). Calls the live API with
+  plain fetch (not the shared limiter), about 20 calls. `/players/nfl` (CONTRACT-3, in
+  `players.contract.test.ts`) is excluded by default; run `CONTRACT_PLAYERS=1 pnpm test:contract`
+  to include it (at most once a day). Manual or gate-only, never part of CI.
+
+## Coverage
+
+Run `pnpm test:coverage` for the whole repo. Coverage globs are repo-relative, so a per-project
+`--coverage --project X` run reports `Unknown%`; thresholds are only meaningful on the whole run.
 
 ## MSW fixture handlers
 

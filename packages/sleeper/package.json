@@ -7,5 +7,9 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sideline/shared": "workspace:*",
+    "zod": "4.6.5"
   }
 }

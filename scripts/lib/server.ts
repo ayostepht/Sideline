@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { existsSync, openSync, closeSync } from "node:fs";
+import { closeSync, existsSync, mkdtempSync, openSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { createServer } from "node:net";
 import path from "node:path";
 
@@ -116,6 +117,35 @@ export async function killProcessGroup(pgid: number, graceMs = 5000): Promise<vo
   }
 }
 
+/** Thrown when the server never answers; carries the last lines of its output. */
+export class ServerStartError extends Error {
+  constructor(
+    message: string,
+    readonly tail: string,
+  ) {
+    super(message);
+    this.name = "ServerStartError";
+  }
+}
+
+/** Last `lines` lines of a log file ("" when it cannot be read). */
+export function tailLines(file: string, lines = 100): string {
+  try {
+    return readFileSync(file, "utf8").split("\n").slice(-lines).join("\n");
+  } catch {
+    return "";
+  }
+}
+
+/** First line that looks like an error, else the first non-empty line. */
+export function firstErrorLine(text: string): string | undefined {
+  const all = text.split("\n").map((l) => l.trim());
+  return (
+    all.find((l) => /^(\w*Error\b|Error:)|cannot find|enoent|eaddrinuse/i.test(l)) ??
+    all.find((l) => l)
+  );
+}
+
 export interface RunningServer {
   baseUrl: string;
   stop(): Promise<void>;
@@ -129,6 +159,8 @@ export async function startStandaloneServer(options: {
   root: string;
   logFile?: string;
   timeoutMs?: number;
+  /** Writable data directory for the server. Defaults to a fresh temp dir removed on stop. */
+  dataDir?: string;
 }): Promise<RunningServer> {
   const { root } = options;
   if (!standaloneBuildExists(root)) {
@@ -137,6 +169,9 @@ export async function startStandaloneServer(options: {
     );
   }
   const port = await findFreePort();
+  // The app defaults DATA_DIR to /data, which does not exist or is not writable on dev machines.
+  const ownDataDir = options.dataDir === undefined;
+  const dataDir = options.dataDir ?? mkdtempSync(path.join(tmpdir(), "sideline-server-"));
   const logFd = options.logFile === undefined ? undefined : openSync(options.logFile, "a");
   const stdio: ["ignore", number | "ignore", number | "ignore"] =
     logFd === undefined ? ["ignore", "ignore", "ignore"] : ["ignore", logFd, logFd];
@@ -147,7 +182,13 @@ export async function startStandaloneServer(options: {
       cwd: root,
       stdio,
       detached: true, // own process group, so stop() can kill the wrapper and server.js together
-      env: { ...process.env, NODE_ENV: "production", PORT: String(port), HOSTNAME: "127.0.0.1" },
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        PORT: String(port),
+        HOSTNAME: "127.0.0.1",
+        DATA_DIR: dataDir,
+      },
     },
   );
   if (logFd !== undefined) closeSync(logFd);
@@ -171,13 +212,23 @@ export async function startStandaloneServer(options: {
     process.removeListener("exit", onExit);
     if (pgid === undefined) return;
     await killProcessGroup(pgid);
+    if (ownDataDir) rmSync(dataDir, { recursive: true, force: true });
+    // Wait for the OS to release the port so the next server (or a stray probe) cannot collide.
+    const deadline = Date.now() + 10_000;
+    while (!(await isPortFree(port)) && Date.now() < deadline) await sleep(100);
   };
   const ready = await waitForStatus(`${baseUrl}/api/health`, {
     timeoutMs: options.timeoutMs ?? 60_000,
   });
   if (!ready.ok || exited) {
     await stop();
-    throw new Error(`Standalone server did not become healthy at ${baseUrl}/api/health`);
+    const tail = options.logFile === undefined ? "" : tailLines(options.logFile);
+    const first = firstErrorLine(tail);
+    throw new ServerStartError(
+      `Standalone server did not become healthy at ${baseUrl}/api/health` +
+        (first === undefined ? "" : ` (server said: ${first})`),
+      tail,
+    );
   }
   return { baseUrl, stop };
 }

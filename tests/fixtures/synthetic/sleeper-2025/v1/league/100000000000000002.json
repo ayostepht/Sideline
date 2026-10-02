@@ -1,0 +1,11 @@
+{
+  "league_id": "100000000000000002",
+  "name": "Synthetic League 2025",
+  "season": "2025",
+  "status": "in_season",
+  "sport": "nfl",
+  "total_rosters": 2,
+  "roster_positions": ["QB", "RB", "WR", "FLEX", "BN"],
+  "scoring_settings": { "pass_yd": 0.04, "pass_td": 4, "rec": 1, "rec_yd": 0.1, "rush_yd": 0.1 },
+  "settings": { "waiver_type": 0, "waiver_budget": 0, "playoff_week_start": 15 }
+}
