@@ -5,7 +5,13 @@ import { afterEach, describe, expect, it } from "vitest";
 import { planDataDir } from "../screens/datadir.js";
 import { lanIPv4 } from "./lan.js";
 import { redactHome } from "./paths.js";
-import { assertSeededDataDir, FIXTURE_LEAGUE_ID, SEED_MARKER } from "./seed.js";
+import {
+  assertSeededDataDir,
+  FIXTURE_LEAGUE_ID,
+  isCaseInsensitivePlatform,
+  isInside,
+  SEED_MARKER,
+} from "./seed.js";
 
 const made: string[] = [];
 function temp(): string {
@@ -33,6 +39,25 @@ describe("assertSeededDataDir", () => {
     mkdirSync(sub, { recursive: true });
     marker(sub, { leagueId: FIXTURE_LEAGUE_ID, seededAt: "x" });
     expect(() => assertSeededDataDir(sub, root)).toThrow(/real data/);
+  });
+  it("refuses case variants of ./data (existing and not yet created)", () => {
+    const root = temp();
+    mkdirSync(path.join(root, "data", "nested"), { recursive: true });
+    const insensitiveFs = isCaseInsensitivePlatform();
+    if (insensitiveFs) {
+      expect(() => assertSeededDataDir(path.join(root, "DATA", "nested"), root)).toThrow(
+        /real data/,
+      );
+      expect(() => assertSeededDataDir(path.join(root, "Data", "new-leaf"), root)).toThrow(
+        /real data/,
+      );
+    }
+    // Platform rule, independent of the test machine's filesystem.
+    expect(isInside("/r/DATA/x", "/r/data", true)).toBe(true);
+    expect(isInside("/r/DATA/x", "/r/data", false)).toBe(false);
+    expect(isCaseInsensitivePlatform("darwin")).toBe(true);
+    expect(isCaseInsensitivePlatform("win32")).toBe(true);
+    expect(isCaseInsensitivePlatform("linux")).toBe(false);
   });
   it("refuses a temp dir without the marker", () => {
     expect(() => assertSeededDataDir(temp(), temp())).toThrow(/no .*marker/);
@@ -74,6 +99,10 @@ describe("planDataDir", () => {
 describe("redactHome", () => {
   it("rewrites the home directory to ~", () => {
     expect(redactHome('{"p":"/Users/jo/x/chrome"}', "/Users/jo")).toBe('{"p":"~/x/chrome"}');
+  });
+  it("only replaces the home prefix at a path boundary", () => {
+    expect(redactHome("/Users/stephanie2/x", "/Users/steph")).toBe("/Users/stephanie2/x");
+    expect(redactHome("/Users/steph/x and /Users/steph", "/Users/steph")).toBe("~/x and ~");
   });
   it("leaves text alone when home is empty", () => {
     expect(redactHome("/a/b", "")).toBe("/a/b");

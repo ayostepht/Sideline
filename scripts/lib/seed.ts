@@ -1,16 +1,11 @@
 import { spawn } from "node:child_process";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import fs from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { z } from "zod";
+
+const realpath = fs.realpathSync.native;
 
 /** The fake league id every recorded fixture uses (tests/fixtures/sleeper/manifest.json). */
 export const FIXTURE_LEAGUE_ID = "1000000000000000001";
@@ -18,7 +13,7 @@ export const SEED_MARKER = ".sideline-fixture-seed";
 
 const MarkerSchema = z.object({ leagueId: z.string(), seededAt: z.string() });
 
-/** Resolves symlinks for the longest existing prefix, so temp dirs compare equal on macOS. */
+/** Native realpath of the longest existing prefix (on-disk case on macOS), plus the rest. */
 function canonical(p: string): string {
   const abs = path.resolve(p);
   let existing = abs;
@@ -27,11 +22,22 @@ function canonical(p: string): string {
     rest.unshift(path.basename(existing));
     existing = path.dirname(existing);
   }
-  return path.join(realpathSync(existing), ...rest);
+  return path.join(realpath(existing), ...rest);
 }
 
-function isInside(child: string, parent: string): boolean {
-  const rel = path.relative(parent, child);
+/** macOS and Windows filesystems are case-insensitive by default. */
+export function isCaseInsensitivePlatform(platform: string = process.platform): boolean {
+  return platform === "darwin" || platform === "win32";
+}
+
+export function isInside(
+  child: string,
+  parent: string,
+  caseInsensitive: boolean = isCaseInsensitivePlatform(),
+): boolean {
+  const c = caseInsensitive ? child.toLowerCase() : child;
+  const p = caseInsensitive ? parent.toLowerCase() : parent;
+  const rel = path.relative(p, c);
   return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
 }
 
