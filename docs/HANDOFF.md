@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch D (T1.5b, T1.7a, T1.8) dispatched.
+Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch D committed (847c7e0, fe43bdd, eeaf97d, 3091394); Batch D code review in flight.
 
 ## 1. Resume in five steps
 
@@ -22,62 +22,32 @@ Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch D (T1.5b, T1.7
   - T1.1, T1.2a, T1.3a (each plus its review fix);
   - T1.4a, T1.2b, T1.4b, T1.3b, T1.5a;
   - T1.6 plus the T1.6-build devops fix, and T1.6-fix (be35d5f, shared `SYNC_CADENCE_MS`);
-  - T1.5a-fix (4b021b2).
+  - T1.5a-fix (4b021b2);
+  - Batch D: T1.8 (847c7e0), T1.7a (fe43bdd, root scripts 3091394), T1.5b (eeaf97d).
 
   Commit ids are in the PROGRESS.md task table.
 - **Reviews:** saved in `docs/reviews/2026-10-02-p1-*`. Batch A, B and C findings are all fixed (Minor items in the PROGRESS backlog).
-- **Last full check:** `pnpm verify` green (461 tests). `pnpm build` passes. Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
+- **Last full check:** `pnpm verify` green (479 tests), `pnpm test:coverage` thresholds pass (94% lines), `pnpm test:integration` 5 passed, container health verified. `pnpm build` passes. Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
 
 ## 3. In flight
 
-Batch D, dispatched 2026-10-02. Briefs and done-criteria match section 4, step 1.
-
-| Task | Agent | Writes to |
-|---|---|---|
-| T1.5b | sleeper-data-engineer | `apps/worker/src/jobs/**`, `packages/sleeper/src/**` |
-| T1.7a | qa-engineer | `tests/**`, `e2e/**`, vitest, playwright and lighthouse configs |
-| T1.8 | devops-engineer | `Dockerfile`, `docker/`, compose, `apps/web/next.config.ts`, `scripts/gate*`, package.json deps, lockfile |
+| Task | Agent | Writes to | Done when |
+|---|---|---|---|
+| Batch D code review (`git diff 0aed7c8..3091394`) | code-reviewer | nothing (read-only) | Report returned; save it as `docs/reviews/2026-10-02-p1-batchD-code.md`, then fix Blocker and Major findings before Batch E. If lost, re-dispatch the review. |
 
 ## 4. Next steps (in order)
 
-1. **Batch D**, three agents in parallel:
-   - **T1.5b** (sleeper-data-engineer, `apps/worker/src/jobs` plus `packages/sleeper`). Sleeper jobs:
-     - state, league, users, rosters;
-     - matchups: current week, backfill of completed weeks, and future weeks through `playoff_week_start - 1`;
-     - transactions;
-     - players: at most once per 24 h through the persisted guard, `etag: false`;
-     - trending, stats;
-     - projections, writing latest plus pregame snapshots;
-     - `backfill_2025`: one-shot, 36 calls, skipped when the data is present.
-
-     Jobs register in `apps/worker/src/jobs/index.ts` and acquire through `ctx.limiter.acquire(ctx.counter)`. The week comes from `/state/nfl`. Use a `Sideline/<version> (self-hosted)` user agent. Log loudly when position drops exceed a threshold (Batch B m4).
-
-     **Hard requirement (Batch C M2):** the HTTP client accepts an AbortSignal, every call passes `ctx.signal`, jobs check `signal.aborted` before each request, and a test proves no fetch happens after a mid-job lease loss.
-   - **T1.7a** (qa-engineer, `tests/`, test configs):
-     - `integration` and `contract` Vitest projects;
-     - temp-SQLite and MSW helpers, and a synthetic 2025 stats and projections fixture;
-     - the live contract suite: schema-only, league id from `.env`, skips `/players/nfl` unless `CONTRACT_PLAYERS=1`, never writes responses to tracked files;
-     - a temp `DATA_DIR` for the Playwright and Lighthouse servers (health returns 503 without one);
-     - backlog items: fixtures README, Lighthouse unit note, G0 N3 `reuseExistingServer`, and per-project coverage printing Unknown%.
-   - **T1.8** (devops-engineer, `Dockerfile`, `docker/`, `scripts/gate*`):
-     - the standalone image ships the better-sqlite3 native binding and `packages/db/drizzle`, for arm64 and amd64;
-     - `/data` is writable by the non-root user;
-     - container health returns 200 "degraded" within 30 s on an empty volume;
-     - Batch C m5: handle a non-array `externals` in `next.config.ts`;
-     - G0 N1: `--only` writes `latest.partial.json`;
-     - G0 N4: wait for the port to be released;
-     - declare `tsx` in `packages/db` and `apps/worker`.
-2. **Orchestrator integration fix** after Batch D: point root `test:integration` and `test:contract` at the new Vitest projects (two lines in root `package.json`).
-3. **Batch D code review.**
-4. **Batch E: T1.5c** (sleeper-data-engineer):
+1. **Batch D review fixes**: Blocker and Major findings from the review, dispatched to the owning agents.
+2. **Batch E: T1.5c** (sleeper-data-engineer):
    - the nflverse job through `createNflverseProvider` (ok and degraded both work when the flag is off or a download fails);
    - compute the ADR-002 fallback kickoff when `kickoffApproximate`;
    - pin the kickoff `Z` format with a test (Batch C m7);
    - the derived-table recompute hook (an empty registry until T3.2);
+   - run nflverse before projections in `ALL_ORDER` so pregame snapshots have kickoffs (T1.5b follow-up);
    - `db:seed:fixtures`: a full worker sync from a fixture-backed fetch into `DATA_DIR`.
 
    Then a code review.
-5. **Batch F: T1.7b** (qa-engineer), integration suites:
+3. **Batch F: T1.7b** (qa-engineer), integration suites:
    - a full sync from fixtures with per-table counts;
    - idempotency: the second run has `rows_changed = 0`;
    - MSW 500, 429 and timeout failures;
@@ -87,7 +57,7 @@ Batch D, dispatched 2026-10-02. Briefs and done-criteria match section 4, step 1
    - CLI cases: worker alive, no worker, lease held, and a run longer than the lease expiry.
 
    Then a code review.
-6. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
+4. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
    - `pnpm test:contract` run live once;
    - the orchestrator live smoke: `pnpm run sync --once` into a gitignored `./data`, the day's single `/players/nfl` fetch, then a second run with near-zero changes;
    - `pnpm fixtures:check` and an identifier scan;
