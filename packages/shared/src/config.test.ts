@@ -108,6 +108,25 @@ describe("loadConfig", () => {
     expect(errorOf({ SYNC_LEAGUE_CRON: cron }).message).toContain("SYNC_LEAGUE_CRON");
   });
 
+  it.each(["foo bar baz qux quux", "61 * * * *", "* * *", "* 24 * * *", "* * 0 * *", "* * * 13 *"])(
+    "rejects invalid cron %s",
+    (cron) => {
+      expect(errorOf({ SYNC_LEAGUE_CRON: cron }).message).toContain("SYNC_LEAGUE_CRON");
+    },
+  );
+
+  it.each(["*/15 * * * *", "0 3 * * 1", "0 0 */2 * * *", "0 6 * JAN-MAR MON-FRI", "1,2,3 * * * *"])(
+    "accepts valid cron %s",
+    (cron) => {
+      expect(loadConfig({ SYNC_LEAGUE_CRON: cron }).syncCron.league).toBe(cron);
+    },
+  );
+
+  it("accepts a valid TZ and rejects an invalid one", () => {
+    expect(loadConfig({ TZ: "Europe/London" }).tz).toBe("Europe/London");
+    expect(errorOf({ TZ: "Mars/Olympus" }).message).toContain("TZ");
+  });
+
   it("rejects a bad LOG_LEVEL", () => {
     expect(errorOf({ LOG_LEVEL: "loud" }).message).toContain("LOG_LEVEL");
   });

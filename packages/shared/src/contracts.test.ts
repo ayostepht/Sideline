@@ -165,6 +165,30 @@ const samples: [string, ZodType, unknown][] = [
       creator: "u",
       createdAt: 1700000000000,
       statusUpdatedAt: null,
+      draftPicks: [{ season: "2027", round: 1 }],
+      waiverBudget: [{ sender: 1, receiver: 2, amount: 10 }],
+      consenterIds: [1, 2],
+    },
+  ],
+  [
+    "Transaction (unknown type, nullable consenters)",
+    TransactionSchema,
+    {
+      leagueId: "1",
+      transactionId: "t2",
+      week: 1,
+      type: "future_type",
+      status: "complete",
+      adds: null,
+      drops: null,
+      rosterIds: [],
+      waiverBid: null,
+      creator: null,
+      createdAt: 1700000000000,
+      statusUpdatedAt: null,
+      draftPicks: [],
+      waiverBudget: [],
+      consenterIds: null,
     },
   ],
   [
@@ -249,6 +273,31 @@ describe("contracts round-trip", () => {
   it.each(samples)("%s parses its own JSON and rejects unknown keys", (_name, schema, sample) => {
     expect(schema.parse(JSON.parse(JSON.stringify(sample)))).toEqual(sample);
     expect(schema.safeParse({ ...(sample as object), bogus: 1 }).success).toBe(false);
+  });
+});
+
+describe("Transaction defaults", () => {
+  it("defaults draftPicks and waiverBudget to []", () => {
+    const t = TransactionSchema.parse({
+      leagueId: "1",
+      transactionId: "t",
+      week: 1,
+      type: "waiver",
+      status: "complete",
+      adds: null,
+      drops: null,
+      rosterIds: [1],
+      waiverBid: null,
+      creator: null,
+      createdAt: 1,
+      statusUpdatedAt: null,
+      consenterIds: null,
+    });
+    expect(t.draftPicks).toEqual([]);
+    expect(t.waiverBudget).toEqual([]);
+  });
+  it("rejects an empty type", () => {
+    expect(() => TransactionSchema.parse({ type: "" })).toThrow();
   });
 });
 

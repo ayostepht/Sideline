@@ -13,7 +13,57 @@ export function cronEnvName(job: string): string {
   return `SYNC_${job.toUpperCase()}_CRON`;
 }
 
-const cronField = /^[\w*,/?#LW-]+$/i;
+const MONTHS = "JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC";
+const DAYS = "SUN|MON|TUE|WED|THU|FRI|SAT";
+
+/** Allowed numeric range per field position; the 6-field form has a leading seconds field. */
+const CRON_RANGES_5: readonly (readonly [number, number, string?])[] = [
+  [0, 59],
+  [0, 23],
+  [1, 31],
+  [1, 12, MONTHS],
+  [0, 7, DAYS],
+];
+
+function cronValueOk(v: string, min: number, max: number, names?: string): boolean {
+  if (/^\d+$/.test(v)) return Number(v) >= min && Number(v) <= max;
+  return names !== undefined && new RegExp(`^(${names})$`, "i").test(v);
+}
+
+function cronFieldOk(
+  field: string,
+  [min, max, names]: readonly [number, number, string?],
+): boolean {
+  return field.split(",").every((item) => {
+    const [base, step, ...extra] = item.split("/");
+    if (extra.length > 0 || base === undefined || base === "") return false;
+    if (step !== undefined && (!/^\d+$/.test(step) || Number(step) < 1)) return false;
+    if (base === "*") return true;
+    const range = base.split("-");
+    if (range.length > 2) return false;
+    return range.every((v) => cronValueOk(v, min, max, names));
+  });
+}
+
+/** True for a 5 or 6 field cron expression with valid grammar and numeric ranges per position. */
+export function isValidCron(expr: string): boolean {
+  const fields = expr.trim().split(/\s+/);
+  if (fields.length !== 5 && fields.length !== 6) return false;
+  const ranges = fields.length === 6 ? [[0, 59] as const, ...CRON_RANGES_5] : CRON_RANGES_5;
+  return fields.every((f, i) => {
+    const r = ranges[i];
+    return r !== undefined && cronFieldOk(f, r);
+  });
+}
+
+function isValidTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /** Validated application config. Optional values are null when unset. */
 export const AppConfigSchema = z.strictObject({
@@ -107,7 +157,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     const v = get(name);
     if (v === undefined) continue;
     const fields = v.split(/\s+/);
-    if ((fields.length !== 5 && fields.length !== 6) || !fields.every((f) => cronField.test(f))) {
+    if (!isValidCron(v)) {
       fail(
         name,
         `must be a cron expression with 5 or 6 fields, for example "*/15 * * * *" (got "${v}"). Fix it or leave it empty for the default.`,
@@ -115,6 +165,11 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     } else {
       syncCron[job] = fields.join(" ");
     }
+  }
+
+  const tz = get("TZ") ?? "America/New_York";
+  if (!isValidTimeZone(tz)) {
+    fail("TZ", `must be a valid IANA time zone such as "America/New_York" (got "${tz}").`);
   }
 
   const logRaw = get("LOG_LEVEL")?.toLowerCase();
@@ -130,7 +185,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     sleeperUsername: get("SLEEPER_USERNAME") ?? null,
     defaultLeagueId: get("DEFAULT_LEAGUE_ID") ?? null,
     dataDir: get("DATA_DIR") ?? "/data",
-    tz: get("TZ") ?? "America/New_York",
+    tz,
     appPassword,
     sessionSecret,
     puid: int("PUID", 1000, 0, 65535),

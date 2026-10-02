@@ -1,3 +1,10 @@
+/**
+ * Timestamp conventions in these contracts:
+ * - ISO 8601 strings: `fetchedAt` (stats, trending), `kickoffUtc`, `seasonStartDate` (date only),
+ *   sync `startedAt`/`finishedAt`/`requestedAt`, health `time`, `lastHeartbeatAt`, `lastSuccessAt`.
+ * - ms epoch numbers: Transaction `createdAt` and `statusUpdatedAt`, plus the heartbeat input of
+ *   `deriveWorkerStatus` (api/health).
+ */
 export const PACKAGE_NAME = "@sideline/shared";
 
 export * from "./domain/nfl-state.js";
