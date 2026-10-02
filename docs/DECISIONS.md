@@ -162,3 +162,15 @@ Date: 2026-10-02
 **Alternatives considered:** joining through the nflverse `players` asset (works for snaps via pfr id, but adds 2.5 MB downloads for no gain over name plus team).
 
 **Consequences:** T1.4b implements the join order, the alias table, the LA/LAR map, kickoff conversion and carry share. The Sleeper players table keeps a trimmed `gsis_id`.
+
+## ADR-007: Web build uses webpack instead of Turbopack
+
+Date: 2026-10-02
+
+**Decision:** `next build --webpack` and `next dev --webpack`, with `resolve.extensionAlias` mapping `.js` to `.ts`/`.tsx`/`.js`, `module.parser.javascript.url = false` (so webpack does not try to bundle the migrations folder URL in `packages/db`), and better-sqlite3 as a server external.
+
+**Context:** workspace packages use `.js`-suffixed relative imports (TS `moduleResolution: bundler`, `verbatimModuleSyntax`). Turbopack in Next 16.3.8 has no extension-alias option, so `pnpm build` failed as soon as the web app imported `@sideline/shared` (T1.6). ADR-001 listed Turbopack as the builder.
+
+**Alternatives considered:** dropping `.js` suffixes from every workspace package (works with Turbopack, but is a cross-package convention change touching code owned by four agents); `experimental.extensionAlias` (webpack-only, Turbopack ignored it).
+
+**Consequences:** builds are slower than Turbopack. Revisit when Turbopack gains extension aliasing, or if the packages switch to extensionless imports. The Docker image (T1.8) must ship the better-sqlite3 native module and `packages/db/drizzle`.

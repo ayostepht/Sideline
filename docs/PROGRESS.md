@@ -29,6 +29,8 @@ Updated: 2026-10-02, after commit d155036 (T1.3a-fix); Batch C dispatched.
 
   If interrupted, `git status` shows each one's partial files by path. Verify each against its acceptance criteria in this file's "Batch C brief essentials", or discard that path (`git checkout -- <path> && git clean -fd <path>`) and re-dispatch.
 - **Batch C status:**
+  - T1.5a committed (45c4b9e). Jobs register in `apps/worker/src/jobs/index.ts` (`registeredJobs`); every Sleeper call goes through `ctx.limiter.acquire(ctx.counter)`.
+  - T1.6-build: `pnpm build` passes using webpack (Turbopack has no `.js` to `.ts` alias in Next 16.3.8; ADR-007). The standalone health route fails until `better-sqlite3` is a dependency of `apps/web`; the same devops agent is adding it (uncommitted `apps/web/next.config.ts`, `apps/web/package.json`, `pnpm-lock.yaml`).
   - T1.3b committed (fd8023f).
   - T1.6 delivered but not committed (`apps/web/app/api`, `apps/web/lib/server`; coverage 96.9%). It is blocked on two things:
     - the T1.5a worker lint error, which T1.5a owns;
@@ -121,7 +123,7 @@ Updated: 2026-10-02, after commit d155036 (T1.3a-fix); Batch C dispatched.
 | T1.4b | nflverse provider | sleeper-data-engineer | B | Done (attempt 1 stopped at pause before writing; attempt 2 delivered; 693 non-test lines across 7 files, accepted) | 2 | f759d28 |
 | T1.3a-fix | Batch B review M1-M3, m1, n1 (waiver_position, total_rosters, reapStale, unique lease holders) | backend-engineer | B-fix | Done | 1 | d155036 |
 | T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Done (targeted checks; full verify pending T1.5a) | 1 | fd8023f |
-| T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | In progress | 1 | |
+| T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Done (targeted checks; worker coverage 83.8%) | 1 | 45c4b9e |
 | T1.6 | Health, sync status, sync run API | backend-engineer | C | In progress | 1 | |
 | T1.5b | Sleeper sync jobs and 2025 backfill | sleeper-data-engineer | D | Not started | 0 | |
 | T1.7a | Integration and contract harness | qa-engineer | D | Not started | 0 | |
