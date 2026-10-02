@@ -1,16 +1,40 @@
-import { UserRound } from "lucide-react";
-import { EmptyState } from "../../components/empty-state";
+import { DbError } from "../../components/db-error";
+import { getDb } from "../../lib/server/db";
+import { getSettings } from "../../lib/server/identity";
+import { getLeagueOverview } from "../../lib/server/league-views";
+import { OnboardingFlow, type OnboardingInitial } from "./_components/onboarding-flow";
+
+export const dynamic = "force-dynamic";
 
 export default function OnboardingPage() {
+  let initial: OnboardingInitial = {
+    username: null,
+    activeLeagueId: null,
+    activeLeagueName: null,
+    synced: false,
+  };
+  const db = getDb();
+  if (!db.ok) return <DbError retryHref="/onboarding" />;
+  try {
+    const s = getSettings(db.handle);
+    const overview =
+      s.activeLeagueId === null ? null : getLeagueOverview(db.handle, s.activeLeagueId, new Date());
+    initial = {
+      username: s.sleeperUsername,
+      activeLeagueId: s.activeLeagueId,
+      activeLeagueName: overview?.ok ? overview.data.name : null,
+      synced: overview?.ok === true,
+    };
+  } catch {
+    // A database the worker has not migrated yet is a normal first run: start from step 1.
+  }
   return (
-    <main className="mx-auto max-w-xl p-4">
-      <h1 className="sr-only">Welcome to Sideline</h1>
-      <EmptyState
-        icon={UserRound}
-        title="Setup is on its way"
-        message="You will connect your Sleeper username and pick a league here."
-        className="py-24"
-      />
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-4 py-8">
+      <p className="text-lg font-semibold tracking-tight" data-testid="onboarding-wordmark">
+        Sideline
+      </p>
+      <h1 className="text-2xl font-semibold tracking-tight">Set up Sideline</h1>
+      <OnboardingFlow initial={initial} />
     </main>
   );
 }
