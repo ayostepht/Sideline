@@ -18,7 +18,7 @@ Read this list at session start. Open a full ADR below only when a task touches 
 - **UI checks (ADR-004):** the no-horizontal-scroll check compares `scrollWidth` with `clientWidth`.
 - **Ownership (ADR-000, ADR-005, ADR-008, ADR-009):** dependencies, `next.config.ts` and `postcss.config.mjs` belong to devops-engineer; `components/ui/` to frontend-engineer; fixture output under `tests/fixtures/` is written by the sleeper-data-engineer recorder.
 - **Visual identity (ADR-011):** palette #FFFFFF, #2A2A2A, #D9D9D9, lime #D5FC51 (fill, never text on light), plus at most a blue and a purple; Inter; corners at most 4px; denser spacing; scoreboard feel.
-- **G2 checkpoint (ADR-012):** notFound() page tests run serial, assertions unchanged, retries 0; dev tools allowed in `next dev`, asserted absent from the production/Docker build (DEVTOOLS-1).
+- **G2 checkpoint (ADR-012):** notFound() page tests run serial in chained `*-notfound` projects, assertions unchanged, retries 0; dev tools allowed in `next dev`, asserted absent from the production/Docker build (DEVTOOLS-1).
 - **Session reading (ADR-010):** HANDOFF, PROGRESS, this list, latest gate report; PLAN by section; briefs point to `docs/brief-rules.md`.
 - **Coverage (ADR-005 item 8):** `lib/server`, `app/api`, db and worker at least 75% lines; sleeper and providers at least 85%.
 
@@ -279,7 +279,7 @@ Date: 2026-10-02. Status: accepted (Steph's direction at the G2 human checkpoint
 Date: 2026-10-02. Status: accepted (Steph, G2 checkpoint).
 
 **Decision.**
-1. **TEAM-3 flake, option (c):** the notFound() page tests run without the heavy parallel load (serial block or limited workers), with every assertion unchanged and retries still 0. The root cause (deferred stylesheet under load, PROGRESS backlog) stays logged; a server-side pre-check (option a) remains a backlog item, not scheduled.
+1. **TEAM-3 flake, option (c):** the notFound() page tests live in `e2e/not-found.spec.ts`, run serial in three `*-notfound` Playwright projects chained after the main projects (one at a time), with every assertion unchanged and retries still 0. Caveats: a main-suite failure skips them (Playwright dependencies); stress them with `--workers=1`, since `--repeat-each` at default workers still reproduces the root cause. The root cause (deferred stylesheet under load, PROGRESS backlog) stays logged; a server-side pre-check (option a) remains a backlog item, not scheduled.
 2. **Next.js dev tools:** the dev indicator stays on for local `next dev` (useful while testing). It must never appear in the production or Docker build. An e2e test (DEVTOOLS-1) asserts its absence on the standalone server, which is the same build Docker ships.
 
 **Alternatives.** (a) fix now with a middleware or DB pre-check; (b) accept with a deadline; hide dev tools everywhere with `devIndicators: false`. Not chosen.

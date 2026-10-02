@@ -57,7 +57,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T2.7a | Visual identity part 1 (ADR-011): tokens, Inter, radius, primitives, gallery swatches | frontend-engineer | G2 | Done (verify 728, build OK, all text pairs AA by agent's computed ratios; e2e and screens after T2.7b) | 1 | 7dc84e1 |
 | T2.7b | Visual identity part 2: page density and layout, plus ux minors m1, m2, m3, m6 | frontend-engineer | G2 | Done (verify 728, build OK; m3 top bar label left: lives in components/shell; e2e pending port 3000) | 1 | 27ae22d |
 | T2.7c | E2E updates for the redesign (rosters list removed, back link, strings, h2) | qa-engineer | G2 | Committed, not yet run (port 3000 in use); orchestrator scoped TEAM-4 locators | 1 | 43ce389 |
-| T2.7d | TEAM-3 serial (ADR-012), DEVTOOLS-1, first e2e and axe run of the redesign | qa-engineer | G2 | In progress | 1 | |
+| T2.7d | TEAM-3 serial (ADR-012), DEVTOOLS-1, first e2e and axe run of the redesign | qa-engineer | G2 | Done (e2e 294/294 x5 by agent, x1 by orchestrator; a11y 290, 0 violations on the new palette; DEVTOOLS-1 passes) | 1 | 8fd82a3 |
 | G2-reviews | Batch F code and UX review (closeout) | code-reviewer, ux-reviewer | G | Done (code: 1 Major found and fixed same session, see T2.6d-fix; UX: APPROVE, no Blocker/Major) | 1 | see docs/reviews/2026-10-02-p2-batchF2-{code,ux}.md |
 | G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
 
