@@ -32,12 +32,18 @@ export const OnboardingUserSchema = z.strictObject({
 });
 export type OnboardingUser = z.infer<typeof OnboardingUserSchema>;
 
-export const OnboardingStatusSchema = z.strictObject({
-  phase: OnboardingPhaseSchema,
-  error: z.string().optional(),
-  user: OnboardingUserSchema.optional(),
-  leagues: z.array(LeagueChoiceSchema).optional(),
-});
+export const OnboardingStatusSchema = z.discriminatedUnion("phase", [
+  z.strictObject({ phase: z.literal("idle") }),
+  z.strictObject({ phase: z.literal("resolving_user") }),
+  z.strictObject({ phase: z.literal("loading_leagues"), user: OnboardingUserSchema.optional() }),
+  z.strictObject({
+    phase: z.literal("ready"),
+    user: OnboardingUserSchema,
+    leagues: z.array(LeagueChoiceSchema),
+  }),
+  z.strictObject({ phase: z.literal("failed"), error: z.string() }),
+  z.strictObject({ phase: z.literal("worker_offline") }),
+]);
 export type OnboardingStatus = z.infer<typeof OnboardingStatusSchema>;
 
 export const SelectLeagueRequestSchema = z.strictObject({ leagueId: z.string().min(1) });

@@ -11,6 +11,10 @@ export function saveUserLeagues(
   leagues: LeagueChoice[],
   now: Date,
 ): void {
+  const bad = leagues.find((l) => l.season !== season);
+  if (bad !== undefined) {
+    throw new Error(`saveUserLeagues: league season ${bad.season} does not match ${season}`);
+  }
   h.db.transaction((tx) => {
     tx.delete(userLeagues)
       .where(and(eq(userLeagues.userId, userId), eq(userLeagues.season, season)))

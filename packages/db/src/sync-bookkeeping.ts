@@ -174,21 +174,35 @@ export function readHeartbeat(h: DbHandle): Heartbeat | null {
 
 // ---------- sync_requests ----------
 
-function readParams(row: typeof syncRequests.$inferSelect): SyncRequestParams | null {
-  if (row.paramsJson === null) return null;
+const PARAM_JOBS: ReadonlySet<string> = new Set(["user", "user_leagues"]);
+
+/** Params for the row, or an error string when an onboarding job's params are missing or invalid. */
+function readParams(row: typeof syncRequests.$inferSelect): {
+  params: SyncRequestParams | null;
+  error?: string;
+} {
+  if (row.paramsJson === null) {
+    return PARAM_JOBS.has(row.job)
+      ? { params: null, error: `missing params for job ${row.job}` }
+      : { params: null };
+  }
   try {
-    return parseParamsForJob(row.job, JSON.parse(row.paramsJson));
+    const params = parseParamsForJob(row.job, JSON.parse(row.paramsJson));
+    return params === null
+      ? { params: null, error: `invalid params for job ${row.job}` }
+      : { params };
   } catch {
-    return null;
+    return { params: null, error: `unreadable params for job ${row.job}` };
   }
 }
 
 function toRequest(row: typeof syncRequests.$inferSelect): SyncRequest {
-  const params = readParams(row);
+  const { params, error: paramsError } = readParams(row);
   return SyncRequestSchema.parse({
     id: row.id,
     job: row.job,
     ...(params === null ? {} : { params }),
+    ...(paramsError === undefined ? {} : { paramsError }),
     requestedAt: row.requestedAt,
     status: row.status,
     source: row.source,

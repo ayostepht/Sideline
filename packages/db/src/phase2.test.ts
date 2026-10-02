@@ -143,6 +143,21 @@ describe("user leagues", () => {
   });
 });
 
+describe("saveUserLeagues season guard", () => {
+  it("throws when a league season differs and writes nothing", () => {
+    const l: LeagueChoice = {
+      leagueId: "x",
+      name: "X",
+      season: 2025,
+      totalRosters: 10,
+      status: "complete",
+      avatar: null,
+    };
+    expect(() => saveUserLeagues(h, "u1", 2026, [l], now)).toThrow(/season/);
+    expect(readUserLeagues(h, "u1")).toEqual([]);
+  });
+});
+
 describe("enqueueWithParams", () => {
   it("round-trips validated params, dedupes on identical params only", () => {
     const a = enqueueWithParams(h, "user", { username: "fake_a" }, "api", now);
@@ -159,12 +174,26 @@ describe("enqueueWithParams", () => {
     const r = enqueueRequest(h, "state", "api", now).request;
     expect(r.params).toBeUndefined();
   });
-  it("treats corrupt stored params as absent", () => {
+  it("normalizes username case so Foo and foo dedupe", () => {
+    const a = enqueueWithParams(h, "user", { username: " Fake_A " }, "api", now);
+    expect(a.request.params).toEqual({ username: "fake_a" });
+    expect(enqueueWithParams(h, "user", { username: "FAKE_A" }, "api", now).created).toBe(false);
+  });
+  it("flags corrupt, invalid or missing stored params with paramsError", () => {
     const r = enqueueWithParams(h, "user_leagues", { userId: "1", season: 2026 }, "api", now);
     h.sqlite
       .prepare("UPDATE sync_requests SET params_json = 'nope' WHERE id = ?")
       .run(r.request.id);
-    expect(getRequest(h, r.request.id)?.params).toBeUndefined();
+    const got = getRequest(h, r.request.id);
+    expect(got?.params).toBeUndefined();
+    expect(got?.paramsError).toMatch(/params/);
+    h.sqlite
+      .prepare("UPDATE sync_requests SET params_json = '{\"userId\":1}' WHERE id = ?")
+      .run(r.request.id);
+    expect(getRequest(h, r.request.id)?.paramsError).toMatch(/invalid/);
+    h.sqlite.prepare("UPDATE sync_requests SET params_json = NULL WHERE id = ?").run(r.request.id);
+    expect(getRequest(h, r.request.id)?.paramsError).toMatch(/missing/);
+    expect(enqueueRequest(h, "state", "api", now).request.paramsError).toBeUndefined();
   });
 });
 
@@ -186,6 +215,11 @@ describe("worker read helpers", () => {
     expect(readNflStateFetchedAt(h)).toBe("t1");
     touchNflStateFetchedAt(h, "t2");
     expect(readNflStateFetchedAt(h)).toBe("t2");
+  });
+  it("returns null for an invalid stored season type", () => {
+    upsertNflState(h, state, "t1");
+    h.sqlite.prepare("UPDATE nfl_state SET season_type = 'bogus' WHERE id = 1").run();
+    expect(readNflState(h)).toBeNull();
   });
   it("league playoff week start", () => {
     expect(readLeaguePlayoffWeekStart(h, "L1")).toBeNull();

@@ -33,7 +33,10 @@ export const SleeperUsernameSchema = z
   .max(40)
   .regex(/^[A-Za-z0-9_.]+$/, "Usernames use letters, numbers, underscores and periods");
 
-export const UserJobParamsSchema = z.strictObject({ username: SleeperUsernameSchema });
+/** Username is trimmed then lowercased (Sleeper usernames are case-insensitive) so dedupe matches. */
+export const UserJobParamsSchema = z.strictObject({
+  username: SleeperUsernameSchema.toLowerCase(),
+});
 export type UserJobParams = z.infer<typeof UserJobParamsSchema>;
 export const UserLeaguesJobParamsSchema = z.strictObject({
   userId: z.string().min(1),
@@ -91,6 +94,8 @@ export const SyncRequestSchema = z.strictObject({
   job: SyncRequestJobSchema,
   /** Onboarding jobs only; absent or null otherwise. */
   params: SyncRequestParamsSchema.nullable().optional(),
+  /** Set when stored params are missing or fail validation for an onboarding job; the worker should fail the request with it. */
+  paramsError: z.string().optional(),
   requestedAt: z.string(),
   status: SyncRequestStatusSchema,
   source: z.enum(["api", "cli"]),

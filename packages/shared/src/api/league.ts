@@ -19,7 +19,8 @@ export const LeagueOverviewSchema = z.strictObject({
 export type LeagueOverview = z.infer<typeof LeagueOverviewSchema>;
 
 /**
- * Standings sort (ADR-009 item 10): wins desc, then ties desc, then points for desc.
+ * Standings sort (ADR-009 item 10): wins desc, then ties desc, then points for desc, then rosterId
+ * asc as the final deterministic key (see `compareStandings`).
  * `rank` is the 1-based position after that sort. `teamName` falls back to the manager display
  * name, then "Team {rosterId}". Names are untrusted text.
  */
@@ -39,6 +40,14 @@ export const StandingsRowSchema = z.strictObject({
   isMine: z.boolean(),
 });
 export type StandingsRow = z.infer<typeof StandingsRowSchema>;
+
+/** Comparator implementing the standings sort. Pure; total order since rosterId is unique. */
+export function compareStandings(
+  a: Pick<StandingsRow, "rosterId" | "wins" | "ties" | "pointsFor">,
+  b: Pick<StandingsRow, "rosterId" | "wins" | "ties" | "pointsFor">,
+): number {
+  return b.wins - a.wins || b.ties - a.ties || b.pointsFor - a.pointsFor || a.rosterId - b.rosterId;
+}
 
 export const StandingsResponseSchema = z.strictObject({
   rows: z.array(StandingsRowSchema),

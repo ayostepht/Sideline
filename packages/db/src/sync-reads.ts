@@ -3,7 +3,7 @@
  * semantics. Mapping old -> new is in each doc comment.
  */
 import { and, eq, isNotNull, sql } from "drizzle-orm";
-import type { NflState, SeasonType } from "@sideline/shared";
+import { SeasonTypeSchema, type NflState, type SeasonType } from "@sideline/shared";
 import type { DbHandle } from "./connection.js";
 import {
   leagues,
@@ -15,14 +15,16 @@ import {
   schedule,
 } from "./schema.js";
 
-/** readState -> readNflState. Null when state never synced. */
+/** readState -> readNflState. Null when state never synced or the stored row is invalid (unknown season type). */
 export function readNflState(h: DbHandle): NflState | null {
   const r = h.db.select().from(nflState).where(eq(nflState.id, 1)).get();
   if (r === undefined) return null;
+  const seasonType = SeasonTypeSchema.safeParse(r.seasonType);
+  if (!seasonType.success) return null;
   return {
     season: r.season,
     week: r.week,
-    seasonType: r.seasonType as SeasonType,
+    seasonType: seasonType.data,
     displayWeek: r.displayWeek,
     leg: r.leg,
     previousSeason: r.previousSeason,

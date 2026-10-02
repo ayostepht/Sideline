@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  compareStandings,
   ONBOARDING_JOB_NAMES,
   OnboardingStartRequestSchema,
   OnboardingStatusSchema,
@@ -7,6 +8,7 @@ import {
   SYNC_JOB_NAMES,
   SyncRequestSchema,
   TeamDetailSchema,
+  UserJobParamsSchema,
   UserLeaguesJobParamsSchema,
   computeFreshness,
   parseParamsForJob,
@@ -57,39 +59,63 @@ describe("username params", () => {
     );
     expect(parseParamsForJob("user_leagues", { userId: "", season: 1 })).toBeNull();
     expect(parseParamsForJob("state", {})).toBeNull();
+    expect(UserJobParamsSchema.parse({ username: "  FooBar " })).toEqual({ username: "foobar" });
   });
 });
 
 describe("onboarding status", () => {
-  it("accepts every phase and rejects unknown", () => {
-    for (const phase of [
-      "idle",
-      "resolving_user",
-      "loading_leagues",
-      "ready",
-      "failed",
-      "worker_offline",
-    ]) {
-      expect(OnboardingStatusSchema.safeParse({ phase }).success).toBe(true);
-    }
-    expect(OnboardingStatusSchema.safeParse({ phase: "done" }).success).toBe(false);
+  const user = { userId: "1", username: "fake_a", displayName: "Fake A" };
+  const league = {
+    leagueId: "1",
+    name: "L",
+    season: 2026,
+    totalRosters: 10,
+    status: "in_season",
+    avatar: null,
+  };
+  const ok = (v: unknown) => OnboardingStatusSchema.safeParse(v).success;
+  it("accepts each phase shape and rejects unknown", () => {
+    expect(ok({ phase: "idle" })).toBe(true);
+    expect(ok({ phase: "resolving_user" })).toBe(true);
+    expect(ok({ phase: "loading_leagues" })).toBe(true);
+    expect(ok({ phase: "loading_leagues", user })).toBe(true);
+    expect(ok({ phase: "ready", user, leagues: [league] })).toBe(true);
+    expect(ok({ phase: "failed", error: "nope" })).toBe(true);
+    expect(ok({ phase: "worker_offline" })).toBe(true);
+    expect(ok({ phase: "done" })).toBe(false);
+  });
+  it("requires per-phase fields and rejects extras", () => {
+    expect(ok({ phase: "ready", leagues: [league] })).toBe(false);
+    expect(ok({ phase: "ready", user })).toBe(false);
+    expect(ok({ phase: "failed" })).toBe(false);
+    expect(ok({ phase: "worker_offline", error: "x" })).toBe(false);
+    expect(ok({ phase: "idle", user })).toBe(false);
   });
   it("validates nested leagues", () => {
-    const league = {
-      leagueId: "1",
-      name: "L",
-      season: 2026,
-      totalRosters: 10,
-      status: "in_season",
-      avatar: null,
-    };
-    expect(OnboardingStatusSchema.safeParse({ phase: "ready", leagues: [league] }).success).toBe(
-      true,
-    );
+    expect(ok({ phase: "ready", user, leagues: [{ ...league, avatar: 3 }] })).toBe(false);
+  });
+});
+
+describe("compareStandings", () => {
+  const row = (rosterId: number, wins: number, ties: number, pointsFor: number) => ({
+    rosterId,
+    wins,
+    ties,
+    pointsFor,
+  });
+  it("sorts wins, ties, points for, then rosterId ascending", () => {
+    const rows = [row(4, 5, 0, 100), row(3, 6, 0, 50), row(2, 5, 1, 10), row(1, 5, 0, 120)];
+    expect(rows.sort(compareStandings).map((r) => r.rosterId)).toEqual([3, 2, 1, 4]);
+  });
+  it("is deterministic when everything else is equal", () => {
+    const rows = [row(9, 3, 0, 80), row(2, 3, 0, 80), row(5, 3, 0, 80)];
+    expect(rows.sort(compareStandings).map((r) => r.rosterId)).toEqual([2, 5, 9]);
     expect(
-      OnboardingStatusSchema.safeParse({ phase: "ready", leagues: [{ ...league, avatar: 3 }] })
-        .success,
-    ).toBe(false);
+      [...rows]
+        .reverse()
+        .sort(compareStandings)
+        .map((r) => r.rosterId),
+    ).toEqual([2, 5, 9]);
   });
 });
 
