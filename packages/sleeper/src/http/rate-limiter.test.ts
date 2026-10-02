@@ -91,4 +91,23 @@ describe("RateLimiter", () => {
     await l.acquire();
     expect(l.totalCalls).toBe(1);
   });
+
+  it("m3: a backward clock step never over-waits or goes negative", async () => {
+    const c = fake();
+    const l = new RateLimiter({ now: c.now, sleep: c.sleep });
+    for (let i = 0; i < 5; i++) await l.acquire();
+    c.advance(-3_600_000);
+    const before = c.sleeps.length;
+    await l.acquire();
+    const waited = c.sleeps.slice(before).reduce((a, b) => a + b, 0);
+    expect(waited).toBeLessThanOrEqual(1000 / 5 + 1);
+    for (let i = 0; i < 5; i++) await l.acquire();
+    expect(l.totalCalls).toBe(11);
+  });
+
+  it("m3: the default clock is monotonic", async () => {
+    const l = new RateLimiter();
+    await l.acquire();
+    expect(l.totalCalls).toBe(1);
+  });
 });

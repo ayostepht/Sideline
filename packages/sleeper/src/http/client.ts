@@ -36,6 +36,8 @@ export interface SleeperHttpOptions {
   retryAfterCapMs?: number;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
+  /** Schedules the per-attempt timeout; returns a cancel function. Injectable for tests. */
+  setTimer?: (fn: () => void, ms: number) => () => void;
   /** Returns [0,1). Injectable for deterministic jitter. */
   random?: () => number;
 }
@@ -56,6 +58,20 @@ export interface SleeperResult<T> {
   attempts: number;
 }
 
+const realSetTimer = (fn: () => void, ms: number): (() => void) => {
+  const h = setTimeout(fn, ms);
+  return () => clearTimeout(h);
+};
+
+/** Releases the socket for responses whose body we will not read. */
+async function discard(res: Response): Promise<void> {
+  try {
+    await res.body?.cancel();
+  } catch {
+    // body already consumed or locked; nothing to release
+  }
+}
+
 const realSleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /** Parses Retry-After (delta seconds or HTTP date) into ms, or undefined. */
@@ -63,6 +79,8 @@ export function parseRetryAfter(value: string | null, now: number): number | und
   if (value === null) return undefined;
   const trimmed = value.trim();
   if (/^\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed) * 1000;
+  // Anything else numeric-looking (e.g. "-5", "1e3") falls through to Date.parse, which
+  // yields a past or garbage date: it clamps to 0 or undefined, both harmless (backoff wins).
   const date = Date.parse(trimmed);
   return Number.isNaN(date) ? undefined : Math.max(0, date - now);
 }
@@ -98,6 +116,7 @@ export class SleeperHttp {
       retryAfterCapMs: 60_000,
       now: Date.now,
       sleep: realSleep,
+      setTimer: realSetTimer,
       random: Math.random,
       ...options,
     };
@@ -157,7 +176,7 @@ export class SleeperHttp {
       const started = this.o.now();
       const controller = new AbortController();
       let timedOut = false;
-      const timer = setTimeout(() => {
+      const cancelTimer = this.o.setTimer(() => {
         timedOut = true;
         controller.abort();
       }, this.o.timeoutMs);
@@ -173,11 +192,12 @@ export class SleeperHttp {
         this.emit({ type: "error", url, attempt, code: err.code, message: err.message });
         throw err;
       } finally {
-        clearTimeout(timer);
+        cancelTimer();
       }
       const status = res.status;
       this.emit({ type: "response", url, attempt, status, durationMs: this.o.now() - started });
 
+      if (status === 304) await discard(res);
       if (status === 304 || res.ok) {
         let body: unknown = undefined;
         if (status !== 304) {
@@ -192,9 +212,13 @@ export class SleeperHttp {
         return { status, body, etag: res.headers.get("etag"), attempts: attempt };
       }
 
+      await discard(res);
       const retryable = status === 429 || status >= 500;
-      if (!retryable || attempt > this.o.maxRetries) {
-        const err = new SleeperHttpError(status, url, attempt);
+      const retryAfter = parseRetryAfter(res.headers.get("retry-after"), this.o.now());
+      const tooLong = retryable && retryAfter !== undefined && retryAfter > this.o.retryAfterCapMs;
+      if (!retryable || attempt > this.o.maxRetries || tooLong) {
+        // A Retry-After beyond the cap fails now; the next scheduled run retries.
+        const err = new SleeperHttpError(status, url, attempt, tooLong ? retryAfter : undefined);
         this.emit({ type: "error", url, attempt, code: err.code, message: err.message });
         throw err;
       }
@@ -204,8 +228,7 @@ export class SleeperHttp {
         this.o.backoffBaseMs,
         this.o.backoffMaxMs,
       );
-      const retryAfter = parseRetryAfter(res.headers.get("retry-after"), this.o.now()) ?? 0;
-      const delayMs = Math.min(this.o.retryAfterCapMs, Math.max(retryAfter, backoff));
+      const delayMs = Math.min(this.o.retryAfterCapMs, Math.max(retryAfter ?? 0, backoff));
       this.emit({ type: "retry", url, attempt, reason: `status ${status}`, delayMs });
       await this.o.sleep(delayMs);
     }

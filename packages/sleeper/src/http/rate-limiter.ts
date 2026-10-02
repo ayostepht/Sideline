@@ -21,6 +21,9 @@ export interface RateLimiterOptions {
   sleep?: (ms: number) => Promise<void>;
 }
 
+/** Monotonic by default; a wall-clock step cannot move it backward. */
+const monotonicNow = (): number => performance.now();
+
 const realSleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -51,7 +54,7 @@ export class RateLimiter {
       if (!Number.isFinite(v) || v <= 0) throw new RangeError(`${name} must be a positive number`);
     }
     if (this.cap < 1) throw new RangeError("maxPerWindow must be at least 1");
-    this.now = options.now ?? Date.now;
+    this.now = options.now ?? monotonicNow;
     this.sleep = options.sleep ?? realSleep;
     this.tokens = Math.max(1, this.rate);
     this.lastRefill = this.now();
@@ -78,7 +81,13 @@ export class RateLimiter {
     for (;;) {
       const t = this.now();
       const burst = Math.max(1, this.rate);
-      this.tokens = Math.min(burst, this.tokens + ((t - this.lastRefill) / 1000) * this.rate);
+      if (t < this.lastRefill) {
+        // Injected clock stepped backward: rebase history so waits stay bounded.
+        const delta = t - this.lastRefill;
+        for (let i = 0; i < this.stamps.length; i++) this.stamps[i] = (this.stamps[i] ?? 0) + delta;
+      }
+      const elapsed = Math.max(0, t - this.lastRefill);
+      this.tokens = Math.min(burst, this.tokens + (elapsed / 1000) * this.rate);
       this.lastRefill = t;
       while (this.stamps.length > 0 && t - (this.stamps[0] ?? t) >= this.windowMs) {
         this.stamps.shift();

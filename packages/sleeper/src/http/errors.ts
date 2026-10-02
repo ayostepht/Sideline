@@ -17,8 +17,14 @@ export class SleeperHttpError extends SleeperError {
     readonly status: number,
     readonly url: string,
     readonly attempts: number,
+    /** Retry-After the server asked for, when we refused to wait that long. */
+    readonly retryAfterMs?: number,
   ) {
-    super("SLEEPER_HTTP", `Sleeper responded ${status} for ${url} after ${attempts} attempt(s)`);
+    super(
+      "SLEEPER_HTTP",
+      `Sleeper responded ${status} for ${url} after ${attempts} attempt(s)` +
+        (retryAfterMs === undefined ? "" : ` (server requested Retry-After ${retryAfterMs} ms)`),
+    );
   }
 }
 

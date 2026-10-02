@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   computeBackoff,
@@ -105,8 +105,20 @@ describe("SleeperHttp retries (T1.2 spec)", () => {
     expect(events.at(-1)?.type).toBe("error");
   });
 
-  it("caps Retry-After at 60 s", async () => {
-    sequence([[429, { "retry-after": "9999" }], 200]);
+  it("Retry-After over the cap fails immediately without retrying", async () => {
+    sequence([[429, { "retry-after": "120" }], 200]);
+    const { client, sleeps, limiter } = setup();
+    const err = await client.getJson("/x", schema).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(SleeperHttpError);
+    expect((err as SleeperHttpError).status).toBe(429);
+    expect((err as SleeperHttpError).retryAfterMs).toBe(120_000);
+    expect((err as SleeperHttpError).message).toContain("Retry-After 120000");
+    expect(sleeps).toEqual([]);
+    expect(limiter.totalCalls).toBe(1);
+  });
+
+  it("Retry-After exactly at the cap still retries", async () => {
+    sequence([[503, { "retry-after": "60" }], 200]);
     const { client, sleeps } = setup();
     await client.getJson("/x", schema);
     expect(sleeps[0]).toBe(60_000);
@@ -156,8 +168,21 @@ describe("SleeperHttp errors and validation", () => {
         );
       });
     };
-    const { client, limiter } = setup({ fetch: hanging, timeoutMs: 20 });
-    const err = await client.getJson("/x", schema).catch((e: unknown) => e);
+    let fire: (() => void) | undefined;
+    let cancelled = false;
+    const setTimer = (fn: () => void, ms: number) => {
+      expect(ms).toBe(20);
+      fire = fn;
+      return () => {
+        cancelled = true;
+      };
+    };
+    const { client, limiter } = setup({ fetch: hanging, timeoutMs: 20, setTimer });
+    const pending = client.getJson("/x", schema).catch((e: unknown) => e);
+    await vi.waitFor(() => expect(fire).toBeDefined());
+    fire?.();
+    const err = await pending;
+    expect(cancelled).toBe(true);
     expect(err).toBeInstanceOf(SleeperTimeoutError);
     expect(calls).toBe(1);
     expect(limiter.totalCalls).toBe(1);
@@ -231,6 +256,51 @@ describe("SleeperHttp ETag (ADR-002 item 9)", () => {
     server.use(http.get(`${BASE}/x`, () => new HttpResponse(null, { status: 304 })));
     const { client } = setup();
     await expect(client.getJson("/x", schema)).rejects.toBeInstanceOf(SleeperHttpError);
+  });
+});
+
+describe("SleeperHttp body release (m2)", () => {
+  function fakeRes(status: number, headers: Record<string, string> = {}) {
+    const cancel = vi.fn(() => Promise.resolve());
+    const res = {
+      status,
+      ok: status >= 200 && status < 300,
+      headers: new Headers(headers),
+      body: { cancel },
+      text: () => Promise.resolve("{}"),
+    } as unknown as Response;
+    return { res, cancel };
+  }
+
+  it("cancels the body on 304", async () => {
+    const { res, cancel } = fakeRes(304);
+    const store = new InMemoryEtagStore();
+    await store.set(`${BASE}/x`, '"v1"', { ok: true });
+    const { client } = setup({ fetch: () => Promise.resolve(res), etagStore: store });
+    await client.getJson("/x", schema);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels the body on a 404 and on each retried 503", async () => {
+    const a = fakeRes(404);
+    await expect(
+      setup({ fetch: () => Promise.resolve(a.res) }).client.getJson("/x", schema),
+    ).rejects.toBeInstanceOf(SleeperHttpError);
+    expect(a.cancel).toHaveBeenCalledTimes(1);
+
+    const b = fakeRes(503);
+    await expect(
+      setup({ fetch: () => Promise.resolve(b.res) }).client.getJson("/x", schema),
+    ).rejects.toBeInstanceOf(SleeperHttpError);
+    expect(b.cancel).toHaveBeenCalledTimes(4);
+  });
+
+  it("swallows a cancel() that throws", async () => {
+    const { res, cancel } = fakeRes(404);
+    cancel.mockRejectedValue(new TypeError("locked"));
+    await expect(
+      setup({ fetch: () => Promise.resolve(res) }).client.getJson("/x", schema),
+    ).rejects.toBeInstanceOf(SleeperHttpError);
   });
 });
 
