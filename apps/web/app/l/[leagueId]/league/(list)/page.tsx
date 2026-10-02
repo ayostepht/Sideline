@@ -44,7 +44,7 @@ export default async function LeaguePage({
       ) : (
         <>
           <section aria-labelledby="league-standings-h" className="flex flex-col gap-1">
-            <h2 id="league-standings-h" className="sl-label">
+            <h2 id="league-standings-h" className="sl-label sl-mark">
               Standings
             </h2>
             <StandingsList rows={rows} leagueId={leagueId} week={week} />

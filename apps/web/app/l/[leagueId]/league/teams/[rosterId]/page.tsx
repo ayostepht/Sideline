@@ -3,6 +3,7 @@ import { DbError } from "../../../../../../components/db-error";
 import { leagueBase, parseWeek } from "../../../../../../lib/client/nav";
 import { getLeagueOverview, getTeamDetail } from "../../../../../../lib/server/league-views";
 import { readPage } from "../../../_components/load";
+import { HeaderDetail } from "../../../../../../components/shell/header-detail";
 import { TeamView } from "../../../_components/team-view";
 
 export default async function TeamDetailPage({
@@ -28,13 +29,16 @@ export default async function TeamDetailPage({
   const hl = Array.isArray(sp.highlight) ? sp.highlight[0] : sp.highlight;
   const team = read.value.team.data;
   return (
-    <TeamView
-      team={team}
-      week={parseWeek(sp.week) ?? read.value.overview.data.currentWeek}
-      now={read.now}
-      highlight={hl ?? null}
-      heading={team.roster.teamName}
-      backHref={`${leagueBase(leagueId)}/league`}
-    />
+    <>
+      <HeaderDetail value={team.roster.teamName} />
+      <TeamView
+        team={team}
+        week={parseWeek(sp.week) ?? read.value.overview.data.currentWeek}
+        now={read.now}
+        highlight={hl ?? null}
+        heading={team.roster.teamName}
+        backHref={`${leagueBase(leagueId)}/league`}
+      />
+    </>
   );
 }

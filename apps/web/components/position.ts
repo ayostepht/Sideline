@@ -39,8 +39,9 @@ export const POSITION_CLASS: Record<PositionKey, string> = {
   RB: "bg-pos-rb",
   WR: "bg-pos-wr",
   TE: "bg-pos-te",
-  K: "bg-pos-k",
-  DEF: "bg-pos-def",
+  // K is an outline badge, DEF is the neon purple fill with black text (5.6:1), so WR, K and DEF differ.
+  K: "bg-transparent text-foreground ring-1 ring-inset ring-foreground",
+  DEF: "bg-highlight text-highlight-foreground",
   DL: "bg-pos-dl",
   LB: "bg-pos-lb",
   DB: "bg-pos-db",

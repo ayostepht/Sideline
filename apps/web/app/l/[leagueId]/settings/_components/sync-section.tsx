@@ -1,11 +1,12 @@
 "use client";
 
 import type { SyncJobStatus, SyncStatusResponse } from "@sideline/shared";
-import { AlertCircle, AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { formatAge } from "../../../../../components/freshness";
 import { ErrorState } from "../../../../../components/empty-state";
 import { Button } from "../../../../../components/ui/button";
+import { Tooltip } from "../../../../../components/ui/tooltip";
 import { SETTINGS_POLL_DEADLINE_MS, parseRetryAfter } from "../../../../../lib/client/onboarding";
 import { apiJson } from "../../../../../lib/client/api";
 
@@ -66,7 +67,7 @@ function JobStatus({ state }: { state: JobState }) {
   }
 }
 
-/** "11 of 12 up to date. Last sync 1 day ago". */
+/** "11 of 12 data sources are current. Last sync 1 day ago." */
 export function syncSummary(jobs: readonly SyncJobStatus[], now: number): string {
   if (jobs.length === 0) return "No sync data yet.";
   // A running job only counts as up to date if it has a prior success; a job that is running
@@ -79,7 +80,7 @@ export function syncSummary(jobs: readonly SyncJobStatus[], now: number): string
     .filter((t) => !Number.isNaN(t));
   const latest = times.length === 0 ? null : new Date(Math.max(...times)).toISOString();
   const last = latest === null ? "No sync yet." : `Last sync ${formatAge(latest, now)}.`;
-  return `${upToDate} of ${jobs.length} up to date. ${last}`;
+  return `${upToDate} of ${jobs.length} data sources are current. ${last}`;
 }
 
 export function SyncSection() {
@@ -213,9 +214,21 @@ export function SyncSection() {
               Couldn't refresh. Showing the last result.
             </p>
           ) : null}
-          <p className="text-sm font-medium tabular-nums" data-testid="settings-sync-summary">
-            {syncSummary(data.jobs, now)}
-          </p>
+          <div className="flex items-center gap-1">
+            <p className="text-sm font-medium tabular-nums" data-testid="settings-sync-summary">
+              {syncSummary(data.jobs, now)}
+            </p>
+            <Tooltip content="Each part of your league data, like rosters or player stats, syncs on its own.">
+              <button
+                type="button"
+                aria-label="What is a data source?"
+                data-testid="settings-sync-info"
+                className="inline-flex size-11 items-center justify-center rounded-control text-muted-foreground hover:bg-muted"
+              >
+                <Info className="size-4" aria-hidden />
+              </button>
+            </Tooltip>
+          </div>
           <details data-testid="settings-sync-details">
             <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-link">
               Details

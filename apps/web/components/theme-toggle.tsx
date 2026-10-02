@@ -24,13 +24,13 @@ export function ThemeToggle() {
       data-testid="theme-toggle"
     >
       <ToggleGroupItem value="light" aria-label="Light theme" data-testid="theme-toggle-light">
-        <Sun className="size-4" aria-hidden /> <span className="hidden sm:inline">Light</span>
+        <Sun className="size-4" aria-hidden /> <span>Light</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="dark" aria-label="Dark theme" data-testid="theme-toggle-dark">
-        <Moon className="size-4" aria-hidden /> <span className="hidden sm:inline">Dark</span>
+        <Moon className="size-4" aria-hidden /> <span>Dark</span>
       </ToggleGroupItem>
       <ToggleGroupItem value="system" aria-label="System theme" data-testid="theme-toggle-system">
-        <Monitor className="size-4" aria-hidden /> <span className="hidden sm:inline">System</span>
+        <Monitor className="size-4" aria-hidden /> <span>System</span>
       </ToggleGroupItem>
     </ToggleGroup>
   );

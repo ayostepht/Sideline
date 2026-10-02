@@ -3,7 +3,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /* ADR-011 palette. Core: #FFFFFF, #2A2A2A, #D9D9D9, lime #D5FC51.
-   Extensions: electric blue (info, links, light focus ring), neon purple (data highlight).
+   Extensions: electric blue (info, links, light focus ring), neon #DF00FE secondary accent
+   (non-text or large bold text only; small text on a purple fill is #000000).
    Lime is a fill (text on it is #2A2A2A); as text or ring it is only used on the dark ground. */
 :root {
   --background: #ffffff;
@@ -21,7 +22,8 @@
   --accent-soft-foreground: #2a2a2a;
   --ring: #2147e8;
   --link: #2147e8;
-  --highlight: #7c2ae8;
+  --highlight: #df00fe;
+  --highlight-foreground: #000000;
   --positive: #166534;
   --negative: #b91c1c;
   --warning: #8a4b08;
@@ -32,7 +34,7 @@
   --info-soft: #e8ecfe;
 
   --pos-qb: #2147e8;
-  --pos-rb: #7c2ae8;
+  --pos-rb: #c2410c;
   --pos-wr: #2a2a2a;
   --pos-te: #0f6b5e;
   --pos-k: #5a5a5a;
@@ -64,7 +66,8 @@
   --accent-soft-foreground: #ffffff;
   --ring: #d5fc51;
   --link: #8fa8ff;
-  --highlight: #b794ff;
+  --highlight: #df00fe;
+  --highlight-foreground: #000000;
   --positive: #6ee7a0;
   --negative: #ff8a8a;
   --warning: #fbbf24;
@@ -75,7 +78,7 @@
   --info-soft: #26305a;
 
   --pos-qb: #8fa8ff;
-  --pos-rb: #b794ff;
+  --pos-rb: #fdba74;
   --pos-wr: #ffffff;
   --pos-te: #5eead4;
   --pos-k: #bdbdbd;
@@ -103,6 +106,7 @@
   --color-ring: var(--ring);
   --color-link: var(--link);
   --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-warning: var(--warning);
@@ -166,6 +170,20 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted-foreground);
+}
+
+/* Section heading mark: a small neon purple square (non-text accent, 3.8:1 on both grounds). */
+@utility sl-mark {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    background: var(--highlight);
+  }
 }
 
 @utility tabular-nums {

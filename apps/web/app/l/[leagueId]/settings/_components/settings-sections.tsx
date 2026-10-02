@@ -39,7 +39,7 @@ function Section({
     <Card data-testid={testId}>
       <section aria-labelledby={id}>
         <CardHeader>
-          <h2 id={id} className="sl-label">
+          <h2 id={id} className="sl-label sl-mark">
             {title}
           </h2>
         </CardHeader>

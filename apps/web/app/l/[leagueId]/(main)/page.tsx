@@ -98,7 +98,7 @@ export default async function HomePage({
 
       <Card data-testid="home-standings">
         <CardHeader>
-          <h2 className="sl-label">Standings</h2>
+          <h2 className="sl-label sl-mark">Standings</h2>
         </CardHeader>
         <CardContent>
           {rows.length === 0 ? (

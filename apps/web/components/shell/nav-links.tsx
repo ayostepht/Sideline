@@ -94,7 +94,9 @@ function TabInner({
 }) {
   return (
     <>
-      {active ? <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] bg-primary" /> : null}
+      {active ? (
+        <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] bg-highlight" />
+      ) : null}
       <span
         className={cn(
           "flex h-7 w-12 items-center justify-center rounded-control",

@@ -7,7 +7,7 @@ import { formatPoints, formatRecord } from "./format";
 
 function YouBadge() {
   return (
-    <Badge variant="accent" data-testid="standings-you">
+    <Badge variant="you" data-testid="standings-you">
       You
     </Badge>
   );
@@ -54,7 +54,7 @@ export function StandingsList({
               data-testid="standings-card"
               data-mine={r.isMine ? "true" : undefined}
               className={`flex min-h-11 items-center gap-2 px-3 py-2 ${
-                r.isMine ? "bg-accent-soft" : ""
+                r.isMine ? "bg-accent-soft shadow-[inset_3px_0_0_var(--highlight)]" : ""
               }`}
             >
               <span className="w-6 shrink-0 text-center text-sm font-bold tabular-nums">
@@ -103,7 +103,13 @@ export function StandingsList({
                 data-mine={r.isMine ? "true" : undefined}
                 className={`relative hover:bg-muted ${r.isMine ? "bg-accent-soft hover:bg-accent-soft" : ""}`}
               >
-                <td className="px-3 py-1 font-bold tabular-nums">{r.rank}</td>
+                <td
+                  className={`px-3 py-1 font-bold tabular-nums ${
+                    r.isMine ? "shadow-[inset_3px_0_0_var(--highlight)]" : ""
+                  }`}
+                >
+                  {r.rank}
+                </td>
                 <th scope="row" className="max-w-xs px-3 py-1 text-left font-normal">
                   {/* The after element stretches the link over the whole row. */}
                   <Link

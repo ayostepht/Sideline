@@ -22,7 +22,7 @@ function Section({
 }) {
   return (
     <section aria-labelledby={`team-${id}-h`} data-testid={`team-section-${id}`}>
-      <h2 id={`team-${id}-h`} className="sl-label mb-1">
+      <h2 id={`team-${id}-h`} className="sl-label sl-mark mb-1">
         {title} <span className="tabular-nums">({count})</span>
       </h2>
       <div className="flex flex-col divide-y rounded-card border bg-card">{children}</div>
