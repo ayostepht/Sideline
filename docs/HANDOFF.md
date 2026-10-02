@@ -22,13 +22,14 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 - T2.2b-fix done (18628a4).
 - T2.1c done (17cab8b).
+- T2.3a (frontend-engineer): apps/web/app (layout, page, l/[leagueId]/**, onboarding stub), components/shell, lib/client. getLeagueChoices helper committed 2640463.
 - T2.5a (qa-engineer): playwright.config.ts, lighthouserc.json, e2e, tests. Seeded servers, fixture worker smoke, route list, gallery axe (UX M2).
 - Reviews saved: batch B code (10fc521), batch B UX (a5e32da).
 
 ## 4. Next steps (in order)
 
 1. Verify and commit each in-flight task separately (exact paths).
-2. Batch C: T2.3a shell (frontend), after T2.1c lands. Then code review plus ux-reviewer on the shell.
+2. When T2.3a and T2.5a land: code review of Batch C plus ux-reviewer on the shell (seeded screens only).
 3. Then Batches D to G.
 
 ## 5. Standing rules for every brief
