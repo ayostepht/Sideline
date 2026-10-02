@@ -72,11 +72,11 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.1a | Design system part 1 and gallery | frontend-engineer | A | Done (`/` 133,517 B, gallery 183,470 B; AA contrast table in report) | 1 | d3527fa |
 | T2.2a | Shared DTOs, job names, db migration and helpers | backend-engineer | A | Done (targeted checks; full verify before Batch B; db 96.1% lines) | 1 | 863b018 |
 | T2.0b | Seeded screens/gate harness, screenshot guard, LAN dev, G1 backlog | devops-engineer | A | Done (refusals verified by orchestrator; its docs/self-hosting.md section landed in 17af2ce by an orchestrator `git add docs`) | 1 | 775680b |
-| T2.2a-fix | Batch A review m4, m5, m6, m8, m9 (contracts) | backend-engineer | B1 | In progress | 1 | |
+| T2.2a-fix | Batch A review m4, m5, m6, m8, m9 (contracts) | backend-engineer | B1 | Done (targeted checks) | 1 | a4682f6 |
 | T2.0b-fix | Batch A review m1, n1 (guard case, redaction) | devops-engineer | B1 | Done (targeted checks; full verify before B2) | 1 | e20055a |
 | T2.1b | Design system part 2 (plus review m10) | frontend-engineer | B1 | In progress | 1 | |
-| T2.2b | Server data functions and route handlers | backend-engineer | B2 | Not started | 0 | |
-| T2.2c | Worker onboarding jobs, active league, fixture fetch mode | sleeper-data-engineer | B2 | Not started | 0 | |
+| T2.2b | Server data functions and route handlers | backend-engineer | B2 | In progress | 1 | |
+| T2.2c | Worker onboarding jobs, active league, fixture fetch mode | sleeper-data-engineer | B2 | In progress | 1 | |
 | T2.3a | Layout shell, switcher, week selector, search, placeholders | frontend-engineer | C | Not started | 0 | |
 | T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker) | qa-engineer | C | Not started | 0 | |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |

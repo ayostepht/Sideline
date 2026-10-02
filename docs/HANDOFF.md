@@ -18,9 +18,11 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
-## 3. In flight (Batch B1)
+## 3. In flight (Batch B1 and B2)
 
-- T2.2a-fix (backend-engineer): packages/shared, packages/db. Review m4, m5, m6, m8, m9.
+- T2.2a-fix done (a4682f6).
+- T2.2b (backend-engineer): apps/web/lib/server, apps/web/app/api.
+- T2.2c (sleeper-data-engineer): apps/worker.
 - T2.1b (frontend-engineer): apps/web/components, app/dev, globals.css, lib/client. Plus m10.
 - T2.0b-fix done (e20055a).
 
