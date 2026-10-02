@@ -1,6 +1,6 @@
 # Sleeper API notes (ground truth)
 
-Last updated: 2026-10-01 (T0.3a spike). This file overrides PLAN.md where they disagree.
+Last updated: 2026-10-02 (T1.2b real-row rules, section 4.5). This file overrides PLAN.md where they disagree.
 
 How to read the status column: VERIFIED means it works and matches PLAN. CHANGED means it works but differs from PLAN (described). MISSING means it is not available.
 
@@ -299,6 +299,36 @@ Rows include `pts_ppr`, `pts_half_ppr`, `pts_std` (about 350 to 360 of 760 to 80
   - Week 3: 2026-09-29 04:00Z. Week 4 (current): 2026-10-01 15:00Z. Week 5 (future): 2026-09-28 23:45Z.
   - So a projection's stamp for a played week is the week-end stamp, and the current week is refreshed during the week.
 - Week 4 stats right now: `200 []` (no games played). Week 5 projections exist (3,304 rows, 469 real). Only one week ahead was checked.
+
+### 4.5 Real-row rules (T1.2b)
+
+Dated 2026-10-02. Implemented in `packages/sleeper/src/endpoints/real-rows.ts`, checked against `tests/fixtures/sleeper/`. HTTP 200 is never treated as success: when no real row remains the client returns `status: "unavailable"` (`reason: "empty"` for `[]`, `"no_real_rows"` otherwise).
+
+Order of checks per row: (1) fails row validation: `other`; (2) position missing or not one of QB, RB, WR, TE, K, DEF: `position`; (3) fails the kind's real-row rule: `placeholder`. So a leaked FB placeholder counts as `position`.
+
+**Projections rule:** `stats.gp` present AND `opponent` not null. Placeholders hold only `adp_dd_ppr` (and `pos_adp_dd_ppr`), with `opponent: null`, `date: null`.
+
+**Stats rule (different):** `opponent` not null. `gp` is not required. In the fixtures 84 to 157 stats rows per week have no `gp` yet are real: players whose game happened but who did not play, with stats like `{ "gms_active": 1, "pos_rank_ppr": 999 }` (QB, RB, WR, TE and one K, no DEF). Requiring `gp` would drop them. No placeholder stats rows exist in the trimmed fixtures (the recorder keeps real rows plus rows for kept players), so the stats placeholder rule rests on the same `opponent: null` signal as projections and is untested against live data.
+
+Neither rule looks at point totals. A player with a bye has no row at all and is not "dropped"; byes come from the schedule (ADR-006 item 7). A real row with tiny stats (for example `{ "gp": 1, "fgm_30_39": 0.01 }`) is always kept.
+
+Counts from the recorded (trimmed) fixtures, `tests/fixtures/sleeper/`. Total is rows in the fixture file, not the live API (live projections have about 3,300 rows per week, see sections 4.1 and 7).
+
+| Kind | Week | Total | Kept | Dropped placeholder | Dropped position | Dropped other |
+|---|---|---|---|---|---|---|
+| projections | 1 | 644 | 441 | 127 | 76 | 0 |
+| projections | 2 | 694 | 450 | 168 | 76 | 0 |
+| projections | 3 | 743 | 443 | 224 | 76 | 0 |
+| projections | 4 | 782 | 461 | 245 | 76 | 0 |
+| projections | 5 (future) | 825 | 464 | 285 | 76 | 0 |
+| stats | 1 | 578 | 569 | 0 | 9 | 0 |
+| stats | 2 | 616 | 607 | 0 | 9 | 0 |
+| stats | 3 | 648 | 639 | 0 | 9 | 0 |
+| stats | 4 (no games yet) | 0 | 0 | 0 | 0 | 0 (`unavailable`, reason `empty`) |
+
+Projection position drops are 71 placeholder rows plus 5 real rows of FB, P, CB or DB. Stats position drops are FB and DB rows (all with `gp` or `gms_active`). The synthetic fixtures (`tests/fixtures/synthetic/`) have no `player`, `opponent` or `gp` on their rows, so both kinds come back `unavailable` (2 dropped as `position`); the `ok` path is covered by the recorded fixtures and in-test rows.
+
+Other client behavior worth knowing: `GET /user/{username}` returns `data: null` for an unknown user; the user schema strips every field except `user_id`, `display_name`, `username`, `avatar`, `is_bot`. Each `/players/nfl` entry is validated on its own, and invalid entries are skipped and counted (all 1,021 recorded entries are valid). The client never sends `If-None-Match` for `/players/nfl`; the once-per-day rule is enforced by the worker. `previous_league_id` of `"0"` or `""` is mapped to null.
 
 ## 5. Stat key mapping (SCORE-1)
 
