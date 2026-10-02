@@ -76,7 +76,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.0b-fix | Batch A review m1, n1 (guard case, redaction) | devops-engineer | B1 | Done (targeted checks; full verify before B2) | 1 | e20055a |
 | T2.1b | Design system part 2 (plus review m10) | frontend-engineer | B1 | Done (gallery 185,138 B; `/` 133,517 B) | 1 | c42b101 |
 | T2.2b | Server data functions and route handlers | backend-engineer | B2 | In progress | 1 | |
-| T2.2c | Worker onboarding jobs, active league, fixture fetch mode | sleeper-data-engineer | B2 | In progress | 1 | |
+| T2.2c | Worker onboarding jobs, active league, fixture fetch mode | sleeper-data-engineer | B2 | Done (worker 90% lines; deviation: onboarding writes no sync_runs row, the sync_requests row is the record) | 1 | 74ebc74 |
 | T2.3a | Layout shell, switcher, week selector, search, placeholders | frontend-engineer | C | Not started | 0 | |
 | T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker) | qa-engineer | C | Not started | 0 | |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |
@@ -143,6 +143,9 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - Batch A review (docs/reviews/2026-10-02-p2-batchA-code.md): m2, m3, m12 go to T2.5a (validate E2E_DATA_DIR, seeded lhci, SIDELINE_GALLERY in webServer env); m7 to T2.2c (fail unknown jobs; the worker reads `paramsError`); m11 themeColor vs the in-app toggle to T6.3.
 
 - T2.1b: real overlays render only at `/dev/gallery?open=sheet|dialog|why`; add those URLs to screens routes (if query strings are supported) and to the axe route list in T2.5a.
+
+- T2.2c follow-ups: packages/db `claimNext`/`toRequest` throw on unknown job names, so the worker marks them failed with a raw UPDATE (backend: make claim tolerant, then remove the raw SQL); `latestRunPerJob`/`startRun` are SyncJobName-only, so onboarding has no sync_runs rows (accepted for now); `RawLeagueSchema` has no `avatar` (LeagueChoice.avatar always null); 503 retry test takes about 4 s (no injectable sleep in `makeClient`).
+- T2.5a e2e fixture worker: `pnpm --filter @sideline/worker start:fixtures` with DATA_DIR set, NODE_ENV not production, DEFAULT_LEAGUE_ID unset. Fixture user `manager_04` (id 100000000000000004), league 1000000000000000001 (season 2026); a second synthetic league 1000000000000000999 also listed.
 
 ## Questions for Steph
 
