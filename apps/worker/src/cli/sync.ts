@@ -1,6 +1,7 @@
 import { pathToFileURL } from "node:url";
 import {
   dbPathFromDataDir,
+  complete,
   enqueue,
   getRequest,
   migrate,
@@ -82,6 +83,21 @@ export async function runSyncCli(argv: readonly string[], deps: CliDeps): Promis
         if (cur !== null && (cur.status === "done" || cur.status === "failed")) {
           deps.out(`request #${req.id} ${cur.status}${cur.error !== null ? `: ${cur.error}` : ""}`);
           return cur.status === "done" ? 0 : 1;
+        }
+        const beat = readHeartbeat(db);
+        if (beat === null || deps.now().getTime() - Date.parse(beat.at) >= WORKER_STALE_AFTER_MS) {
+          deps.out("worker stopped before finishing the request");
+          // A running row is left for the next worker's reap; a pending one would run unexpectedly.
+          if (cur !== null && cur.status === "pending") {
+            complete(
+              db,
+              req.id,
+              "failed",
+              "worker stopped before finishing the request",
+              deps.now(),
+            );
+          }
+          return 1;
         }
         if (deps.now().getTime() - start >= WAIT_TIMEOUT_MS) {
           deps.out(`timed out waiting for request #${req.id}`);

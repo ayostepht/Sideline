@@ -1,5 +1,5 @@
 import { Cron } from "croner";
-import type { SyncJobName } from "@sideline/shared";
+import { SYNC_CADENCE_MS, type SyncJobName } from "@sideline/shared";
 import { ALL_ORDER } from "./registry.js";
 import { NFL_TZ } from "./windows.js";
 
@@ -9,17 +9,23 @@ export type Cadence = { every: number; inWindowEvery?: number } | { cron: string
 export type Cadences = Partial<Record<SyncJobName, Cadence | undefined>>;
 
 /** PLAN 3.1 defaults. Cron expressions are evaluated in America/New_York. */
+function everyOf(job: SyncJobName): number {
+  const ms = SYNC_CADENCE_MS[job];
+  if (ms === null) throw new Error(`no interval cadence for ${job}`);
+  return ms;
+}
+
 export const DEFAULT_CADENCES: Cadences = {
-  state: { every: 15 * MIN },
-  league: { every: 60 * MIN },
-  users: { every: 60 * MIN },
-  rosters: { every: 15 * MIN, inWindowEvery: 5 * MIN },
-  matchups: { every: 15 * MIN, inWindowEvery: 2 * MIN },
-  transactions: { every: 15 * MIN },
+  state: { every: everyOf("state") },
+  league: { every: everyOf("league") },
+  users: { every: everyOf("users") },
+  rosters: { every: everyOf("rosters"), inWindowEvery: 5 * MIN },
+  matchups: { every: everyOf("matchups"), inWindowEvery: 2 * MIN },
+  transactions: { every: everyOf("transactions") },
   players: { cron: "30 4 * * *" },
-  trending: { every: 30 * MIN },
-  stats: { every: 60 * MIN },
-  projections: { every: 60 * MIN },
+  trending: { every: everyOf("trending") },
+  stats: { every: everyOf("stats") },
+  projections: { every: everyOf("projections") },
   nflverse: { cron: "0 5 * * *" },
 };
 

@@ -5,7 +5,7 @@ import pino from "pino";
 import { registeredJobs } from "./jobs/index.js";
 import { LeaseKeeper, newHolderId } from "./lease.js";
 import { createJobRegistry } from "./registry.js";
-import { Worker } from "./worker.js";
+import { Worker, raceTimeout } from "./worker.js";
 
 const config = loadConfig(process.env);
 const logger = pino({ level: config.logLevel, base: { app: "sideline-worker" } });
@@ -24,13 +24,19 @@ const worker = new Worker({
 worker.start();
 logger.info({ holder: lease.holder }, "worker started");
 
+const SHUTDOWN_WAIT_MS = 8_000;
 let shuttingDown = false;
 const shutdown = (sig: string): void => {
   if (shuttingDown) return;
   shuttingDown = true;
   logger.info({ sig }, "shutting down");
-  void worker.stop().finally(() => {
-    db.sqlite.close();
+  void raceTimeout(worker.stop(), SHUTDOWN_WAIT_MS).finally(() => {
+    try {
+      lease.release();
+      db.sqlite.close();
+    } catch {
+      // exiting anyway
+    }
     process.exit(0);
   });
 };

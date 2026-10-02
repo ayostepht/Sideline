@@ -1,3 +1,4 @@
+import { SYNC_CADENCE_MS } from "@sideline/shared";
 import { describe, expect, it } from "vitest";
 import { buildCadences, DEFAULT_CADENCES, dueJobs } from "./schedule.js";
 
@@ -76,5 +77,14 @@ describe("dueJobs", () => {
         false,
       ),
     ).toEqual([]);
+  });
+});
+
+describe("DEFAULT_CADENCES vs shared table", () => {
+  it("interval cadences equal SYNC_CADENCE_MS", () => {
+    for (const [job, c] of Object.entries(DEFAULT_CADENCES)) {
+      if (c === undefined || "cron" in c) continue;
+      expect(c.every, job).toBe(SYNC_CADENCE_MS[job as keyof typeof SYNC_CADENCE_MS]);
+    }
   });
 });

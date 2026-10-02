@@ -1,11 +1,4 @@
-import {
-  claimNext,
-  complete,
-  lastSuccessAt,
-  reapStale,
-  writeHeartbeat,
-  type DbHandle,
-} from "@sideline/db";
+import { claimNext, complete, reapStale, writeHeartbeat, type DbHandle } from "@sideline/db";
 import { SyncJobNameSchema, type AppConfig, type SyncJobName } from "@sideline/shared";
 import type { RateLimiter } from "@sideline/sleeper";
 import type { Logger } from "pino";
@@ -82,14 +75,28 @@ export class Worker {
       this.d.logger.info("sync lease held by another worker; retrying");
       return false;
     }
-    const reaped = reapStale(this.d.db, this.d.now(), 0);
+    // Reap only rows started before this acquisition, and not while our own job is winding down
+    // after a lease loss (its rows are still ours).
+    const acquiredAt = this.d.now();
+    const reaped = this.busy ? { requests: 0, runs: 0 } : reapStale(this.d.db, acquiredAt, 0);
     this.d.logger.info({ holder: this.d.lease.holder, reaped }, "sync lease acquired");
-    for (const job of this.d.registry.names()) {
-      const at = lastSuccessAt(this.d.db, job);
-      if (at !== null && this.lastAttempt[job] === undefined) this.lastAttempt[job] = new Date(at);
-    }
+    this.seedLastAttempts();
     this.heartbeatTick();
     return true;
+  }
+
+  /** Seeds last-attempt per job from the newest run of any status, so failures are not retried at once. */
+  private seedLastAttempts(): void {
+    const rows = this.d.db.sqlite
+      .prepare("SELECT job, max(started_at) AS at FROM sync_runs GROUP BY job")
+      .all() as { job: string; at: string | null }[];
+    for (const r of rows) {
+      const parsed = SyncJobNameSchema.safeParse(r.job);
+      if (!parsed.success || r.at === null) continue;
+      const t = Date.parse(r.at);
+      if (!Number.isNaN(t) && this.lastAttempt[parsed.data] === undefined)
+        this.lastAttempt[parsed.data] = new Date(t);
+    }
   }
 
   renewTick(): boolean {
@@ -206,4 +213,20 @@ export class Worker {
     if (this.current !== null) await this.current.catch(() => undefined);
     this.d.lease.release();
   }
+}
+
+/** Resolves when `p` settles or after `ms`, whichever is first; never rejects. */
+export function raceTimeout(p: Promise<unknown>, ms: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    const t = setTimeout(resolve, ms);
+    void p
+      .then(
+        () => undefined,
+        () => undefined,
+      )
+      .then(() => {
+        clearTimeout(t);
+        resolve();
+      });
+  });
 }

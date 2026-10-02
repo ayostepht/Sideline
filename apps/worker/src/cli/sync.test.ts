@@ -117,6 +117,11 @@ describe("runSyncCli", () => {
     const db = tempDb(m.dir);
     writeHeartbeat(db, m.clock.now());
     m.deps.pollMs = 60_000;
+    m.deps.sleep = (ms) => {
+      m.clock.advance(ms);
+      writeHeartbeat(db, m.clock.now()); // worker stays alive
+      return Promise.resolve();
+    };
     expect(await runSyncCli(["--once", "--job=state"], m.deps)).toBe(1);
     expect(m.out.join()).toContain("timed out");
     db.sqlite.close();
@@ -129,6 +134,37 @@ describe("runSyncCli", () => {
     writeHeartbeat(db, new Date(m.clock.now().getTime() - 3_600_000));
     expect(await runSyncCli(["--once", "--job=state"], m.deps)).toBe(0);
     expect(ran).toEqual(["state"]);
+    db.sqlite.close();
+  });
+
+  it("heartbeat goes stale mid-wait: fails the pending request and exits 1", async () => {
+    const m = mk([job("state", [])]);
+    const db = tempDb(m.dir);
+    writeHeartbeat(db, m.clock.now());
+    m.deps.pollMs = 30_000; // no more heartbeats are written, so it ages out after ~2 min
+    expect(await runSyncCli(["--once", "--job=state"], m.deps)).toBe(1);
+    expect(m.out.join()).toContain("worker stopped before finishing the request");
+    expect(m.out.join()).not.toContain("timed out");
+    expect(getRequest(db, 1)).toMatchObject({ status: "failed" });
+    db.sqlite.close();
+  });
+
+  it("heartbeat goes stale while running: leaves the running row for the next reap", async () => {
+    const m = mk([job("state", [])]);
+    const db = tempDb(m.dir);
+    writeHeartbeat(db, m.clock.now());
+    m.deps.pollMs = 30_000;
+    let first = true;
+    m.deps.sleep = (ms) => {
+      m.clock.advance(ms);
+      if (first) {
+        first = false;
+        claimNext(db, m.clock.now());
+      }
+      return Promise.resolve();
+    };
+    expect(await runSyncCli(["--once", "--job=state"], m.deps)).toBe(1);
+    expect(getRequest(db, 1)?.status).toBe("running");
     db.sqlite.close();
   });
 });

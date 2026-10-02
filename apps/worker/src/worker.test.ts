@@ -13,7 +13,7 @@ import { createJobRegistry } from "./registry.js";
 import { runJob } from "./runner.js";
 import { fakeClock, silent, tempDataDir, tempDb, testConfig } from "./testutil.js";
 import type { Job } from "./types.js";
-import { Worker } from "./worker.js";
+import { Worker, raceTimeout } from "./worker.js";
 import { openDb, dbPathFromDataDir } from "@sideline/db";
 import { LEASE_TTL_MS } from "./lease.js";
 import { INTERRUPTED_ERROR } from "@sideline/db";
@@ -251,5 +251,54 @@ describe("start timers", () => {
     s.worker.start();
     expect(s.lease.held).toBe(true);
     await s.worker.stop();
+  });
+});
+
+describe("restart behavior", () => {
+  it("seeds lastAttempt from failed runs so a failing job is not rerun at boot", async () => {
+    const log: string[] = [];
+    const s = setup([okJob("state", log), okJob("league", log)]);
+    const id = startRun(s.db, "state", s.clock.now());
+    s.db.sqlite
+      .prepare("UPDATE sync_runs SET status='failed', finished_at=? WHERE id=?")
+      .run(s.clock.now().toISOString(), id);
+    s.clock.advance(1000);
+    s.worker.acquireTick();
+    await s.worker.scheduleTick();
+    expect(log).toEqual(["league"]);
+  });
+
+  it("re-acquire while a job winds down does not reap its running rows", async () => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((r) => {
+      release = r;
+    });
+    const slow: Job = { name: "state", run: () => gate.then(() => ({ rowsChanged: 0 })) };
+    const s = setup([slow]);
+    s.worker.acquireTick();
+    enqueue(s.db, "state", "api", s.clock.now());
+    const running = s.worker.pollTick();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(runs(s.db)[0]?.status).toBe("running");
+    const other = openDb(dbPathFromDataDir(s.dir));
+    s.clock.advance(LEASE_TTL_MS + 1);
+    acquireLease(other, "other", LEASE_TTL_MS, s.clock.now());
+    expect(s.worker.renewTick()).toBe(false);
+    other.sqlite.close();
+    s.db.sqlite.prepare("DELETE FROM app_settings WHERE key = 'sync_lease'").run();
+    s.clock.advance(1000);
+    expect(s.worker.acquireTick()).toBe(true);
+    expect(runs(s.db)[0]?.status).toBe("running");
+    release();
+    await running;
+  });
+});
+
+describe("raceTimeout", () => {
+  it("resolves on timeout when the promise hangs, and on settle otherwise", async () => {
+    const t0 = Date.now();
+    await raceTimeout(new Promise(() => undefined), 30);
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(25);
+    await raceTimeout(Promise.reject(new Error("x")), 5000);
   });
 });
