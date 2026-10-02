@@ -174,3 +174,15 @@ Date: 2026-10-02
 **Alternatives considered:** dropping `.js` suffixes from every workspace package (works with Turbopack, but is a cross-package convention change touching code owned by four agents); `experimental.extensionAlias` (webpack-only, Turbopack ignored it).
 
 **Consequences:** builds are slower than Turbopack. Revisit when Turbopack gains extension aliasing, or if the packages switch to extensionless imports. The Docker image (T1.8) must ship the better-sqlite3 native module and `packages/db/drizzle`.
+
+## ADR-008: Ownership of apps/web/next.config.ts and package manifests
+
+Date: 2026-10-02
+
+**Decision:** `apps/web/next.config.ts` belongs to devops-engineer (build tooling, ADR-007). Dependency entries in any `package.json` remain devops-engineer only (ADR-005 item 15), including `packages/db`.
+
+**Context:** the Batch D review (m8) flagged devops edits to `next.config.ts` and `packages/db/package.json`. Neither path is in the CLAUDE.md roster for devops.
+
+**Alternatives considered:** giving `next.config.ts` to frontend-engineer. Rejected because the config is about bundling and server externals, not UI.
+
+**Consequences:** frontend briefs that need config changes are split out to devops-engineer.
