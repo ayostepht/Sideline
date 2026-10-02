@@ -20,13 +20,12 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight
 
-- T2.0 (devops-engineer): UI dependency preinstall. Paths: apps/web/package.json, pnpm-lock.yaml, apps/web/postcss.config.mjs. Not yet verified or committed.
+Nothing.
 
 ## 4. Next steps (in order)
 
-1. Batch A0: verify T2.0 when it reports, commit, record pins in ADR-001.
-2. Batch A: T2.1a, T2.2a, T2.0b in parallel, then code-reviewer.
-3. Batches B to G per the PROGRESS Phase 2 table and ADR-009. G2 is a human gate: stop for Steph.
+1. Batch A: dispatch T2.1a (frontend-engineer), T2.2a (backend-engineer), T2.0b (devops-engineer) in parallel, then code-reviewer on A0+A.
+2. Batches B to G per the PROGRESS Phase 2 table and ADR-009. G2 is a human gate: stop for Steph.
 
 ## 5. Standing rules for every brief
 

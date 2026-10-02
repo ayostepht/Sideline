@@ -54,7 +54,7 @@ Date: 2026-10-01
 | Logging | pino 10.3.1, pino-pretty 13.1.3 | |
 | Scripts | tsx | 4.23.15 |
 
-Still to pin when first installed (owning task records the version here): Tailwind CSS, shadcn/ui, Radix, lucide-react, Recharts, TanStack Table (T2.1).
+Pinned in T2.0 (2026-10-02, apps/web dependencies): tailwindcss and @tailwindcss/postcss 4.3.3; @radix-ui/react-dialog 1.1.23, -popover 1.1.23, -tooltip 1.2.16, -dropdown-menu 2.1.24, -tabs 1.1.21, -toggle-group 1.1.19, -visually-hidden 1.2.11, -slot 1.3.3; class-variance-authority 0.7.1; clsx 2.1.1; tailwind-merge 3.7.0; lucide-react 1.49.0; cmdk 1.1.1; next-themes 0.4.6; geist 1.7.2. shadcn/ui is generated code (no runtime package). Recharts and TanStack Table are deferred to Phase 4 (ADR-009 item 6).
 
 Pinned in T1.0 (2026-10-02): better-sqlite3 13.0.3 (SQLite 3.53.4), drizzle-orm 0.45.3, drizzle-kit 0.31.11, @types/better-sqlite3 9.6.0, croner 10.0.1, csv-parse 7.0.3; zod 4.6.5 and pino 10.3.1 also as runtime dependencies of the packages that use them.
 

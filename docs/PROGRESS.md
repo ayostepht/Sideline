@@ -68,7 +68,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | ID | Title | Agent | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|
 | T2.B0 | Branch, ADR-009, PLAN amendments, tracking docs | orchestrator | 0 | Done | 1 | |
-| T2.0 | UI dependency preinstall, postcss config | devops-engineer | A0 | Not started | 0 | |
+| T2.0 | UI dependency preinstall, postcss config | devops-engineer | A0 | Done (route JS unchanged 131,641 B; image 105.2 MB, health 200 in 2 s) | 1 | 383678c |
 | T2.1a | Design system part 1 and gallery | frontend-engineer | A | Not started | 0 | |
 | T2.2a | Shared DTOs, job names, db migration and helpers | backend-engineer | A | Not started | 0 | |
 | T2.0b | Seeded screens/gate harness, screenshot guard, LAN dev, G1 backlog | devops-engineer | A | Not started | 0 | |
