@@ -1,6 +1,7 @@
 import {
   enqueueRequest,
   findActiveRequest,
+  getRequest,
   isMigrated,
   lastRequestAt,
   lastSuccessAt,
@@ -112,4 +113,34 @@ export function requestSyncOn(h: DbHandle, job: SyncRequest["job"], now: Date): 
 
 function runBody(request: z.input<typeof SyncRunResponseSchema>["request"], deduplicated: boolean) {
   return SyncRunResponseSchema.parse({ request, deduplicated });
+}
+
+/**
+ * Queue an `all` sync after the active league changed. Skips the manual debounce. A pending
+ * `all` is reused (it reads the active league when it runs); a running one already read the old
+ * league, so a fresh pending one is added behind it.
+ */
+export function requestSyncForLeagueChange(h: DbHandle, now: Date): ApiResult {
+  const tx = h.sqlite.transaction((): { request: SyncRequest; created: boolean } => {
+    const pending = h.sqlite
+      .prepare(
+        "SELECT id FROM sync_requests WHERE job = 'all' AND status = 'pending' ORDER BY id LIMIT 1",
+      )
+      .get() as { id: number } | undefined;
+    if (pending !== undefined) {
+      const existing = getRequest(h, pending.id);
+      if (existing === null) throw new Error("sync_requests row not readable");
+      return { request: existing, created: false };
+    }
+    const res = h.sqlite
+      .prepare(
+        "INSERT INTO sync_requests (job, requested_at, status, source) VALUES ('all', ?, 'pending', 'api')",
+      )
+      .run(now.toISOString());
+    const created = getRequest(h, Number(res.lastInsertRowid));
+    if (created === null) throw new Error("sync_requests insert not readable");
+    return { request: created, created: true };
+  });
+  const { request, created } = tx.immediate();
+  return { status: created ? 202 : 200, body: runBody(request, !created) };
 }

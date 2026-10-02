@@ -170,6 +170,16 @@ describe("getTeamDetail and getMyTeam", () => {
     expect(d.roster.rosterId).toBe(3);
     expect(d.roster.isMine).toBe(true);
   });
+  it("a user owning two rosters gets the lowest roster_id, deterministically", () => {
+    const h = setup();
+    h.sqlite
+      .prepare("UPDATE rosters SET owner_id = 'u2' WHERE league_id = 'L1' AND roster_id = 3")
+      .run();
+    setSleeperUserId(h, "u2");
+    expect(ok(getMyTeam(h, "L1", SEED_NOW)).roster.rosterId).toBe(2);
+    const rows = ok(getStandings(h, "L1", SEED_NOW)).rows;
+    expect(rows.filter((r) => r.isMine).map((r) => r.rosterId)).toEqual([2]);
+  });
 });
 
 describe("searchPlayers", () => {

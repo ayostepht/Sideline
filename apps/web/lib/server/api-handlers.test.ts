@@ -174,6 +174,8 @@ describe("/api/settings", () => {
     const r = await patch(JSON.stringify({ leagueId: "L1" }));
     expect(r.status).toBe(200);
     expect(await json(r)).toMatchObject({ settings: { activeLeagueId: "L1" }, sync: "queued" });
+    const again = await patch(JSON.stringify({ leagueId: "L1" }));
+    expect(await json(again)).toMatchObject({ sync: "pending_reused" });
     expect((await patch(JSON.stringify({ leagueId: "L2" }))).status).toBe(400);
   });
   it("PATCH rejects empty, combined and malformed bodies", async () => {

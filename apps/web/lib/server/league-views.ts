@@ -115,7 +115,17 @@ function teamNameOf(r: RosterRow): string {
   return nonBlank(r.team_name) ?? nonBlank(r.display_name) ?? `Team ${r.roster_id}`;
 }
 
+/**
+ * Marks one roster as the stored user's: the lowest roster_id they own. Co-owners are not
+ * considered in Phase 2 (only `owner_id` is read), so a user owning two rosters gets one.
+ */
 function rankRows(rows: RosterRow[], userId: string | null): StandingsRow[] {
+  const mineRosterId =
+    userId === null
+      ? null
+      : rows
+          .filter((r) => r.owner_id === userId)
+          .reduce<number | null>((m, r) => (m === null || r.roster_id < m ? r.roster_id : m), null);
   const mapped = rows.map((r) => ({
     rosterId: r.roster_id,
     ownerId: r.owner_id,
@@ -129,7 +139,7 @@ function rankRows(rows: RosterRow[], userId: string | null): StandingsRow[] {
     pointsAgainst: r.fpts_against,
     // Rosters do not store a division yet; see report (needs a db and worker change).
     division: null,
-    isMine: userId !== null && r.owner_id === userId,
+    isMine: userId !== null && r.roster_id === mineRosterId,
   }));
   mapped.sort(compareStandings);
   return mapped.map((m, i) => ({ ...m, rank: i + 1 }));
@@ -267,13 +277,18 @@ export function getTeamDetail(
   };
 }
 
-/** The stored user's team in this league; `no_team` when no user is stored or they have no roster. */
+/**
+ * The stored user's team in this league; `no_team` when no user is stored or they have no roster.
+ * With several owned rosters the lowest roster_id wins. Co-owners are not considered in Phase 2.
+ */
 export function getMyTeam(h: DbHandle, leagueId: string, now: Date): Lookup<TeamDetail> {
   if (readLeague(h, leagueId) === null) return { ok: false, reason: "not_found" };
   const userId = getSleeperUserId(h);
   if (userId === null) return { ok: false, reason: "no_team" };
   const mine = h.sqlite
-    .prepare("SELECT roster_id AS id FROM rosters WHERE league_id = ? AND owner_id = ? LIMIT 1")
+    .prepare(
+      "SELECT roster_id AS id FROM rosters WHERE league_id = ? AND owner_id = ? ORDER BY roster_id LIMIT 1",
+    )
     .get(leagueId, userId) as { id: number } | undefined;
   if (mine === undefined) return { ok: false, reason: "no_team" };
   return getTeamDetail(h, leagueId, mine.id, now);
