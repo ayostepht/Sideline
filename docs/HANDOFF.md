@@ -23,6 +23,7 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - T2.2b-fix done (18628a4).
 - T2.1c done (17cab8b).
 - T2.3a done (0a45a4a).
+- T2.0b-fix2 (devops-engineer): scripts/gate/routes-size.ts, scripts/screens. Decode dynamic route paths; query in screens slugs.
 - T2.5a (qa-engineer): playwright.config.ts, lighthouserc.json, e2e, tests. Seeded servers, fixture worker smoke, route list, gallery axe (UX M2).
 - Reviews saved: batch B code (10fc521), batch B UX (a5e32da).
 

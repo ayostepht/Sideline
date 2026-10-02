@@ -81,6 +81,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.1c | Gallery UX review fixes M1, m1 to m6, n1, n2 plus code m7 | frontend-engineer | B-fix | Done (gallery 185,352 B) | 1 | 17cab8b |
 | T2.3a | Layout shell, switcher, week selector, search, placeholders | frontend-engineer | C | Done (`/l/[leagueId]` 155.0 KB, `/` 136.6 KB; overlays and cmdk lazy) | 1 | 0a45a4a |
 | T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker; plus UX M2 gallery axe) | qa-engineer | C | In progress | 1 | |
+| T2.0b-fix2 | Route-size check on dynamic routes; screens slugs for query routes | devops-engineer | C | In progress | 1 | |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |
 | T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Not started | 0 | |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
