@@ -18,19 +18,16 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
-## 3. In flight (Batch B1 and B2)
+## 3. In flight
 
-- T2.2a-fix done (a4682f6).
-- T2.2b (backend-engineer): apps/web/lib/server, apps/web/app/api.
-- T2.2c done (74ebc74).
-- T2.1b done (c42b101).
-- T2.0b-fix done (e20055a).
+- code-reviewer on Batch B1+B2 (diff 1225d42..cfd1d59). Save as `docs/reviews/2026-10-02-p2-batchB-code.md`.
+- ux-reviewer on `/dev/gallery` (seeded `pnpm screens`, captures in `.screens/` only). Save as `docs/reviews/2026-10-02-p2-batchB-ux.md`.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit each B1 task separately (stage exact paths only).
-2. Batch B2: T2.2b (backend) and T2.2c (sleeper-data) after T2.2a-fix lands. T2.2c handles m7 (fail unknown jobs, honor `paramsError`), onboarding jobs via `parseParamsForJob`, and swaps `jobs/db-reads.ts` to the T2.2a helpers (readState->readNflState, readPlayoffWeekStart->readLeaguePlayoffWeekStart, storedMatchupWeeks->readStoredMatchupWeeks, positionCounts->readPlayerPositionCounts, storedStatsWeeks->readStoredStatsWeeks, storedProjectionWeeks->readStoredProjectionWeeks, kickoffsByTeam->readKickoffsByTeam, readStateFetchedAt->readNflStateFetchedAt, touchStateFetchedAt->touchNflStateFetchedAt; scheduleTeamCode stays).
-3. Code review of B1+B2, ux-reviewer on `/dev/gallery` (seeded screens, captures in `.screens/` only), then Batches C to G.
+1. Save both reviews; fix Blocker and Major before Batch C.
+2. Batch C: T2.3a shell (frontend) and T2.5a QA harness (qa). Inputs for T2.5a are in the PROGRESS backlog (seeded Playwright and lhci, fixture worker command, review m2, m3, m12, gallery `?open=` URLs).
+3. Then Batches D to G.
 
 ## 5. Standing rules for every brief
 
