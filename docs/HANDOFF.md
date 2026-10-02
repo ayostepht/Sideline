@@ -27,6 +27,8 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - T2.5a (qa-engineer): playwright.config.ts, lighthouserc.json, e2e, tests. Seeded servers, fixture worker smoke, route list, gallery axe (UX M2).
 - Reviews saved: batch B code (10fc521), batch B UX (a5e32da).
 
+- code-reviewer on Batch C part 1 (diff a5e32da..494e0bd, e2e excluded). Save as `docs/reviews/2026-10-02-p2-batchC-code.md`.
+
 ## 4. Next steps (in order)
 
 1. Verify and commit each in-flight task separately (exact paths).
