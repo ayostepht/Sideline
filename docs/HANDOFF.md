@@ -20,14 +20,11 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight
 
-- Batch D code review saved (0d7b0d8): M1 browser vs server clock in first-sync, M2 ignores sync result, M3 unbounded poll.
-- T2.3b-fix done (20da03b).
-- T2.2d done (7dc548f).
-- T2.2e done (06a5188).
+- T2.2f (sleeper-data-engineer): apps/worker/src/cli/seed-fixtures.ts. Seeded DB gets the fixture user, league choices and active league so screens and Lighthouse show a signed-in Home.
 
 ## 4. Next steps (in order)
 
-1. Batch E: T2.4 ux-reviewer (all routes) and T2.5b qa (suites), in parallel. Then Batch F fixes, then G2.
+1. Verify and commit T2.2f. Then Batch E: T2.4 ux-reviewer (all routes) and T2.5b qa (suites); T2.5b must not build or run e2e while the ux-reviewer's screens run is active (`pgrep -f "[s]creens.ts"`). Then Batch F fixes, then G2.
 2. Batch E: T2.4 UX review (all routes; capture Syncing, not-found, More sheet, search states) and T2.5b (e2e onboarding on the fixture server, navigation, pages into `existingRoutes` for axe and no-hscroll, Lighthouse on `/l/1000000000000000001` and League, data function perf on the fixture DB, review items in PROGRESS backlog).
 3. Batch F fix round, then G2 gate: live onboarding run by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan`, non-localhost origin), screenshots archived from the seeded dir only, then stop for Steph.
 
