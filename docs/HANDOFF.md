@@ -18,16 +18,17 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
-## 3. In flight
+## 3. In flight (Batch D)
 
-- Shell UX review saved (d0d2c89): M1 768 layout, M2 desktop header.
-- T2.3a-fix2 (frontend-engineer): components, globals.css, placeholder copy. Sidebar breakpoint stays at 1024 (PLAN 6.3).
+- T2.3b (frontend-engineer): app/onboarding/**, app/l/[leagueId]/settings/**, `_components/` under them, new pure helpers in lib/client.
+- T2.3c (frontend-engineer): app/l/[leagueId]/page.tsx (Home), team/**, league/** (incl. teams/[rosterId]), `_components/` under them, new pure helpers in lib/client.
+- Both treat apps/web/components as read-only and wait on `pgrep -f "[n]ext build"` before building.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit T2.3a-fix2 (run e2e and a11y); its report says how pages render headings with the new header: put that in the Batch D briefs.
-2. Batch D: T2.3b (onboarding, Settings v1) and T2.3c (Home, League, team detail, My Team), two frontend instances, `components/` read-only for both, builds one at a time (`pgrep -f "[n]ext build"` wait). Then code review.
-3. Batch E: T2.4 UX review and T2.5b e2e/axe/Lighthouse/perf. Batch F fix round. Batch G gate G2 (human).
+1. Verify and commit T2.3b and T2.3c separately (exact paths). Then code-reviewer on Batch D.
+2. Batch E: T2.4 UX review (all routes; capture Syncing, not-found, More sheet, search states) and T2.5b (e2e onboarding on the fixture server, navigation, pages into `existingRoutes` for axe and no-hscroll, Lighthouse on `/l/1000000000000000001` and League, data function perf on the fixture DB, review items in PROGRESS backlog).
+3. Batch F fix round, then G2 gate: live onboarding run by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan`, non-localhost origin), screenshots archived from the seeded dir only, then stop for Steph.
 
 ## 5. Standing rules for every brief
 

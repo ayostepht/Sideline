@@ -84,9 +84,9 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.0b-fix2 | Route-size check on dynamic routes; screens slugs for query routes | devops-engineer | C | Done (`/` 139,863 B; `/l/*` 158,754 B; gallery 189,202 B) | 1 | 494e0bd |
 | T2.3a-fix | Batch C review M1 (404 loop), M2 (layout errors), m1, m2, m3 | frontend-engineer | C-fix | Done (orchestrator: verify 662 tests, e2e 75, a11y 36 on the combined tree; `/l/[leagueId]` 161,611 B) | 1 | 2a08728 |
 | T2.2b-fix2 | Batch C review m4, m5; getLeagueChoices tests | backend-engineer | C-fix | Done (lib/server and app/api 98.4% lines) | 1 | cfb098d |
-| T2.3a-fix2 | Shell UX review M1 (768 layout, sidebar stays at 1024 per PLAN 6.3), M2 (desktop header title and week label), m1 to m4, n1 | frontend-engineer | C-fix | In progress | 1 | |
-| T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |
-| T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Not started | 0 | |
+| T2.3a-fix2 | Shell UX review M1 (768 layout, sidebar stays at 1024 per PLAN 6.3), M2 (desktop header title and week label), m1 to m4, n1 | frontend-engineer | C-fix | Done (orchestrator: verify 662, e2e 75; `/l/[leagueId]` 161,725 B) | 1 | 41fd0c1 |
+| T2.3b | Onboarding and Settings v1 | frontend-engineer | D | In progress | 1 | |
+| T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | In progress | 1 | |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
 | T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | Not started | 0 | |
 | T2.6 | Fix round | frontend-engineer | F | Not started | 0 | |
