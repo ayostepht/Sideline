@@ -12,90 +12,9 @@
 | 5 Matchups and league intelligence | G5 | | Not started |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
 
-## Resume point (read this first after /clear or a new session)
+## Resume point
 
-Updated: 2026-10-02, Batch C review saved; fixes in progress.
-
-- **Branch:** `phase/1-data`. Plan: ADR-005 (approved by Steph with changes); nflverse facts: ADR-006. Phase 1 task table below.
-- **Committed and verified:**
-  - B0, T1.0, T1.1 (plus fix), T1.2a (plus fix), T1.4a, T1.3a, T1.2b, T1.4b.
-  - Batch A and B work is done.
-  - Reviews saved: `docs/reviews/2026-10-02-p1-batchA-part1-code.md` and `-part2-code.md`.
-- **Batch B review fixed:** M1 to M3 closed in d155036 (`reapStale`, `enqueue` stale threshold 15 min, a column for every shared field, enforced by `schema.test.ts`).
-- **In flight: Batch C**, three agents in parallel:
-  - **T1.3b** (backend-engineer, `packages/db/**` plus a doc comment in `packages/shared` for starters "0").
-  - **T1.5a** (sleeper-data-engineer, `apps/worker/**`).
-  - **T1.6** (backend-engineer, `apps/web/app/api/**`, `apps/web/lib/server/**`).
-
-  If interrupted, `git status` shows each one's partial files by path. Verify each against its acceptance criteria in this file's "Batch C brief essentials", or discard that path (`git checkout -- <path> && git clean -fd <path>`) and re-dispatch.
-- **Batch C committed:**
-  - T1.3b (fd8023f), T1.5a (45c4b9e), T1.6-build (34e0e78, webpack per ADR-007), T1.6 (7995e8e).
-  - Full `pnpm verify` is green (452 tests) and `pnpm build` passes.
-  - Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
-  - Coverage: api 100%, lib/server 97%, worker 83.8%, db 95%, providers 97.5%, sleeper 100%, shared 100%.
-- **Batch C review saved:** `docs/reviews/2026-10-02-p1-batchC-code.md`, CHANGES REQUIRED with 3 Major findings.
-- **In flight:** T1.6-fix (backend-engineer; `packages/shared`, `packages/db`, `apps/web/lib/server`, `apps/web/app/api`).
-- **Then:** T1.5a-fix (sleeper-data-engineer, `apps/worker`). It runs sequentially, because it consumes the new shared cadence table.
-- **If interrupted:** check `git status` in those paths and verify against the review findings, or discard and re-dispatch.
-- **M2 carries into the T1.5b brief as a hard requirement:**
-  - the Sleeper HTTP client accepts an AbortSignal;
-  - every job passes `ctx.signal`;
-  - jobs check `signal.aborted` before each request;
-  - a test proves no fetch happens after a mid-job lease loss.
-- **Other review items carried into later briefs:** m5 (externals and the docker native-binding smoke) to T1.8; m7 (kickoff `Z` format test) to T1.5c; m6 (freshness from `sync_runs`) for Phase 2; n1 (body size cap) to T6.1.
-- **Batch C brief essentials:**
-  - **T1.3b:**
-    - idempotent upserts that count real changes only;
-    - chunked bulk players;
-    - trending replaces each type's set;
-    - projections write latest plus a pregame snapshot (only when fetched_at is before kickoff);
-    - a DB-backed EtagStore (structurally typed);
-    - `computed_cache` get, put and invalidate;
-    - `tableCounts`;
-    - a second identical upsert reports 0 changes.
-  - **T1.5a:**
-    - the worker holds the lease while alive (renew every 30 s, TTL 2 min) and calls `reapStale(olderThanMs=0)` after acquiring it;
-    - heartbeat every 30 s;
-    - polls `sync_requests` every 5 s;
-    - cadences from PLAN 3.1 with `SYNC_*_CRON` overrides;
-    - game windows from `schedule` (kickoff to kickoff + 4 h) or the PLAN 3.4 fallback;
-    - jobs implement an interface; one shared `RateLimiter`; `sync_runs` record calls and changes;
-    - the CLI enqueues and waits when a worker is alive, otherwise takes the lease and runs directly;
-    - tests use fake jobs.
-  - **T1.6:**
-    - health per ADR-005 item 6 (503 only on DB failure; never migrates);
-    - sync status;
-    - `POST /api/sync/run` returns the existing pending or running request (`deduplicated: true`), else 429 with Retry-After within 60 s of the last request for that job, else enqueues;
-    - 400 on a bad body;
-    - thin handlers, logic in `lib/server`;
-    - `pnpm build` passes;
-    - api and `lib/server` coverage at least 75%.
-- **Next steps, in order:**
-  1. Commit T1.6-fix, then dispatch and commit T1.5a-fix. Then Batch D (T1.5b with M2, T1.7a, T1.8 with m5). Batch C briefs, kept for reference:
-     - T1.3b (backend-engineer, `packages/db`): idempotent upserts counting real changes only; projection snapshot upsert (only when fetched_at is before kickoff); `http_cache` EtagStore; `computed_cache`; read helpers for health and sync status.
-     - T1.5a (sleeper-data-engineer, `apps/worker`):
-       - croner scheduler with PLAN 3.1 cadences and `SYNC_*_CRON` overrides;
-       - job runner writing `sync_runs` that never crashes the process;
-       - heartbeat and the `sync_requests` poller;
-       - game windows from the `schedule` table with the ADR-002 fallback;
-       - the `pnpm run sync --once [--job]` CLI: it enqueues to a live worker and waits, runs directly when no worker is alive, and holds the renewed lease (ADR-005 item 3);
-       - one shared `RateLimiter`.
-     - T1.6 (backend-engineer, `apps/web/app/api` plus `apps/web/lib/server`): health per ADR-005 item 6 (update the existing route test), sync status, `POST /api/sync/run` (queues a request, dedupes, at most 1 per job per 60 s, else 429 with Retry-After); thin handlers; temp-SQLite tests.
-  3. Batches D (T1.5b, T1.7a, T1.8), E (T1.5c), F (T1.7b), then the G1 gate, per the task table, ADR-005 and the backlog notes tagged T1.5b, T1.7a and T1.8.
-- **Every brief carries:**
-  - the Node 24 PATH prefix;
-  - identifiers only from `.env` (ADR-000);
-  - msw 3;
-  - no `.skip` and no weakened thresholds;
-  - only devops changes dependencies (ADR-005 item 15);
-  - report, don't fix, failures in other agents' paths;
-  - `pnpm run sync`, not `pnpm sync`;
-  - work efficiently and keep the report short (Steph's token budget is limited).
-- **Before every commit:**
-  - `pnpm verify`;
-  - an identifier scan of the staged diff against `.env`;
-  - `pnpm fixtures:check` when fixtures change;
-  - rewrite this Resume point and commit it.
+See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
 
 ## Phase 0 tasks
 
