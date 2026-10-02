@@ -21,6 +21,7 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 ## 3. In flight
 
 - code-reviewer on Batch D (diff 41fd0c1..9490c57). Save as `docs/reviews/2026-10-02-p2-batchD-code.md`.
+- T2.2d (backend-engineer): packages/db, apps/web/lib/server. Standalone migrated detection.
 
 ## 4. Next steps (in order)
 
