@@ -21,13 +21,13 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 ## 3. In flight
 
 - Batch D code review saved (0d7b0d8): M1 browser vs server clock in first-sync, M2 ignores sync result, M3 unbounded poll.
-- T2.3b-fix (frontend-engineer): onboarding, settings, team pages (m9). M1 follow-up sent (use server `syncSince`, no browser clock), M2, M3, minors.
+- T2.3b-fix done (20da03b).
 - T2.2d done (7dc548f).
 - T2.2e done (06a5188).
 
 ## 4. Next steps (in order)
 
-1. Verify and commit T2.3b-fix (full verify, e2e). Then Batch E.
+1. Batch E: T2.4 ux-reviewer (all routes) and T2.5b qa (suites), in parallel. Then Batch F fixes, then G2.
 2. Batch E: T2.4 UX review (all routes; capture Syncing, not-found, More sheet, search states) and T2.5b (e2e onboarding on the fixture server, navigation, pages into `existingRoutes` for axe and no-hscroll, Lighthouse on `/l/1000000000000000001` and League, data function perf on the fixture DB, review items in PROGRESS backlog).
 3. Batch F fix round, then G2 gate: live onboarding run by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan`, non-localhost origin), screenshots archived from the seeded dir only, then stop for Steph.
 
