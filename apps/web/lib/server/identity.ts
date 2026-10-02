@@ -2,13 +2,15 @@ import {
   getActiveLeagueId,
   getSleeperUserId,
   getSleeperUsername,
+  readNflState,
+  readUserLeagues,
   resolveIdentity,
   setActiveLeagueId,
   setSleeperUsername,
   type DbHandle,
   type Identity,
 } from "@sideline/db";
-import { UserJobParamsSchema, type AppSettingsDto } from "@sideline/shared";
+import { UserJobParamsSchema, type AppSettingsDto, type LeagueChoice } from "@sideline/shared";
 
 type Env = Record<string, string | undefined>;
 
@@ -41,4 +43,12 @@ export function getSettings(h: DbHandle, env: Env = process.env): AppSettingsDto
     sleeperUserId: getSleeperUserId(h),
     activeLeagueId: id.activeLeagueId,
   };
+}
+
+/** Leagues for the stored user in the current season (league switcher). Read-only: never enqueues. */
+export function getLeagueChoices(h: DbHandle, env: Env = process.env): LeagueChoice[] {
+  const userId = getSleeperUserId(h) ?? getIdentity(h, env).sleeperUserId;
+  if (userId === null) return [];
+  const season = readNflState(h)?.season;
+  return readUserLeagues(h, userId, season);
 }
