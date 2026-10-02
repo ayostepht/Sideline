@@ -7,7 +7,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "db:migrate": "tsx ../../scripts/not-implemented.ts T1.3a db:migrate"
+    "db:migrate": "tsx src/cli/migrate.ts",
+    "db:generate": "drizzle-kit generate"
   },
   "devDependencies": {
     "@types/better-sqlite3": "9.6.0",
