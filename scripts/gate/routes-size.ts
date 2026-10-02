@@ -96,9 +96,14 @@ export function collectRouteSizes(nextDir: string): RouteSize[] {
   for (const [key, route] of Object.entries(pathManifest)) {
     if (!key.endsWith("/page")) continue; // skip route handlers (API) and other entry types
     const manifestFile = path.join(nextDir, "server/app", `${key}_client-reference-manifest.js`);
-    if (!existsSync(manifestFile)) continue;
+    // A route we cannot measure must fail the budget check, never slip past it.
+    if (!existsSync(manifestFile)) {
+      throw new Error(`route ${route}: client reference manifest is missing (${key})`);
+    }
     const manifest = parseClientManifest(readFileSync(manifestFile, "utf8"));
-    if (manifest === undefined) continue;
+    if (manifest === undefined) {
+      throw new Error(`route ${route}: client reference manifest could not be parsed (${key})`);
+    }
     routes[route] = routeJsFiles(rootMain, manifest);
   }
   const cache = new Map<string, number>();

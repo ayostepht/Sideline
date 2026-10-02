@@ -1,7 +1,7 @@
-import { mkdtempSync, mkdirSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { GateContext } from "./context.js";
 import { parseGateArgs } from "./flags.js";
 import { gateExitCode, summarize, type CheckResult } from "./report.js";
@@ -38,8 +38,13 @@ describe("mapExit", () => {
 });
 
 describe("GateContext.step with real child processes", () => {
+  const roots: string[] = [];
+  afterEach(() => {
+    for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true });
+  });
   function makeContext(): GateContext {
     const root = mkdtempSync(path.join(tmpdir(), "gate-test-"));
+    roots.push(root);
     const ctx = new GateContext(root, parseGateArgs([]), {});
     mkdirSync(ctx.logsDir, { recursive: true });
     return ctx;
@@ -82,6 +87,18 @@ describe("gateExitCode", () => {
 
   it("is 0 with passes and skips only", () => {
     expect(gateExitCode(summarize([check("PASS"), check("SKIPPED")]))).toBe(0);
+  });
+
+  it("under strict, fails on a skip unless it is allowed", () => {
+    const checks = [
+      { ...check("PASS"), id: "U1" },
+      { ...check("SKIPPED"), id: "U2b" },
+    ];
+    const summary = summarize(checks);
+    expect(gateExitCode(summary, { checks, allowSkip: [] })).toBe(1);
+    expect(gateExitCode(summary, { checks, allowSkip: ["u2b"] })).toBe(0);
+    expect(gateExitCode(summary, { checks, allowSkip: ["U2"] })).toBe(1);
+    expect(gateExitCode(summary)).toBe(0);
   });
 
   it("is 1 as soon as one check fails", () => {

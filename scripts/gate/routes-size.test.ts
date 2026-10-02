@@ -1,6 +1,10 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { gzipSync } from "node:zlib";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
+  collectRouteSizes,
   computeRouteSizes,
   normalizeChunk,
   parseClientManifest,
@@ -72,6 +76,58 @@ describe("route JS sizes", () => {
     ).toEqual(["/x"]);
     expect(routesOverBudget([{ route: "/y", files: 1, gzipBytes: ROUTE_JS_BUDGET_BYTES }])).toEqual(
       [],
+    );
+  });
+});
+
+describe("collectRouteSizes with a fixture build dir", () => {
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+  });
+
+  function makeBuild(opts: { missing?: string; broken?: string }): string {
+    const dir = mkdtempSync(path.join(tmpdir(), "routes-size-"));
+    dirs.push(dir);
+    const write = (rel: string, content: string): void => {
+      mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+      writeFileSync(path.join(dir, rel), content);
+    };
+    write("build-manifest.json", JSON.stringify({ rootMainFiles: ["static/chunks/root.js"] }));
+    write("static/chunks/root.js", "root();");
+    write("static/chunks/aaa.js", "aaa();");
+    write(
+      "app-path-routes-manifest.json",
+      JSON.stringify({
+        "/page": "/",
+        "/lineup/page": "/lineup",
+        "/api/health/route": "/api/health",
+      }),
+    );
+    write("server/app/page_client-reference-manifest.js", SAMPLE_MANIFEST);
+    if (opts.missing !== "/lineup/page") {
+      write(
+        "server/app/lineup/page_client-reference-manifest.js",
+        opts.broken === "/lineup/page" ? "this is not javascript (" : SAMPLE_MANIFEST,
+      );
+    }
+    write("static/chunks/bbb.js", "bbb();");
+    return dir;
+  }
+
+  it("measures every page route and ignores route handlers", () => {
+    const sizes = collectRouteSizes(makeBuild({}));
+    expect(sizes.map((s) => s.route)).toEqual(["/", "/lineup"]);
+    expect(sizes.every((s) => s.gzipBytes > 0)).toBe(true);
+  });
+
+  it("throws naming the route when a client manifest is missing", () => {
+    expect(() => collectRouteSizes(makeBuild({ missing: "/lineup/page" }))).toThrow(/\/lineup/);
+  });
+
+  it("throws naming the route when a client manifest cannot be parsed", () => {
+    expect(() => collectRouteSizes(makeBuild({ broken: "/lineup/page" }))).toThrow(
+      /\/lineup.*could not be parsed/,
     );
   });
 });

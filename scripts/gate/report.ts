@@ -41,9 +41,28 @@ export function summarize(checks: readonly CheckResult[]): GateSummary {
   return summary;
 }
 
-/** The gate passes when nothing failed. Skipped checks do not fail it but are always listed. */
-export function gateExitCode(summary: GateSummary): 0 | 1 {
-  return summary.fail === 0 ? 0 : 1;
+/** Skipped ids not covered by an allow-list entry (exact id match, case-insensitive). */
+export function disallowedSkips(
+  checks: readonly CheckResult[],
+  allowSkip: readonly string[],
+): string[] {
+  const allowed = new Set(allowSkip.map((s) => s.toLowerCase()));
+  return checks
+    .filter((c) => c.status === "SKIPPED" && !allowed.has(c.id.toLowerCase()))
+    .map((c) => c.id);
+}
+
+/**
+ * The gate passes when nothing failed. Skipped checks are always listed; under strict mode a
+ * skipped check that is not in the allow-list also fails the gate.
+ */
+export function gateExitCode(
+  summary: GateSummary,
+  strict?: { checks: readonly CheckResult[]; allowSkip: readonly string[] },
+): 0 | 1 {
+  if (summary.fail > 0) return 1;
+  if (strict !== undefined && disallowedSkips(strict.checks, strict.allowSkip).length > 0) return 1;
+  return 0;
 }
 
 /** What we read back from the previous docs/gates/latest.json (validated, all fields lenient). */

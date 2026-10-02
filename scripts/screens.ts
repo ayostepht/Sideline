@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { chromium } from "@playwright/test";
+import { chromium, type Browser, type BrowserContext } from "@playwright/test";
 import { z } from "zod";
 import { standaloneBuildExists, startStandaloneServer, type RunningServer } from "./lib/server.js";
 import {
@@ -56,26 +56,27 @@ async function main(): Promise<number> {
 
   const failures: string[] = [];
   const written: string[] = [];
-  const browser = await chromium.launch();
+  let browser: Browser | undefined;
   try {
+    browser = await chromium.launch();
     for (const route of routes) {
       for (const width of WIDTHS) {
         for (const theme of THEMES) {
-          const context = await browser.newContext({
-            viewport: { width, height: VIEWPORT_HEIGHT },
-            colorScheme: theme,
-            reducedMotion: "reduce",
-            deviceScaleFactor: 1,
-          });
+          const label = `${route} at ${width}px ${theme}`;
+          let context: BrowserContext | undefined;
           try {
+            context = await browser.newContext({
+              viewport: { width, height: VIEWPORT_HEIGHT },
+              colorScheme: theme,
+              reducedMotion: "reduce",
+              deviceScaleFactor: 1,
+            });
             const page = await context.newPage();
             const response = await page.goto(new URL(route, baseUrl).toString(), {
               waitUntil: "networkidle",
             });
             if (response === null || !response.ok()) {
-              failures.push(
-                `${route} at ${width}px ${theme}: HTTP ${response?.status() ?? "no response"}`,
-              );
+              failures.push(`${label}: HTTP ${response?.status() ?? "no response"}`);
               continue;
             }
             await page.evaluate("document.fonts.ready.then(() => true)");
@@ -83,14 +84,19 @@ async function main(): Promise<number> {
             mkdirSync(path.dirname(file), { recursive: true });
             await page.screenshot({ path: file, fullPage: true });
             written.push(path.relative(root, file));
+          } catch (err) {
+            // Record the failure and keep going so one bad page does not hide the others.
+            failures.push(`${label}: ${err instanceof Error ? err.message : String(err)}`);
           } finally {
-            await context.close();
+            await context?.close().catch(() => undefined);
           }
         }
       }
     }
+  } catch (err) {
+    failures.push(`browser: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
-    await browser.close();
+    await browser?.close().catch(() => undefined);
     if (server !== undefined) await server.stop();
   }
 

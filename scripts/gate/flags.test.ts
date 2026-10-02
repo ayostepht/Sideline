@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { CHECKS, flagSkipReason } from "./checks.js";
-import { FlagError, matchesSelector, namedExactly, parseGateArgs, selectChecks } from "./flags.js";
+import {
+  FlagError,
+  GATE_HELP,
+  matchesSelector,
+  namedExactly,
+  parseGateArgs,
+  selectChecks,
+} from "./flags.js";
 
 describe("gate flags", () => {
   it("parses flags", () => {
@@ -9,8 +16,23 @@ describe("gate flags", () => {
       skipDocker: true,
       amd64: true,
       fast: true,
+      strict: false,
+      allowSkip: [],
+      help: false,
     });
     expect(parseGateArgs([]).only).toBeUndefined();
+  });
+
+  it("parses --strict and --allow-skip", () => {
+    const flags = parseGateArgs(["--strict", "--allow-skip=U2b, UI3"]);
+    expect(flags.strict).toBe(true);
+    expect(flags.allowSkip).toEqual(["U2b", "UI3"]);
+    expect(() => parseGateArgs(["--allow-skip="])).toThrow(FlagError);
+  });
+
+  it("documents the new flags and the U3c rule in the help text", () => {
+    for (const word of ["--strict", "--allow-skip", "--amd64", "linux/amd64", "U3c"])
+      expect(GATE_HELP).toContain(word);
   });
 
   it("rejects unknown flags and empty --only", () => {

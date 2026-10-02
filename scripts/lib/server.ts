@@ -55,9 +55,16 @@ export interface WaitResult {
 /** Polls a URL until it answers with the expected status, or the timeout passes. */
 export async function waitForStatus(
   url: string,
-  options: { timeoutMs: number; intervalMs?: number; expectStatus?: number },
+  options: {
+    timeoutMs: number;
+    intervalMs?: number;
+    expectStatus?: number;
+    /** Overrides expectStatus: any status for which this returns true counts as ready. */
+    accept?: (status: number) => boolean;
+  },
 ): Promise<WaitResult> {
   const expect = options.expectStatus ?? 200;
+  const accept = options.accept ?? ((code: number) => code === expect);
   const interval = options.intervalMs ?? 250;
   const started = Date.now();
   let status: number | undefined;
@@ -66,7 +73,7 @@ export async function waitForStatus(
       const res = await fetch(url, { signal: AbortSignal.timeout(2000), redirect: "manual" });
       status = res.status;
       await res.arrayBuffer();
-      if (res.status === expect) return { ok: true, elapsedMs: Date.now() - started, status };
+      if (accept(res.status)) return { ok: true, elapsedMs: Date.now() - started, status };
     } catch {
       // Not up yet; keep polling.
     }
@@ -75,6 +82,38 @@ export async function waitForStatus(
   return status === undefined
     ? { ok: false, elapsedMs: Date.now() - started }
     : { ok: false, elapsedMs: Date.now() - started, status };
+}
+
+function groupAlive(pgid: number): boolean {
+  try {
+    process.kill(-pgid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Stops a process group led by `pgid` (spawned with `detached: true`): SIGTERM first, then
+ * SIGKILL to the whole group if anything is still alive after `graceMs`. This also reaches
+ * grandchildren such as the real server.js behind a wrapper script.
+ */
+export async function killProcessGroup(pgid: number, graceMs = 5000): Promise<void> {
+  try {
+    process.kill(-pgid, "SIGTERM");
+  } catch {
+    return; // group already gone
+  }
+  const deadline = Date.now() + graceMs;
+  while (groupAlive(pgid) && Date.now() < deadline) await sleep(50);
+  if (groupAlive(pgid)) {
+    try {
+      process.kill(-pgid, "SIGKILL");
+    } catch {
+      // Gone in the meantime.
+    }
+    while (groupAlive(pgid)) await sleep(20);
+  }
 }
 
 export interface RunningServer {
@@ -107,6 +146,7 @@ export async function startStandaloneServer(options: {
     {
       cwd: root,
       stdio,
+      detached: true, // own process group, so stop() can kill the wrapper and server.js together
       env: { ...process.env, NODE_ENV: "production", PORT: String(port), HOSTNAME: "127.0.0.1" },
     },
   );
@@ -115,14 +155,22 @@ export async function startStandaloneServer(options: {
   child.on("exit", () => {
     exited = true;
   });
+  const pgid = child.pid;
+  // Safety net for crashes and process.exit(): never leave the server running.
+  const onExit = (): void => {
+    if (pgid === undefined) return;
+    try {
+      process.kill(-pgid, "SIGKILL");
+    } catch {
+      // Already gone.
+    }
+  };
+  process.once("exit", onExit);
   const baseUrl = `http://127.0.0.1:${port}`;
   const stop = async (): Promise<void> => {
-    if (exited) return;
-    const done = new Promise<void>((resolve) => child.once("exit", () => resolve()));
-    child.kill("SIGTERM");
-    const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
-    await done;
-    clearTimeout(timer);
+    process.removeListener("exit", onExit);
+    if (pgid === undefined) return;
+    await killProcessGroup(pgid);
   };
   const ready = await waitForStatus(`${baseUrl}/api/health`, {
     timeoutMs: options.timeoutMs ?? 60_000,

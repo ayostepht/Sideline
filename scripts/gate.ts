@@ -5,8 +5,9 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { CHECKS, flagSkipReason } from "./gate/checks.js";
 import { GateContext, type Outcome } from "./gate/context.js";
-import { FlagError, parseGateArgs, selectChecks } from "./gate/flags.js";
+import { FlagError, GATE_HELP, parseGateArgs, selectChecks } from "./gate/flags.js";
 import {
+  disallowedSkips,
   gateExitCode,
   parsePreviousReport,
   summarize,
@@ -33,6 +34,10 @@ async function main(): Promise<number> {
   let selected;
   try {
     flags = parseGateArgs(process.argv.slice(2));
+    if (flags.help) {
+      process.stdout.write(GATE_HELP);
+      return 0;
+    }
     selected = selectChecks(CHECKS, flags.only);
   } catch (err) {
     if (err instanceof FlagError) {
@@ -125,6 +130,15 @@ async function main(): Promise<number> {
   process.stdout.write(
     `\n${summary.pass} passed, ${summary.fail} failed, ${summary.skipped} skipped. Report: docs/gates/latest.json\n`,
   );
+  if (flags.strict) {
+    const blocked = disallowedSkips(results, flags.allowSkip);
+    if (blocked.length > 0 && summary.fail === 0) {
+      process.stdout.write(
+        `--strict: skipped check(s) not allowed: ${blocked.join(", ")}. Fix them or pass --allow-skip=${blocked.join(",")}.\n`,
+      );
+    }
+    return gateExitCode(summary, { checks: results, allowSkip: flags.allowSkip });
+  }
   return gateExitCode(summary);
 }
 

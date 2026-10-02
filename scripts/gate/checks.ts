@@ -13,7 +13,7 @@ import type { GateContext, Outcome } from "./context.js";
 import { runCapture } from "./exec.js";
 import { summarizeCoverage } from "./coverage.js";
 import { LIGHTHOUSE_BUDGETS, readLhrs, summarizeLhrs } from "./lighthouse.js";
-import { summarizePlaywright } from "./playwright-json.js";
+import { evaluatePlaywright, summarizePlaywright } from "./playwright-json.js";
 import { collectRouteSizes, ROUTE_JS_BUDGET_BYTES, routesOverBudget } from "./routes-size.js";
 import { scanRepo } from "./u4-scan.js";
 import { compareWarnings, countEslintMessages } from "./warnings.js";
@@ -153,7 +153,8 @@ async function playwrightCheck(
     return metrics === undefined ? run.mapped : { ...run.mapped, metrics };
   if (summary === undefined)
     return fail("playwright passed but its JSON report is missing or unreadable");
-  if (summary.expected === 0) return fail("playwright ran zero tests", metrics);
+  const problem = evaluatePlaywright(summary);
+  if (problem !== undefined) return fail(problem, metrics);
   return { status: "PASS", metrics: metrics ?? {} };
 }
 
@@ -249,7 +250,6 @@ async function dockerCheck(
     imageSizeMb: Math.round((sizeBytes / 1_048_576) * 10) / 10,
     architecture: architecture ?? null,
   };
-  let started = false;
   try {
     const t0 = Date.now();
     const runArgs = [
@@ -265,7 +265,6 @@ async function dockerCheck(
     const run = await runCapture("docker", runArgs, { cwd: ctx.root, logFile: log });
     if (run.code !== 0)
       return fail(`docker run failed: ${run.stderr.trim().split("\n").pop() ?? ""}`, metrics);
-    started = true;
     const portOut = await runCapture("docker", ["port", name, "3000/tcp"], {
       cwd: ctx.root,
       logFile: log,
@@ -287,9 +286,16 @@ async function dockerCheck(
         metrics,
       );
     }
-    const home = await waitForStatus(`${base}/`, { timeoutMs: 5000 });
+    // "/" may redirect (for example to onboarding), so any 2xx or 3xx counts.
+    const home = await waitForStatus(`${base}/`, {
+      timeoutMs: 5000,
+      accept: (status) => status >= 200 && status < 400,
+    });
     if (!home.ok)
-      return fail(`GET / did not return 200 (last status ${home.status ?? "none"})`, metrics);
+      return fail(
+        `GET / did not return 2xx or 3xx (last status ${home.status ?? "none"})`,
+        metrics,
+      );
     if (sizeBytes > IMAGE_BUDGET_BYTES) {
       return fail(
         `image is ${String(metrics["imageSizeMb"])} MB, over the 400 MB limit (HOST-5)`,
@@ -298,8 +304,8 @@ async function dockerCheck(
     }
     return { status: "PASS", metrics };
   } finally {
-    if (started)
-      await runCapture("docker", ["rm", "-f", "-v", name], { cwd: ctx.root, logFile: log });
+    // Always remove, even when `docker run` failed halfway. "No such container" is fine.
+    await runCapture("docker", ["rm", "-f", "-v", name], { cwd: ctx.root, logFile: log });
   }
 }
 

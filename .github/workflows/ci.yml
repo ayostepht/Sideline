@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -19,9 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Version comes from "packageManager" in package.json.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 12.8.1
 
       - uses: actions/setup-node@v4
         with:
@@ -33,6 +33,9 @@ jobs:
 
       - name: Typecheck, lint, format, unit tests
         run: pnpm verify
+
+      - name: Static scan (skips, any, lint disables, TODOs)
+        run: pnpm gate --only=U4
 
       - name: Unit tests with coverage thresholds
         run: pnpm test:coverage

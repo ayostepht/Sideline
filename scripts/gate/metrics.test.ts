@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { summarizeCoverage } from "./coverage.js";
 import { median, summarizeLhrs } from "./lighthouse.js";
-import { summarizePlaywright } from "./playwright-json.js";
+import { evaluatePlaywright, summarizePlaywright } from "./playwright-json.js";
 import { parsePreviousReport } from "./report.js";
 import { compareWarnings, countEslintMessages } from "./warnings.js";
 
@@ -116,5 +116,26 @@ describe("lighthouse summary", () => {
     });
     expect(median([])).toBeUndefined();
     expect(median([1, 3])).toBe(2);
+  });
+});
+
+describe("evaluatePlaywright (UI1/UI2)", () => {
+  const all = ["desktop-chromium", "mobile-iphone", "mobile-pixel"];
+  it("accepts a full run with nothing skipped", () => {
+    expect(evaluatePlaywright({ expected: 12, skipped: 0, projects: all })).toBeUndefined();
+  });
+  it("fails on zero tests", () => {
+    expect(evaluatePlaywright({ expected: 0, skipped: 0, projects: all })).toMatch(/zero tests/);
+  });
+  it("fails when any test was skipped, including fixme", () => {
+    expect(evaluatePlaywright({ expected: 12, skipped: 1, projects: all })).toMatch(/skipped 1/);
+  });
+  it("fails when a configured project did not run and names it", () => {
+    const reason = evaluatePlaywright({
+      expected: 8,
+      skipped: 0,
+      projects: ["desktop-chromium", "mobile-iphone"],
+    });
+    expect(reason).toMatch(/mobile-pixel/);
   });
 });

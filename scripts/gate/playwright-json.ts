@@ -83,3 +83,23 @@ export function summarizePlaywright(
   }
   return { ...parsed.data.stats, projects: [...projects].sort(), tags: tally };
 }
+
+/** The Playwright projects playwright.config.ts defines; all must run for UI1 and UI2. */
+export const REQUIRED_PLAYWRIGHT_PROJECTS = ["desktop-chromium", "mobile-iphone", "mobile-pixel"];
+
+/**
+ * Returns a failure reason when a passing Playwright run has not earned a PASS: no tests,
+ * any skipped or fixme test, or fewer than the required projects. Undefined means fine.
+ */
+export function evaluatePlaywright(
+  summary: Pick<PlaywrightSummary, "expected" | "skipped" | "projects">,
+  required: readonly string[] = REQUIRED_PLAYWRIGHT_PROJECTS,
+): string | undefined {
+  if (summary.expected === 0) return "playwright ran zero tests";
+  if (summary.skipped > 0)
+    return `playwright skipped ${summary.skipped} test(s); skipped or fixme tests are not allowed`;
+  const missing = required.filter((p) => !summary.projects.includes(p));
+  if (missing.length > 0)
+    return `playwright did not run project(s): ${missing.join(", ")} (ran: ${summary.projects.join(", ") || "none"})`;
+  return undefined;
+}
