@@ -3,7 +3,7 @@ import { expectNoSeriousA11yViolations } from "./helpers/axe";
 import { expectNoHorizontalScroll, PHONE_WIDTH } from "./helpers/no-hscroll";
 import { expectThemeApplied, themes, useTheme } from "./helpers/theme";
 import { settleAnimations } from "./helpers/settle";
-import { existingRoutes, notFoundRoutes, overlayRoutes } from "./routes";
+import { existingRoutes, overlayRoutes } from "./routes";
 
 /** UI2 (axe, both themes) and UI5 (no horizontal scroll at 390px) for every existing route. */
 for (const route of existingRoutes) {
@@ -28,26 +28,6 @@ for (const route of existingRoutes) {
       const response = await page.goto(route);
       expect(response?.ok()).toBe(true);
       if (overlayRoutes.has(route)) await expect(page.getByRole("dialog")).toBeVisible();
-      await expectNoHorizontalScroll(page, { width: PHONE_WIDTH });
-    });
-  });
-}
-
-for (const route of notFoundRoutes) {
-  test.describe(`not-found route ${route}`, () => {
-    for (const theme of themes) {
-      test(`UI2: ${route} has no serious axe violations (${theme})`, async ({ page }) => {
-        await useTheme(page, theme);
-        const response = await page.goto(route);
-        expect(response?.status()).toBe(404);
-        await expectThemeApplied(page, theme);
-        await expectNoSeriousA11yViolations(page, { theme });
-      });
-    }
-
-    test(`UI5: ${route} has no horizontal scroll at ${PHONE_WIDTH}px`, async ({ page }) => {
-      const response = await page.goto(route);
-      expect(response?.status()).toBe(404);
       await expectNoHorizontalScroll(page, { width: PHONE_WIDTH });
     });
   });

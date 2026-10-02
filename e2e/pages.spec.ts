@@ -23,6 +23,15 @@ test.describe("Home (PLAN 6.4 Home v1)", () => {
     await expect(mine).toContainText(DATA.myTeamName);
   });
 
+  // DEVTOOLS-1 (Steph, G2): dev tools are fine locally, never in the Docker build. This e2e server
+  // is the same standalone production build Docker ships, so the Next.js dev indicator must be gone.
+  test("DEVTOOLS-1: the Next.js dev indicator is absent on Home", async ({ page }) => {
+    await page.goto(L);
+    await expect(page.getByTestId("home-page")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open Next.js Dev Tools" })).toHaveCount(0);
+    await expect(page.locator("nextjs-portal")).toHaveCount(0);
+  });
+
   test("HOME-2: See full roster and See full standings link to the right pages", async ({
     page,
   }) => {
@@ -85,7 +94,7 @@ test.describe("League (PLAN 6.4 League)", () => {
     const hrefs: string[] = [];
     for (const link of await links.all()) hrefs.push((await link.getAttribute("href")) ?? "");
     expect(new Set(hrefs).size, "each team has a distinct link").toBe(DATA.teamCount);
-    for (const h of hrefs) expect(h).toMatch(new RegExp(`${L}/league/teams/\\d+$`));
+    for (const h of hrefs) expect(h).toMatch(new RegExp(`${L}/league/teams/\\d+(\\?week=\\d+)?$`));
     await links.first().click();
     await expect(page).toHaveURL(new RegExp(`${L}/league/teams/\\d+`));
     await expect(page.getByTestId("team-view")).toBeVisible();
@@ -130,13 +139,6 @@ test.describe("Team detail and My Team (PLAN 6.4)", () => {
     await expect(hit.getByTestId("player-row-highlight-tag")).toBeVisible();
   });
 
-  test("TEAM-3: an unknown roster id shows the not-found page", async ({ page }) => {
-    const res = await page.goto(`${L}/league/teams/9999`);
-    expect(res?.status()).toBe(404);
-    await expect(page.getByRole("heading", { name: "We could not find that page" })).toBeVisible();
-    await expect(page.getByTestId("team-view")).toHaveCount(0);
-  });
-
   test("MYTEAM-1: My Team shows the stored user's team and matches that roster's page", async ({
     page,
   }) => {
@@ -155,27 +157,9 @@ test.describe("Team detail and My Team (PLAN 6.4)", () => {
     await expect(page.getByTestId("team-view")).toBeVisible();
     await expect(page.getByTestId("team-mine-badge")).toHaveCount(0);
   });
-
-  test("MYTEAM-3: My Team for an unknown league shows the not-found page (no soft 404)", async ({
-    page,
-  }) => {
-    const res = await page.goto(`/l/${DATA.unknownLeagueId}/team`);
-    expect(res?.status()).toBe(404);
-    await expect(page.getByRole("heading", { name: "We could not find that page" })).toBeVisible();
-    await expect(page.getByTestId("team-view")).toHaveCount(0);
-  });
 });
 
 test.describe("States (PLAN 6.5, ADR-009 item 2)", () => {
-  test("STATE-1: unknown league shows not-found with a working link", async ({ page }) => {
-    const res = await page.goto(`/l/${DATA.unknownLeagueId}`);
-    expect(res?.status()).toBe(404);
-    await expect(page.getByRole("heading", { name: "We could not find that page" })).toBeVisible();
-    await page.getByRole("link", { name: "Go home" }).click();
-    await expect(page).toHaveURL(new RegExp(`${L}$`));
-    await expect(page.getByTestId("home-page")).toBeVisible();
-  });
-
   test("STATE-2: section stubs (lineup, matchup, waivers, players) render inside the shell", async ({
     page,
   }) => {

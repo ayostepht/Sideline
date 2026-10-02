@@ -97,6 +97,9 @@ process.env["E2E_ONBOARDING_DATA_DIR"] = onboardingDir;
 const onboardingUrl = `http://${HOST}:${ONBOARDING_PORT}`;
 process.env["E2E_ONBOARDING_URL"] = onboardingUrl;
 
+const NOT_FOUND_SPEC = /not-found\.spec\.ts/;
+const MAIN_PROJECTS = ["desktop-chromium", "mobile-iphone", "mobile-pixel"];
+
 export default defineConfig({
   testDir: "./e2e",
   testMatch: "**/*.spec.ts",
@@ -114,17 +117,45 @@ export default defineConfig({
     {
       name: "desktop-chromium",
       use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
+      testIgnore: NOT_FOUND_SPEC,
     },
     {
       name: "mobile-iphone",
       use: { ...devices["iPhone 13"] },
       // The first-run flow changes shared onboarding-server state; it runs on desktop only.
-      testIgnore: /onboarding-flow\.spec\.ts/,
+      testIgnore: [/onboarding-flow\.spec\.ts/, NOT_FOUND_SPEC],
     },
     {
       name: "mobile-pixel",
       use: { ...devices["Pixel 7"] },
-      testIgnore: /onboarding-flow\.spec\.ts/,
+      testIgnore: [/onboarding-flow\.spec\.ts/, NOT_FOUND_SPEC],
+    },
+    // Not-found pages (Steph's G2 decision, option c; root cause in PROGRESS backlog "TEAM-3
+    // flaky e2e test"): they run only after the whole main suite has finished, one project at
+    // a time, so nothing loads the server beside them. Assertions are unchanged.
+    {
+      name: "desktop-chromium-notfound",
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } },
+      testMatch: NOT_FOUND_SPEC,
+      // One worker runs this file top to bottom; repeats and files never overlap.
+      fullyParallel: false,
+      dependencies: MAIN_PROJECTS,
+    },
+    {
+      name: "mobile-iphone-notfound",
+      use: { ...devices["iPhone 13"] },
+      testMatch: NOT_FOUND_SPEC,
+      // One worker runs this file top to bottom; repeats and files never overlap.
+      fullyParallel: false,
+      dependencies: ["desktop-chromium-notfound"],
+    },
+    {
+      name: "mobile-pixel-notfound",
+      use: { ...devices["Pixel 7"] },
+      testMatch: NOT_FOUND_SPEC,
+      // One worker runs this file top to bottom; repeats and files never overlap.
+      fullyParallel: false,
+      dependencies: ["mobile-iphone-notfound"],
     },
   ],
   webServer: [
