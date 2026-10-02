@@ -14,16 +14,24 @@
 
 ## Resume point (read this first after /clear or a new session)
 
-Updated: 2026-10-02, after commit f759d28 (T1.4b). The orchestrator rewrites this section after every commit.
+Updated: 2026-10-02, after the Batch B review (fix in progress). The orchestrator rewrites this section after every commit.
 
 - **Branch:** `phase/1-data`. Plan: ADR-005 (approved by Steph with changes); nflverse facts: ADR-006. Phase 1 task table below.
 - **Committed and verified:**
   - B0, T1.0, T1.1 (plus fix), T1.2a (plus fix), T1.4a, T1.3a, T1.2b, T1.4b.
   - Batch A and B work is done.
   - Reviews saved: `docs/reviews/2026-10-02-p1-batchA-part1-code.md` and `-part2-code.md`.
-- **In flight:** the code review of Batch B (code-reviewer, read-only, commits 195826e (T1.3a), 38ee8a4 (T1.2b) and f759d28 (T1.4b)), to be saved as `docs/reviews/2026-10-02-p1-batchB-code.md`. If interrupted, re-run it; nothing to clean up.
+- **Batch B review saved:** `docs/reviews/2026-10-02-p1-batchB-code.md`, CHANGES REQUIRED with 3 Major findings, all in `packages/db`.
+- **In flight:** T1.3a-fix (backend-engineer, `packages/db/**` only):
+  - **M1:** `rosters.waiver_position`; `waiver_budget_used` becomes real.
+  - **M2:** `leagues.total_rosters`.
+  - **M3:** `reapStale` for requests and runs stuck in `running`.
+  - **m1:** unique lease holder ids.
+  - **n1:** duplicate import.
+
+  If interrupted, check `git status` under `packages/db` and verify against those findings, or discard and re-dispatch. The 0000 migration may be regenerated, since no persistent DB exists yet.
 - **Next steps, in order:**
-  1. Save the Batch B review. Fix Blocker and Major findings (send each back to the owning agent with a narrowed brief); Minor findings go to the backlog.
+  1. Verify and commit T1.3a-fix. Then Batch C.
   2. Batch C, three in parallel:
      - T1.3b (backend-engineer, `packages/db`): idempotent upserts counting real changes only; projection snapshot upsert (only when fetched_at is before kickoff); `http_cache` EtagStore; `computed_cache`; read helpers for health and sync status.
      - T1.5a (sleeper-data-engineer, `apps/worker`):
@@ -80,6 +88,7 @@ Updated: 2026-10-02, after commit f759d28 (T1.4b). The orchestrator rewrites thi
 | T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | Done (agent hit the session limit after finishing; orchestrator verified; 712 non-test lines, mostly schemas, accepted) | 1 | 38ee8a4 |
 | T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Done | 1 | 195826e |
 | T1.4b | nflverse provider | sleeper-data-engineer | B | Done (attempt 1 stopped at pause before writing; attempt 2 delivered; 693 non-test lines across 7 files, accepted) | 2 | f759d28 |
+| T1.3a-fix | Batch B review M1-M3, m1, n1 (waiver_position, total_rosters, reapStale, unique lease holders) | backend-engineer | B-fix | In progress | 1 | |
 | T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Not started | 0 | |
 | T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Not started | 0 | |
 | T1.6 | Health, sync status, sync run API | backend-engineer | C | Not started | 0 | |
@@ -122,6 +131,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 - T1.8 (devops): declare zod and tsx in packages/db (imported/used but resolved via root hoisting); bundle `packages/db/drizzle/` migrations into the image or set `SIDELINE_MIGRATIONS_DIR`. `cli/migrate.ts` has no unit test (covered by the CLI run; db total 91.6%).
 - T1.4a review m6/m8 (sleeper-data-engineer): nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, root from import.meta.url, write-then-swap; label 14f join rates as spike measurements or add `--report`.
 - T1.5c: compute the ADR-002 fallback kickoff when nflverse gametime is missing (provider returns kickoffUtc null, kickoffApproximate true); pass PlayerRef.gsisId as stored. getUsage re-parses cached files each call (fine at this size).
+- Batch B review (docs/reviews/2026-10-02-p1-batchB-code.md): m2, m3, m7 providers cache meta zod, guarded/atomic cache writes, season_type filter (sleeper-data-engineer); m4 log loud position-drop counts (T1.5b); m5 stats rows without gp are did-not-play (T3.1); m6 document starters "0" = empty slot in shared (T1.3b).
 - msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
 
 ## Questions for Steph
