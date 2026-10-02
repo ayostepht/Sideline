@@ -54,6 +54,8 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T2.6d-test | MYTEAM-3 e2e coverage for the My Team 404 fix | qa-engineer | G | Done (30/30 at repeat-each=10, orchestrator-verified) | 1 | 7e00c00 |
 | G2-M1 | G2 code review M1: block cross-origin and non-JSON writes on mutating API routes | backend-engineer | G2 | Done (verify 721, integration 23; 1-line orchestrator fix to an integration test request header) | 1 | 1aaa95d |
 | G2-B1 | Checkpoint bug: worker resolves sleeper_user_id when identity was env-seeded ("doesn't know which team is mine") | sleeper-data-engineer | G2 | Done (verify 728, integration 23; full gate re-run pending, batched with other checkpoint fixes) | 1 | b7aa20a |
+| T2.7a | Visual identity part 1 (ADR-011): tokens, Inter, radius, primitives, gallery swatches | frontend-engineer | G2 | In progress | 1 | |
+| T2.7b | Visual identity part 2: page density and layout | frontend-engineer | G2 | Planned (after T2.7a) | 0 | |
 | G2-reviews | Batch F code and UX review (closeout) | code-reviewer, ux-reviewer | G | Done (code: 1 Major found and fixed same session, see T2.6d-fix; UX: APPROVE, no Blocker/Major) | 1 | see docs/reviews/2026-10-02-p2-batchF2-{code,ux}.md |
 | G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
 

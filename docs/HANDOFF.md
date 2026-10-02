@@ -20,6 +20,7 @@ Last updated: 2026-10-02, G2 automated checks PASS (gate re-run 11/11 after M1 f
 
 ## 3. In flight
 
+- T2.7a (frontend-engineer): visual identity per ADR-011 (tokens, Inter, radius, primitives, gallery swatches). Uncommitted edits in `apps/web/app/globals.css`, `app/layout.tsx`, `components/`, `app/dev/` are this task. Next: T2.7b page-level density and layout (pages under `app/l/**`, `app/onboarding/**`), then e2e, `pnpm screens`, ux-reviewer, retake G2 screenshots, full gate, show Steph.
 - G2-B1 done and committed (verify 728, integration 23). Full gate re-run still owed: run it once Steph's dev servers are off port 3000, batched with any other checkpoint fixes, then add B1 to G2.md.
 - Waiting on Steph's replies to the G2 questions (`docs/gates/G2.md`, Human checkpoint). Do not start Phase 3.
 
