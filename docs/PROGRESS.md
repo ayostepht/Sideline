@@ -14,27 +14,27 @@
 
 ## Resume point (read this first after /clear or a new session)
 
-Updated: 2026-10-02, after commit 38ee8a4 (T1.2b). Resumed after the usage pause. The orchestrator rewrites this section after every commit.
+Updated: 2026-10-02, after commit f759d28 (T1.4b). The orchestrator rewrites this section after every commit.
 
 - **Branch:** `phase/1-data`. Plan: ADR-005 (approved by Steph with changes); nflverse facts: ADR-006. Phase 1 task table below.
-- **Committed and verified:** B0, T1.0, T1.1 (+fix), T1.2a (+fix), T1.4a, T1.3a. Reviews saved: `docs/reviews/2026-10-02-p1-batchA-part1-code.md` (fixes applied) and `-part2-code.md` (T1.4a, APPROVE; m1/m2 fixed; m3-m5, n1 go into the T1.4b brief; m6, m8 in backlog).
-- **T1.2b committed (38ee8a4)** after the session limit cut the agent off at its final step. The orchestrator verified the acceptance criteria.
-- **In flight:** T1.4b (nflverse provider, sleeper-data-engineer, re-dispatched 2026-10-02 after the pause), writing `packages/providers/src/**` only. If interrupted, any files beyond the stub `index.ts`/`index.test.ts` are partial: verify against the essentials below, or discard (`git checkout -- packages/providers && git clean -fd packages/providers/src`) and re-dispatch.
-- **T1.4b brief essentials:**
-  - Factory `createNflverseProvider({ enabled, dataDir, fetch, now, maxAgeMs })`. Results are typed and the provider never throws.
-  - Disk cache in `DATA_DIR/cache/nflverse` with conditional GET, temp-file-then-rename writes, stale-if-error and a 30 s timeout.
-  - Zod row validation with BOM strip; ragged rows are rejected and counted.
-  - Team codes: LA maps to LAR.
-  - Kickoff converted from America/New_York to UTC with range validation and DST edge tests.
-  - `impliedTotals` (home = total/2 + spread/2) and bye weeks.
-  - Player join order: trimmed gsis, then NFD-normalized name plus team with position tiebreak, then an alias table. Ambiguous candidates get no match plus a warning.
-  - Carry share computed from team totals; `rzTouches` is null.
-  - Providers line coverage at least 85%.
-  - Acceptance examples are in api-notes section 14.
+- **Committed and verified:**
+  - B0, T1.0, T1.1 (plus fix), T1.2a (plus fix), T1.4a, T1.3a, T1.2b, T1.4b.
+  - Batch A and B work is done.
+  - Reviews saved: `docs/reviews/2026-10-02-p1-batchA-part1-code.md` and `-part2-code.md`.
+- **In flight:** the code review of Batch B (code-reviewer, read-only, diff `37f1bde..f759d28` covering T1.3a, T1.2b and T1.4b), to be saved as `docs/reviews/2026-10-02-p1-batchB-code.md`. If interrupted, re-run it; nothing to clean up.
 - **Next steps, in order:**
-  1. Verify and commit T1.4b.
-  2. Code review of Batch B (T1.2b, T1.3a, T1.4b); fix Blocker and Major findings.
-  3. Batch C: T1.3b, T1.5a, T1.6. Then batches D, E, F and the G1 gate, per the task table and ADR-005.
+  1. Save the Batch B review. Fix Blocker and Major findings (send each back to the owning agent with a narrowed brief); Minor findings go to the backlog.
+  2. Batch C, three in parallel:
+     - T1.3b (backend-engineer, `packages/db`): idempotent upserts counting real changes only; projection snapshot upsert (only when fetched_at is before kickoff); `http_cache` EtagStore; `computed_cache`; read helpers for health and sync status.
+     - T1.5a (sleeper-data-engineer, `apps/worker`):
+       - croner scheduler with PLAN 3.1 cadences and `SYNC_*_CRON` overrides;
+       - job runner writing `sync_runs` that never crashes the process;
+       - heartbeat and the `sync_requests` poller;
+       - game windows from the `schedule` table with the ADR-002 fallback;
+       - the `pnpm run sync --once [--job]` CLI: it enqueues to a live worker and waits, runs directly when no worker is alive, and holds the renewed lease (ADR-005 item 3);
+       - one shared `RateLimiter`.
+     - T1.6 (backend-engineer, `apps/web/app/api` plus `apps/web/lib/server`): health per ADR-005 item 6 (update the existing route test), sync status, `POST /api/sync/run` (queues a request, dedupes, at most 1 per job per 60 s, else 429 with Retry-After); thin handlers; temp-SQLite tests.
+  3. Batches D (T1.5b, T1.7a, T1.8), E (T1.5c), F (T1.7b), then the G1 gate, per the task table, ADR-005 and the backlog notes tagged T1.5b, T1.7a and T1.8.
 - **Every brief carries:**
   - the Node 24 PATH prefix;
   - identifiers only from `.env` (ADR-000);
@@ -42,7 +42,8 @@ Updated: 2026-10-02, after commit 38ee8a4 (T1.2b). Resumed after the usage pause
   - no `.skip` and no weakened thresholds;
   - only devops changes dependencies (ADR-005 item 15);
   - report, don't fix, failures in other agents' paths;
-  - `pnpm run sync`, not `pnpm sync`.
+  - `pnpm run sync`, not `pnpm sync`;
+  - work efficiently and keep the report short (Steph's token budget is limited).
 - **Before every commit:**
   - `pnpm verify`;
   - an identifier scan of the staged diff against `.env`;
@@ -78,7 +79,7 @@ Updated: 2026-10-02, after commit 38ee8a4 (T1.2b). Resumed after the usage pause
 | T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Done | 1 | d5b2200 |
 | T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | Done (agent hit the session limit after finishing; orchestrator verified; 712 non-test lines, mostly schemas, accepted) | 1 | 38ee8a4 |
 | T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Done | 1 | 195826e |
-| T1.4b | nflverse provider | sleeper-data-engineer | B | In progress (attempt 1 stopped at pause before writing anything) | 1 | |
+| T1.4b | nflverse provider | sleeper-data-engineer | B | Done (attempt 1 stopped at pause before writing; attempt 2 delivered; 693 non-test lines across 7 files, accepted) | 2 | f759d28 |
 | T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Not started | 0 | |
 | T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Not started | 0 | |
 | T1.6 | Health, sync status, sync run API | backend-engineer | C | Not started | 0 | |
@@ -120,6 +121,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 - P1: nflverse play-by-play for red-zone touches (TREND-2), ADR-006 item 6.
 - T1.8 (devops): declare zod and tsx in packages/db (imported/used but resolved via root hoisting); bundle `packages/db/drizzle/` migrations into the image or set `SIDELINE_MIGRATIONS_DIR`. `cli/migrate.ts` has no unit test (covered by the CLI run; db total 91.6%).
 - T1.4a review m6/m8 (sleeper-data-engineer): nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, root from import.meta.url, write-then-swap; label 14f join rates as spike measurements or add `--report`.
+- T1.5c: compute the ADR-002 fallback kickoff when nflverse gametime is missing (provider returns kickoffUtc null, kickoffApproximate true); pass PlayerRef.gsisId as stored. getUsage re-parses cached files each call (fine at this size).
 - msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
 
 ## Questions for Steph
