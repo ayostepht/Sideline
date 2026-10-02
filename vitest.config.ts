@@ -54,7 +54,12 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text-summary", "json-summary", "lcov"],
       reportsDirectory: "./coverage",
-      include: ["apps/*/src/**/*.ts", "apps/web/lib/server/**/*.ts", "packages/*/src/**/*.ts"],
+      include: [
+        "apps/*/src/**/*.ts",
+        "apps/web/lib/server/**/*.ts",
+        "apps/web/app/api/**/*.ts",
+        "packages/*/src/**/*.ts",
+      ],
       exclude: ["**/*.test.ts", "**/*.d.ts", "**/node_modules/**"],
       thresholds: {
         "packages/core/**": { lines: 90, branches: 85 },
@@ -62,6 +67,8 @@ export default defineConfig({
         "packages/providers/**": { lines: 85 },
         "packages/db/**": { lines: 75 },
         "apps/web/lib/server/**": { lines: 75 },
+        "apps/web/app/api/**": { lines: 75 },
+        "apps/worker/**": { lines: 75 },
       },
     },
   },

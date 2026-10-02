@@ -111,3 +111,29 @@ Date: 2026-10-01
 **Alternatives considered:** comparing against the device viewport width from the Playwright project (works, but duplicates config and breaks on zoomed layouts).
 
 **Consequences:** any script that checks UI5 (including the T0.5 gate script) must use `e2e/helpers/no-hscroll.ts` or the same formula.
+
+## ADR-005: Phase 1 plan decisions (data layer and sync)
+
+Date: 2026-10-02
+
+**Decision**
+
+1. **Task splits for the 400-line target.** T1.2, T1.3, T1.4, T1.5 and T1.7 are split into lettered subtasks. T1.0 (dependency preinstall, devops-engineer) and T1.8 (Docker and build with SQLite, devops-engineer) are added. PLAN.md section 9 is amended.
+2. **Contract placement.** `packages/shared` holds domain types, our API DTOs (health, sync status, sync run request), sync job names, the `Reason` type and the zod env config schema (PLAN 4.4). `packages/sleeper` holds raw response schemas plus pure mappers from raw responses to shared domain types.
+3. **One Sleeper caller, enforced.** The web process never calls Sleeper in Phase 1; `POST /api/sync/run` queues a `sync_requests` row that the worker polls. `pnpm sync --once` checks the worker heartbeat: with a live worker it enqueues requests and waits for them; only with no live worker does it run jobs itself. A sync lease in the DB (holder plus expiry, taken atomically) prevents overlapping runs between CLI runs and the worker. The holder renews the lease on a timer well inside the expiry while jobs run, and stops before the next job if a renewal finds the lease lost, so slow runs (including the 2025 backfill) can't lose it mid-job. Phase 2 onboarding (username lookup from web) gets its own decision in the T2.2 brief.
+4. **Data model additions to PLAN 4.5:** `player_week_projection_snapshots` (last fetch before each player's kickoff, ADR-002 item 1), `nfl_state`, `http_cache` for ETags (not used for `/players/nfl`), `sync_requests`, and `app_settings` keys for the worker heartbeat, the sync lease and the last `/players/nfl` fetch (the once-per-day guard survives restarts).
+5. **Idempotent upserts count real changes only** (`ON CONFLICT DO UPDATE ... WHERE` a column differs), so a second identical sync reports `rows_changed = 0`.
+6. **Health semantics.** `/api/health` returns 200 with `status` `ok` or `degraded`, a DB check, worker heartbeat state (`ok`, `stale`, `never`) and the last sync summary; 503 only when SQLite can't be opened or queried. A missing worker or unmigrated schema is `degraded`. The web process never runs migrations. Revisit in T4.3 once the supervisor exists (a heartbeat stale beyond a threshold should probably fail the Docker healthcheck).
+7. **`db:seed:fixtures` moves from T1.3 to T1.5c.** It runs the real worker sync against a fixture-backed fetch, so mapping logic is not duplicated.
+8. **Coverage (closes G0 review m4).** Route handlers stay thin and logic lives in `apps/web/lib/server`. `apps/web/app/api/**` and `apps/worker/**` are added to coverage at 75% lines. PLAN 10.5 and `vitest.config.ts` amended.
+9. **Ownership extensions.** ADR-000 item 5 extends to `tests/fixtures/nflverse/` (written by the sleeper-data-engineer recorder). `apps/web/next.config.ts` belongs to devops-engineer.
+10. **Dependency installs.** Only T1.0 runs `pnpm add` in Phase 1; other agents report missing dependencies.
+11. **Live API budget.** No Sleeper calls during development. At G1: `pnpm test:contract` (about 20 calls, `/players/nfl` excluded unless `CONTRACT_PLAYERS=1`) and one orchestrator live `pnpm sync --once` into gitignored `./data` (the day's single `/players/nfl` fetch).
+12. **Projection filter sanity.** T1.2b documents the real-row rule separately for stats and projections (checked against fixtures), tests that week 5 projections are non-empty after filtering, and reports dropped-row counts by reason. Bye-week players are handled through the schedule, never silently dropped.
+13. **Red-zone touches.** If nflverse needs play-by-play for them, TREND-2 ships without red-zone touches (nullable column) and play-by-play goes to the P1 backlog.
+
+**Context:** Phase 1 planning on 2026-10-02, approved by Steph with changes (items 3, 6, 12, 13).
+
+**Alternatives considered:** web calling Sleeper directly with its own limiter (rejected: two limiters can't enforce one budget); a separate seed script mapping fixtures to rows (rejected: duplicates the worker's mapping); 503 on a missing worker heartbeat (deferred to T4.3: no worker runs in the container until then).
+
+**Consequences:** the worker is the single gate to Sleeper. Health stays green in the Phase 1 to 3 container. The idempotency check measures real changes.

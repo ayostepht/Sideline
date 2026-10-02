@@ -5,7 +5,7 @@
 | Phase | Gate | Branch | Status |
 |---|---|---|---|
 | 0 Bootstrap and API spike | G0 | `phase/0-bootstrap` (merged) | Done, G0 PASS 2026-10-01 |
-| 1 Data layer and sync | G1 | | Not started |
+| 1 Data layer and sync | G1 | `phase/1-data` | In progress (plan approved 2026-10-02, ADR-005) |
 | 2 App shell and league views | G2 (human) | | Not started |
 | 3 Scoring, projections, optimizer | G3 (human) | | Not started |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | | Not started |
@@ -28,9 +28,29 @@
 | T0.3b-fix | Batch C review fixes (m8-m10, m12) | sleeper-data-engineer | C-fix | Done (restarted once after the same interruption) | 1 | 5f4a760 |
 | G0 | Gate | qa-engineer, code-reviewer, orchestrator | E | PASS | 1 | see `docs/gates/G0.md`, tag `gate-G0` |
 
-## Next up: Phase 1 (data layer and sync)
+## Phase 1 tasks
 
-Resume point after `/clear`: branch `phase/1-data` from `main` (at tag `gate-G0`). Batch A: T1.1 shared types/DTOs (backend-engineer) alone, since contracts come first. Batch B: T1.2 sleeper client, T1.3 db schema, T1.4 nflverse provider (all depend on T1.1). Then T1.5 worker plus T1.6 health/sync API, then T1.7 integration tests and the G1 gate. Phase 1 briefs must carry over ADR-002 (projection placeholder rows and position leak, ETag/304, projection snapshots by fetch time, kickoff times from nflverse, 2025 backfill), the T1.3 `allowBuilds` note for better-sqlite3, and the T1.6 coverage decision for `apps/web/app/api`.
+| ID | Title | Agent | Batch | Status | Attempts | Commit |
+|---|---|---|---|---|---|---|
+| T1.B0 | Branch, ADR-005, PLAN amendments, coverage config | orchestrator | 0 | Done | 1 | |
+| T1.0 | Dependency preinstall, workspace links, script wiring, next.config | devops-engineer | A0 | Not started | 0 | |
+| T1.1 | Shared domain types, DTOs, env config | backend-engineer | A | Not started | 0 | |
+| T1.2a | Sleeper HTTP core (limiter, retries, errors, ETag) | sleeper-data-engineer | A | Not started | 0 | |
+| T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Not started | 0 | |
+| T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | Not started | 0 | |
+| T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Not started | 0 | |
+| T1.4b | nflverse provider | sleeper-data-engineer | B | Not started | 0 | |
+| T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Not started | 0 | |
+| T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Not started | 0 | |
+| T1.6 | Health, sync status, sync run API | backend-engineer | C | Not started | 0 | |
+| T1.5b | Sleeper sync jobs and 2025 backfill | sleeper-data-engineer | D | Not started | 0 | |
+| T1.7a | Integration and contract harness | qa-engineer | D | Not started | 0 | |
+| T1.8 | Docker and build with SQLite | devops-engineer | D | Not started | 0 | |
+| T1.5c | nflverse job, derived hook, db:seed:fixtures | sleeper-data-engineer | E | Not started | 0 | |
+| T1.7b | Integration suites | qa-engineer | F | Not started | 0 | |
+| G1 | Gate | qa-engineer, code-reviewer, orchestrator | G | Not started | 0 | |
+
+Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live worker; renewed DB lease), projection real-row rule documented per endpoint with a week 5 non-empty test and bye handling via schedule, red-zone touches dropped to P1 if they need play-by-play.
 
 ## Standing rules for briefs
 
@@ -40,12 +60,13 @@ Resume point after `/clear`: branch `phase/1-data` from `main` (at tag `gate-G0`
 
 ## Backlog (Minor findings and follow-ups)
 
-- T1.3: add `better-sqlite3: true` under `allowBuilds` in pnpm-workspace.yaml (pnpm 12 blocks native builds by default).
+- T1.0 (was T1.3): add `better-sqlite3: true` under `allowBuilds` in pnpm-workspace.yaml (pnpm 12 blocks native builds by default).
+- T4.3: revisit health semantics once the supervisor exists; a worker heartbeat stale beyond a threshold should probably fail the Docker healthcheck (ADR-005 item 6).
 - ADR-001: TypeScript pinned to 6.0.3 (not 7.x) because typescript-eslint 8.71 requires `<6.1`. Revisit when typescript-eslint supports TS 7.
 - Image size: the gate measures `docker image inspect` Size (93.3 MB arm64, 93.2 MB amd64 for web alone; HOST-5 limit 400 MB). OrbStack's "disk usage" column (about 400 MB) is not the measure.
 - Route JS headroom: the placeholder page already ships about 132 KB of 200 KB gzipped script. Frontend briefs (T2.1+) must lazy-load charts and watch bundle size.
 - Lighthouse best-practices is 0.96 against a 0.95 floor on the placeholder page.
-- Review m4: coverage does not measure `apps/web/app/api/**`. Decide in the T1.6 brief (keep handlers thin and test via lib/server, or add api to the 75% group).
+- Review m4: resolved in ADR-005 item 8 (api and worker at 75% lines).
 - Playwright `--project` is variadic: put the spec path before `--project`.
 - tests/fixtures/README.md should list the extra manifest keys the recorder writes (currentWeek, futureMatchupWeeks, projectionWeeks, statsWeeks, syntheticLeagueId, sanitizerVersion, trimming). Owner: qa-engineer.
 - `pnpm fixtures:check` needs the gitignored raw cache or live API, so it cannot run in CI. The orchestrator runs it plus an independent live-fetched identifier scan before every commit and at every gate.
