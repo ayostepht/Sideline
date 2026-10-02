@@ -21,11 +21,10 @@ Last updated: 2026-10-02, Phase 2 Batch F (T2.6a and T2.6b done; T2.6c and code 
 ## 3. In flight (Batch F)
 
 - T2.6c (qa-engineer): `e2e/**`, `tests/README.md`. Updates HOME-1, LEAGUE-2, SET-3 for intended UI changes; adds week double-click, 404 status, placeholder links, More sheet current item, Search result tag.
-- Batch F code review (code-reviewer, read-only) on `git diff 976a355..d5d52f4 -- apps/web`. Save to `docs/reviews/2026-10-02-p2-batchF-code.md`.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit T2.6c; save the Batch F code review and route Blocker/Major. Then a ux-reviewer recheck (also capture not-found, More sheet open).
+1. Verify and commit T2.6c. Then T2.6d (frontend): Batch F review M1, m1 to m5, n1 (docs/reviews/2026-10-02-p2-batchF-code.md); it may need small e2e follow-ups. Then a ux-reviewer recheck (also capture not-found, More sheet open).
 2. G2 gate: `pnpm gate --amd64`; code-reviewer on `git diff main...phase/2-shell`; full coverage run; live onboarding by the orchestrator (about 22 calls); LAN check (`pnpm dev:lan` plus a request with a non-localhost Origin); archive 390 and 1280 px screenshots from the seeded dir to `docs/gates/G2/screens/` after eyeballing each; write `docs/gates/G2.md`; stop for Steph with run instructions (LAN URL, `dev:lan` and worker commands, macOS firewall prompt) and questions.
 
 ## 5. Briefs

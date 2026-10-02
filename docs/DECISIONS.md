@@ -232,6 +232,10 @@ Date: 2026-10-02
 16. **My Team** is reachable from Home's roster card and the League page, and has its own entry in the desktop sidebar and the mobile More sheet. PLAN 6.3 amended.
 17. **Screenshot privacy.** The text identifier scan can't read images. Every committed or archived screenshot (`docs/gates/**`, `docs/reviews/**`) comes only from a fixture-seeded temp DATA_DIR. `scripts/screens` refuses `./data` and any DATA_DIR without the seeding step's marker, with unit tests. `pnpm screens` prints its DATA_DIR and the gate checks that line for UI4. ux-reviewer captures stay in gitignored `.screens/`. PLAN 10.2 UI4 amended.
 
+**Later additions**
+
+18. **Team detail has no loading boundary** (2026-10-02, T2.6b, Batch F review M1). A `loading.tsx` above a page makes Next stream a 200 before `notFound()` runs, so an unknown rosterId returned a soft 404. Loading boundaries live in route groups (`(main)` for Home, `league/(list)` for League) and team detail has none, so it returns a real 404. Other pages keep their own boundaries.
+
 **Context:** Phase 2 planning on 2026-10-02, approved by Steph with answers 14 to 17.
 
 **Alternatives considered:** the web calling `/user` and `/user/leagues` with its own limiter (rejected: two limiters, against ADR-005 item 3); pulling the T4.3 supervisor forward so G2 runs on Unraid (rejected by Steph in favor of local review); no My Team nav entry (Steph chose to add one).

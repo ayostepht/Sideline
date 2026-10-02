@@ -49,6 +49,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T2.6a | Fix round part 1: one freshness pattern with Sync now, placeholders' next action, More sheet current item, dark pill contrast, week double-click (T2.4 M1, m6, m7, n1; T2.5b bug 1) | frontend-engineer | F | Done (orchestrator: verify 693, e2e 273; agent: a11y 102; `/l/[leagueId]` 162,999 B, settings 168,871 B, gallery 193,280 B; Sync now lazy-loaded) | 1 | 05d379e |
 | T2.6b | Fix round part 2: Home issues headline, team detail rows and highlight, League mobile, Settings sync summary, onboarding done view, wide table, soft 404 (T2.4 m1 to m5, n2; T2.5b bug 2) | frontend-engineer | F | Done (orchestrator: verify 693; agent: a11y 102, 8 e2e failures from intended UI changes go to T2.6c; unknown rosterId now 404 via route groups `(main)` and `league/(list)`; settings 168,998 B) | 1 | d5d52f4 |
 | T2.6c | E2E updates for intended UI changes plus tests for the Batch F fixes | qa-engineer | F | In progress | 1 | |
+| T2.6d | Batch F review M1 (loading boundaries for Settings and stubs), m1 to m5, n1 | frontend-engineer | F | Not started (after T2.6c finishes building and running e2e) | 0 | |
 | G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
 
 Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locally with phone over the LAN; My Team nav entry; screenshots only from a seeded temp DATA_DIR.
@@ -74,6 +75,7 @@ Remove an item when it is done; the archive keeps history.
 - `scripts/lib/seed.ts` may not forward `--no-identity`.
 - T2.6a: two-fast-clicks week path has no e2e (unit-tested `stepWeek`); Sync now banner at 390 and More sheet marker not yet seen in screenshots (Batch F UX recheck).
 - T2.6b: Home flagged-starters list and the bye badge never seen in a screenshot (fixture week 4 has no flagged starters); unit tests only. Team detail, Settings and stub pages no longer have a loading skeleton. `lib/client/api.ts` imports schemas from `app/onboarding/_components/schemas` (move later). Settings has about 5 KB of route JS headroom.
+- Batch F review m6 (docs/reviews/2026-10-02-p2-batchF-code.md): every StaleBanner renders Sync now (test id duplicates if two banners); Suspense fallback may shift layout.
 - T2.5b gaps: NAV-6 mocks the league-switch POST (real switch and "Still syncing" not exercised in e2e); stale and preseason states not in e2e (fixtures are fresh mid-season; unit tests cover them). Empty username submit shows no message (button disabled; accepted).
 
 ### Data and backend
