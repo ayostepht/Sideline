@@ -18,13 +18,15 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
-## 3. In flight
+## 3. In flight (Batch A, dispatched 2026-10-02, none verified or committed yet)
 
-Nothing.
+- T2.2a (backend-engineer): packages/shared, packages/db (DTOs, onboarding job type separate from SYNC_JOB_NAMES, params_json migration, identity and db-reads helpers).
+- T2.1a (frontend-engineer): apps/web/app (layout, globals.css, page, dev/gallery), apps/web/components, components.json, lib/client.
+- T2.0b (devops-engineer): scripts/screens*, scripts/lib, scripts/gate*, package.json scripts, next.config.ts (allowedDevOrigins), .env.example, docs/self-hosting.md.
 
 ## 4. Next steps (in order)
 
-1. Batch A: dispatch T2.1a (frontend-engineer), T2.2a (backend-engineer), T2.0b (devops-engineer) in parallel, then code-reviewer on A0+A.
+1. Batch A: verify and commit each of T2.2a, T2.1a, T2.0b as they report (one commit each), then code-reviewer on A0+A.
 2. Batches B to G per the PROGRESS Phase 2 table and ADR-009. G2 is a human gate: stop for Steph.
 
 ## 5. Standing rules for every brief
