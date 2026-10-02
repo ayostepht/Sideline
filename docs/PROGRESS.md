@@ -14,7 +14,7 @@
 
 ## Resume point (read this first after /clear or a new session)
 
-Updated: 2026-10-02, after commit d155036 (T1.3a-fix); Batch C dispatched.
+Updated: 2026-10-02, after commit 7995e8e (T1.6); Batch C done, review in flight.
 
 - **Branch:** `phase/1-data`. Plan: ADR-005 (approved by Steph with changes); nflverse facts: ADR-006. Phase 1 task table below.
 - **Committed and verified:**
@@ -28,15 +28,13 @@ Updated: 2026-10-02, after commit d155036 (T1.3a-fix); Batch C dispatched.
   - **T1.6** (backend-engineer, `apps/web/app/api/**`, `apps/web/lib/server/**`).
 
   If interrupted, `git status` shows each one's partial files by path. Verify each against its acceptance criteria in this file's "Batch C brief essentials", or discard that path (`git checkout -- <path> && git clean -fd <path>`) and re-dispatch.
-- **Batch C status:**
-  - T1.5a committed (45c4b9e). Jobs register in `apps/worker/src/jobs/index.ts` (`registeredJobs`); every Sleeper call goes through `ctx.limiter.acquire(ctx.counter)`.
-  - T1.6-build: `pnpm build` passes using webpack (Turbopack has no `.js` to `.ts` alias in Next 16.3.8; ADR-007). The standalone health route fails until `better-sqlite3` is a dependency of `apps/web`; the same devops agent is adding it (uncommitted `apps/web/next.config.ts`, `apps/web/package.json`, `pnpm-lock.yaml`).
-  - T1.3b committed (fd8023f).
-  - T1.6 delivered but not committed (`apps/web/app/api`, `apps/web/lib/server`; coverage 96.9%). It is blocked on two things:
-    - the T1.5a worker lint error, which T1.5a owns;
-    - `pnpm build` failing because Turbopack can't resolve `.js` imports in workspace TS packages. A devops fix, T1.6-build, is in flight in `apps/web/next.config.ts`.
-  - Commit T1.6 after the build passes.
-  - Open question for the Batch C review: the T1.6 staleness cadences (stats 1 h, projections 6 h, nflverse 24 h) must match the worker's cadences. Move one cadence table into `@sideline/shared`.
+- **Batch C committed:**
+  - T1.3b (fd8023f), T1.5a (45c4b9e), T1.6-build (34e0e78, webpack per ADR-007), T1.6 (7995e8e).
+  - Full `pnpm verify` is green (452 tests) and `pnpm build` passes.
+  - Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
+  - Coverage: api 100%, lib/server 97%, worker 83.8%, db 95%, providers 97.5%, sleeper 100%, shared 100%.
+- **In flight:** the Batch C code review (code-reviewer, read-only) of commits fd8023f, 45c4b9e, 34e0e78 and 7995e8e, to be saved as `docs/reviews/2026-10-02-p1-batchC-code.md`. If interrupted, re-run it.
+- **Known item for the review:** the T1.6 staleness cadences (`apps/web/lib/server/sync.ts` JOB_CADENCE_MS: projections 6 h) and the worker cadences (`apps/worker/src/schedule.ts`: projections hourly) must come from one table in `@sideline/shared`.
 - **Batch C brief essentials:**
   - **T1.3b:**
     - idempotent upserts that count real changes only;
@@ -65,7 +63,7 @@ Updated: 2026-10-02, after commit d155036 (T1.3a-fix); Batch C dispatched.
     - `pnpm build` passes;
     - api and `lib/server` coverage at least 75%.
 - **Next steps, in order:**
-  1. Verify and commit each Batch C task, then run the Batch C code review. Batch C briefs for reference:
+  1. Save the Batch C review; fix Blocker and Major findings plus the cadence-table unification. Then Batch D. Batch C briefs, kept for reference:
      - T1.3b (backend-engineer, `packages/db`): idempotent upserts counting real changes only; projection snapshot upsert (only when fetched_at is before kickoff); `http_cache` EtagStore; `computed_cache`; read helpers for health and sync status.
      - T1.5a (sleeper-data-engineer, `apps/worker`):
        - croner scheduler with PLAN 3.1 cadences and `SYNC_*_CRON` overrides;
@@ -124,7 +122,7 @@ Updated: 2026-10-02, after commit d155036 (T1.3a-fix); Batch C dispatched.
 | T1.3a-fix | Batch B review M1-M3, m1, n1 (waiver_position, total_rosters, reapStale, unique lease holders) | backend-engineer | B-fix | Done | 1 | d155036 |
 | T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Done (targeted checks; full verify pending T1.5a) | 1 | fd8023f |
 | T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Done (targeted checks; worker coverage 83.8%) | 1 | 45c4b9e |
-| T1.6 | Health, sync status, sync run API | backend-engineer | C | In progress | 1 | |
+| T1.6 | Health, sync status, sync run API | backend-engineer | C | Done (build fix T1.6-build by devops-engineer in 34e0e78) | 1 | 7995e8e |
 | T1.5b | Sleeper sync jobs and 2025 backfill | sleeper-data-engineer | D | Not started | 0 | |
 | T1.7a | Integration and contract harness | qa-engineer | D | Not started | 0 | |
 | T1.8 | Docker and build with SQLite | devops-engineer | D | Not started | 0 | |
