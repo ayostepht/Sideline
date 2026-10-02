@@ -118,10 +118,13 @@ export default defineConfig({
     {
       name: "mobile-iphone",
       use: { ...devices["iPhone 13"] },
+      // The first-run flow changes shared onboarding-server state; it runs on desktop only.
+      testIgnore: /onboarding-flow\.spec\.ts/,
     },
     {
       name: "mobile-pixel",
       use: { ...devices["Pixel 7"] },
+      testIgnore: /onboarding-flow\.spec\.ts/,
     },
   ],
   webServer: [

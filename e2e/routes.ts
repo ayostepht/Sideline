@@ -1,4 +1,4 @@
-import { FIXTURE } from "./helpers/servers";
+import { DATA, L } from "./helpers/data";
 
 /**
  * Central route list for the axe (UI2) and no-horizontal-scroll (UI5) specs.
@@ -6,6 +6,18 @@ import { FIXTURE } from "./helpers/servers";
  */
 export const existingRoutes: readonly string[] = [
   "/",
+  // Phase 2 pages for the seeded league (ADR-009 item 4).
+  L, // Home
+  `${L}/team`,
+  `${L}/league`,
+  `${L}/league/teams/${DATA.myRosterId}`,
+  `${L}/settings`,
+  `${L}/lineup`,
+  `${L}/matchup`,
+  `${L}/waivers`,
+  `${L}/players`,
+  // The seeded server has an active league, so onboarding opens on its done view.
+  "/onboarding",
   "/dev/gallery",
   // Real overlays render open only through these URLs (T2.1b); the spec waits for them to be visible.
   "/dev/gallery?open=why",
@@ -20,22 +32,5 @@ export const overlayRoutes: ReadonlyMap<string, "dialog"> = new Map([
   ["/dev/gallery?open=dialog", "dialog"],
 ]);
 
-const L = `/l/${FIXTURE.leagueId}`;
-
-/**
- * Phase 2 pages (ADR-009 item 4) for the seeded league. They do not exist yet.
- * T2.5b moves each page into `existingRoutes` as T2.3 lands it; until then they are not tested.
- * `/onboarding` is served by the onboarding server in some specs, but is listed here as a route.
- */
-export const phase2PageRoutes: readonly string[] = [
-  L, // Home
-  `${L}/team`,
-  `${L}/league`,
-  `${L}/league/teams/1`,
-  `${L}/settings`,
-  `${L}/lineup`,
-  `${L}/matchup`,
-  `${L}/waivers`,
-  `${L}/players`,
-  "/onboarding",
-];
+/** Routes that must answer 404 with the not-found page; axe and no-hscroll still apply. */
+export const notFoundRoutes: readonly string[] = [`/l/${DATA.unknownLeagueId}`];
