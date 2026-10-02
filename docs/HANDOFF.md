@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, after commit 08c4d7a (T1.7b). Batches D and E reviewed; Batch F committed; Batch F code review in flight.
+Last updated: 2026-10-02, after gate G1 PASS (14d4305), merged to `main` and tagged `gate-G1`. Phase 2 not started.
 
 ## 1. Resume in five steps
 
@@ -16,36 +16,19 @@ Last updated: 2026-10-02, after commit 08c4d7a (T1.7b). Batches D and E reviewed
 
 ## 2. Where things stand
 
-- **Phase:** 1, data layer and sync (gate G1). Plan approved by Steph with changes: ADR-005. nflverse facts: ADR-006. Webpack build: ADR-007.
-- **Done and committed:**
-  - B0, T1.0;
-  - T1.1, T1.2a, T1.3a (each plus its review fix);
-  - T1.4a, T1.2b, T1.4b, T1.3b, T1.5a;
-  - T1.6 plus the T1.6-build devops fix, and T1.6-fix (be35d5f, shared `SYNC_CADENCE_MS`);
-  - T1.5a-fix (4b021b2);
-  - Batch D: T1.8 (847c7e0), T1.7a (fe43bdd, root scripts 3091394), T1.5b (eeaf97d); review saved (9882a5d, 0 Blocker/Major, ADR-008).
-  - Batch E: T1.5c (8433f87), including Batch D fixes m1, m2, m3, m6, n1; review saved (dea0b78, 0 Blocker/Major).
-  - Batch F: T1.7b (08c4d7a), 17 new integration tests; `pnpm test:integration` 22 passed in under 1 s.
-
-  Commit ids are in the PROGRESS.md task table.
-- **Reviews:** saved in `docs/reviews/2026-10-02-p1-*`. Batch A to D findings are all fixed (Minor items in the PROGRESS backlog).
-- **Last full check:** `pnpm verify` green (503 tests); `db:seed:fixtures` twice into a temp DATA_DIR: exit 0, second run 0 rows changed, `pnpm test:coverage` thresholds pass (94% lines), `pnpm test:integration` 5 passed, container health verified. `pnpm build` passes. Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
+- **Phase 1 done.** G1 PASS on 2026-10-02 (`docs/gates/G1.md`): `pnpm gate --amd64` 10 of 10, live contract run once, live smoke sync into `./data` (third run 0 rows changed, `/players/nfl` once). Merged `phase/1-data` to `main` with `--no-ff`, tag `gate-G1`, no push.
+- **Baseline:** `pnpm verify` 505 unit tests; `pnpm test:integration` 22; e2e 33; coverage 94.7% lines.
+- **Local data:** `./data` (gitignored) holds a live-synced DB from 2026-10-02. The worker CLI does not load `.env`: run `set -a && . ./.env && set +a` first, and pass an absolute `DATA_DIR`.
+- **Backlog:** Minor review items and follow-ups are in PROGRESS.md. Notable for Phase 2: route JS headroom (132 of 200 KB on the placeholder), the league-job skip reason log, and the `degraded` sync status.
 
 ## 3. In flight
 
-| Task | Agent | Writes to | Done when |
-|---|---|---|---|
-| Batch F code review (`git show 08c4d7a`) | code-reviewer | nothing (read-only) | Report returned; save it as `docs/reviews/2026-10-02-p1-batchF-code.md`, then fix Blocker and Major findings before the G1 gate. If lost, re-dispatch the review. |
+Nothing.
 
 ## 4. Next steps (in order)
 
-1. **Batch F review fixes**: Blocker and Major findings, dispatched to qa-engineer.
-2. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
-   - `pnpm test:contract` run live once;
-   - the orchestrator live smoke: `pnpm run sync --once` into a gitignored `./data`, the day's single `/players/nfl` fetch, then a second run with near-zero changes;
-   - `pnpm fixtures:check` and an identifier scan;
-   - write `docs/gates/G1.md`, merge `--no-ff` to `main`, tag `gate-G1`, no push;
-   - then tell Steph it's a good moment to `/clear` before Phase 2.
+1. Tell Steph G1 passed and it is a good moment to `/clear`.
+2. **Phase 2 planning** (gate G2, human): create branch `phase/2-shell` from `main`. Break PLAN section 9 Phase 2 (T2.1 design system and shell, T2.2 server data functions and DTOs, and the rest) into tasks in PROGRESS.md. Contracts first: T2.2 shared DTOs before frontend pages fan out. Present the plan to Steph for approval before dispatching, as in Phase 1.
 
 ## 5. Standing rules for every brief
 
