@@ -22,7 +22,8 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 - Batch D code review saved (0d7b0d8): M1 browser vs server clock in first-sync, M2 ignores sync result, M3 unbounded poll.
 - T2.3b-fix (frontend-engineer): onboarding, settings, team pages (m9). M2, M3, minors. Waits for a follow-up message with M1.
-- T2.2d (backend-engineer): packages/db, apps/web/lib/server. Standalone migrated detection.
+- T2.2d done (7dc548f).
+- T2.2e (backend-engineer): apps/web/lib/server. `syncSince` on league selection.
 
 ## 4. Next steps (in order)
 

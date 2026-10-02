@@ -87,9 +87,9 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.3a-fix2 | Shell UX review M1 (768 layout, sidebar stays at 1024 per PLAN 6.3), M2 (desktop header title and week label), m1 to m4, n1 | frontend-engineer | C-fix | Done (orchestrator: verify 662, e2e 75; `/l/[leagueId]` 161,725 B) | 1 | 41fd0c1 |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Done (orchestrator: verify 676, e2e 75; /onboarding 154.6 KB, settings 164.3 KB) | 1 | 9490c57 |
 | T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Done (targeted checks; routes about 161.6 KB) | 1 | fbc6204 |
-| T2.2d | Standalone server detects migrations without SIDELINE_MIGRATIONS_DIR | backend-engineer | D-fix | In progress | 1 | |
+| T2.2d | Standalone server detects migrations without SIDELINE_MIGRATIONS_DIR | backend-engineer | D-fix | Done (503 not reproducible from the build checkout; root cause was a baked absolute path; now an embedded migrations manifest) | 1 | 7dc548f |
 | T2.3b-fix | Batch D review M2, M3, m1 to m9, n2 (M1 after T2.2e) | frontend-engineer | D-fix | In progress | 1 | |
-| T2.2e | `syncSince` on POST /api/onboarding/league (Batch D review M1, server side) | backend-engineer | D-fix | Not started | 0 | |
+| T2.2e | `syncSince` on POST /api/onboarding/league (Batch D review M1, server side) | backend-engineer | D-fix | In progress | 1 | |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
 | T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | Not started | 0 | |
 | T2.6 | Fix round | frontend-engineer | F | Not started | 0 | |
@@ -180,6 +180,8 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - T2.3c: Home team card, "You" row, Bye badge and highlight were never seen with a stored user (seeded DB has none); T2.5b should exercise them on the onboarding server after onboarding. Stale freshness text and StaleBanner show together (redundant; T2.4 to judge). Home issue count = starters Out, IR, PUP or on bye in the selected week. test ids listed in the T2.3c report: standings-*, home-*, team-*, no-team-*, league-rosters.
 
 - T2.3b: standalone/`next start` server reports `db.migrated: false` on a seeded DB unless `SIDELINE_MIGRATIONS_DIR` is set (bundled import.meta.url path); APIs behind withMigratedDb then answer 503. Docker sets the env var. Investigate in Batch E (backend, devops). Two `start-standalone.mjs` at once race on copying .next/static. No shared Input/Select component (native controls styled in route folders). 429 countdown wired but not exercised live.
+
+- T2.2d: every `db:generate` must update packages/db/src/migrations-manifest.ts (a journal-sync test fails otherwise); restate in backend briefs.
 
 ## Questions for Steph
 
