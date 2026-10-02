@@ -1,6 +1,6 @@
 {
   "name": "@sideline/worker",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "sync": "tsx src/cli/sync.ts",
     "start": "tsx src/main.ts",
-    "db:seed:fixtures": "tsx ../../scripts/not-implemented.ts T1.5c db:seed:fixtures"
+    "db:seed:fixtures": "tsx src/cli/seed-fixtures.ts"
   },
   "dependencies": {
     "@sideline/core": "workspace:*",

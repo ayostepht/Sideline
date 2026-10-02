@@ -59,8 +59,15 @@ export function playersJob(deps: SleeperJobDeps): Job {
       const res = await client.getPlayers(callOpts(ctx));
       const players = res.data.players.map(mapPlayer);
       warnOnPositionDrop(ctx, positionCounts(ctx.db), players);
-      const out = upsertPlayers(ctx.db, players, ctx.now().toISOString());
-      writePlayersFetchedAt(ctx.db, ctx.now());
+      // One transaction: a crash cannot leave players written without the once-a-day marker
+      // (or the marker without players). No network call happens inside it.
+      const out = ctx.db.sqlite
+        .transaction(() => {
+          const r = upsertPlayers(ctx.db, players, ctx.now().toISOString());
+          writePlayersFetchedAt(ctx.db, ctx.now());
+          return r;
+        })
+        .immediate();
       return { rowsChanged: out.rowsChanged, note: `${players.length} players` };
     },
   };
@@ -138,10 +145,12 @@ async function syncStats(
       continue;
     }
     const wctx = { season, week, seasonType };
-    rowsChanged += upsertPlayerWeekStats(
-      ctx.db,
-      res.rows.map((r) => mapStats(r, wctx)),
-    ).rowsChanged;
+    const mapped = res.rows.map((r) => mapStats(r, wctx));
+    // One transaction per week (fetched above, so no lock is held across the network): a failure
+    // part-way leaves no rows for the week and the next run refetches it.
+    rowsChanged += ctx.db.sqlite
+      .transaction(() => upsertPlayerWeekStats(ctx.db, mapped).rowsChanged)
+      .immediate();
   }
   return {
     rowsChanged,
@@ -178,16 +187,21 @@ export function projectionsJob(deps: SleeperJobDeps): Job {
         }
         const fetchedAt = ctx.now().toISOString();
         const rows = res.rows.map((r) => mapProjection(r, { season, week, seasonType, fetchedAt }));
-        rowsChanged += upsertPlayerWeekProjections(ctx.db, rows).rowsChanged;
         // Pregame snapshot: only rows fetched strictly before the player's team kicks off.
         const teams = new Map<string, string | null>(res.rows.map((r) => [r.player_id, teamOf(r)]));
-        const kickoffs = kickoffsByTeam(ctx.db, season, week);
-        const snap = upsertProjectionSnapshots(ctx.db, rows, (playerId) => {
-          const team = teams.get(playerId);
-          return team ? (kickoffs.get(scheduleTeamCode(team)) ?? null) : null;
-        });
-        rowsChanged += snap.rowsChanged;
-        snapshotsSkipped += snap.skipped;
+        const written = ctx.db.sqlite
+          .transaction(() => {
+            const main = upsertPlayerWeekProjections(ctx.db, rows).rowsChanged;
+            const kickoffs = kickoffsByTeam(ctx.db, season, week);
+            const snap = upsertProjectionSnapshots(ctx.db, rows, (playerId) => {
+              const team = teams.get(playerId);
+              return team ? (kickoffs.get(scheduleTeamCode(team)) ?? null) : null;
+            });
+            return { changed: main + snap.rowsChanged, skipped: snap.skipped };
+          })
+          .immediate();
+        rowsChanged += written.changed;
+        snapshotsSkipped += written.skipped;
       }
       const notes: string[] = [];
       if (unavailable.length > 0)
@@ -234,12 +248,12 @@ export function backfillJob(deps: SleeperJobDeps): Job {
           continue;
         }
         const fetchedAt = ctx.now().toISOString();
-        rowsChanged += upsertPlayerWeekProjections(
-          ctx.db,
-          res.rows.map((r) =>
-            mapProjection(r, { season: BACKFILL_SEASON, week, seasonType: "regular", fetchedAt }),
-          ),
-        ).rowsChanged;
+        const rows = res.rows.map((r) =>
+          mapProjection(r, { season: BACKFILL_SEASON, week, seasonType: "regular", fetchedAt }),
+        );
+        rowsChanged += ctx.db.sqlite
+          .transaction(() => upsertPlayerWeekProjections(ctx.db, rows).rowsChanged)
+          .immediate();
       }
       const notes = [
         stats.note,

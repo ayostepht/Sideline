@@ -2,7 +2,6 @@ import {
   upsertLeague,
   upsertLeagueUsers,
   upsertMatchups,
-  upsertNflState,
   upsertRosters,
   upsertTransactions,
 } from "@sideline/db";
@@ -22,6 +21,7 @@ import {
   makeClient,
   MAX_REGULAR_WEEK,
   requireLeagueId,
+  storeState,
   type SleeperJobDeps,
 } from "./common.js";
 import { readPlayoffWeekStart, storedMatchupWeeks } from "./db-reads.js";
@@ -42,7 +42,7 @@ export function stateJob(deps: SleeperJobDeps): Job {
       const client = makeClient(ctx, deps);
       checkAbort(ctx);
       const res = await client.getState(callOpts(ctx));
-      const out = upsertNflState(ctx.db, mapState(res.data), ctx.now().toISOString());
+      const out = storeState(ctx, mapState(res.data));
       return { rowsChanged: out.rowsChanged };
     },
   };

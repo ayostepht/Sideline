@@ -117,13 +117,16 @@ export const SCHEDULE_COLUMNS = [
 export function mapSchedule(
   table: CsvTable,
   season: number,
-): { games: ScheduleGame[]; warnings: string[] } | { error: string } {
+):
+  { games: ScheduleGame[]; warnings: string[]; gamedays: Map<string, string> } | { error: string } {
   const missing = missingColumns(table, SCHEDULE_COLUMNS);
   if (missing.length > 0) return { error: `games.csv missing columns: ${missing.join(", ")}` };
   const warnings: string[] = [];
   if (table.raggedRows > 0) warnings.push(`schedule: ${table.raggedRows} ragged rows rejected`);
   const unknownTeams = new Set<string>();
   const games: ScheduleGame[] = [];
+  /** gameId to calendar date (YYYY-MM-DD, America/New_York), for the worker's fallback kickoff. */
+  const gamedays = new Map<string, string>();
   let invalid = 0;
   for (const r of table.rows) {
     if (Number(r["season"]) !== season) continue;
@@ -146,11 +149,14 @@ export function mapSchedule(
       homeScore: numOrNull(r["home_score"]),
       awayScore: numOrNull(r["away_score"]),
     });
-    if (parsed.success) games.push(parsed.data);
-    else invalid += 1;
+    if (parsed.success) {
+      games.push(parsed.data);
+      const day = (r["gameday"] ?? "").trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(day)) gamedays.set(parsed.data.gameId, day);
+    } else invalid += 1;
   }
   if (invalid > 0) warnings.push(`schedule: ${invalid} invalid rows rejected`);
   if (unknownTeams.size > 0)
     warnings.push(`schedule: unknown team codes kept: ${[...unknownTeams].join(", ")}`);
-  return { games, warnings };
+  return { games, warnings, gamedays };
 }

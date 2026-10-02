@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { type FetchFn, loadAsset } from "./cache.js";
 import { type CsvTable, parseCsvTable } from "./csv.js";
 import { mapSchedule } from "./schedule.js";
-import type { PlayerRef, ProviderResult, ScheduleProvider, UsageProvider } from "./types.js";
+import type { NflverseProvider, PlayerRef, ProviderResult, ScheduleWithDates } from "./types.js";
 import { joinUsage } from "./usage.js";
 
 export interface NflverseOptions {
@@ -23,7 +23,7 @@ type Loaded = {
   warnings: string[];
 };
 
-export function createNflverseProvider(opts: NflverseOptions): ScheduleProvider & UsageProvider {
+export function createNflverseProvider(opts: NflverseOptions): NflverseProvider {
   const fetchFn: FetchFn = opts.fetch ?? ((url, init) => fetch(url, init));
   const cacheOpts = {
     dir: join(opts.dataDir, "cache", "nflverse"),
@@ -62,14 +62,25 @@ export function createNflverseProvider(opts: NflverseOptions): ScheduleProvider 
     warnings: [...l.warnings, ...warnings],
   });
 
+  async function scheduleWithDates(season: number): Promise<ProviderResult<ScheduleWithDates>> {
+    if (!opts.enabled) return disabled;
+    const l = await load("schedules", "games.csv.gz");
+    if (!("table" in l)) return { ok: false, reason: l.reason, message: l.message };
+    const mapped = mapSchedule(l.table, season);
+    if ("error" in mapped) return { ok: false, reason: "parse", message: mapped.error };
+    return {
+      ok: true,
+      data: { games: mapped.games, gamedays: mapped.gamedays },
+      meta: meta(l, mapped.warnings),
+    };
+  }
+
   return {
+    getScheduleWithDates: scheduleWithDates,
+
     async getSchedule(season) {
-      if (!opts.enabled) return disabled;
-      const l = await load("schedules", "games.csv.gz");
-      if (!("table" in l)) return { ok: false, reason: l.reason, message: l.message };
-      const mapped = mapSchedule(l.table, season);
-      if ("error" in mapped) return { ok: false, reason: "parse", message: mapped.error };
-      return { ok: true, data: mapped.games, meta: meta(l, mapped.warnings) };
+      const r = await scheduleWithDates(season);
+      return r.ok ? { ok: true, data: r.data.games, meta: r.meta } : r;
     },
 
     async getUsage(season, weeks, players: readonly PlayerRef[]) {

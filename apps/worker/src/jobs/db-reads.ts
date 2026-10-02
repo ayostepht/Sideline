@@ -99,3 +99,18 @@ export function kickoffsByTeam(h: DbHandle, season: number, week: number): Map<s
   }
   return out;
 }
+
+/** When nfl_state was last fetched from Sleeper (ISO), or null when never. */
+export function readStateFetchedAt(h: DbHandle): string | null {
+  const r = h.sqlite.prepare("SELECT fetched_at AS f FROM nfl_state WHERE id = 1").get() as
+    { f: string } | undefined;
+  return r?.f ?? null;
+}
+
+/**
+ * The upsert leaves fetched_at alone when nothing else changed (it is volatile), so a refetch that
+ * returned an identical state must bump it explicitly or the row would look stale forever.
+ */
+export function touchStateFetchedAt(h: DbHandle, fetchedAt: string): void {
+  h.sqlite.prepare("UPDATE nfl_state SET fetched_at = ? WHERE id = 1").run(fetchedAt);
+}

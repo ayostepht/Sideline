@@ -137,7 +137,7 @@ describe("requests", () => {
     s.worker.acquireTick();
     enqueue(s.db, "all", "api", s.clock.now());
     await s.worker.pollTick();
-    expect(log).toEqual(["state", "matchups", "players", "projections", "nflverse"]);
+    expect(log).toEqual(["state", "matchups", "players", "nflverse", "projections"]);
   });
   it("an unregistered single job request fails cleanly", async () => {
     const s = setup([]);

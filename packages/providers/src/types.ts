@@ -33,3 +33,14 @@ export interface UsageProvider {
     players: readonly PlayerRef[],
   ): Promise<ProviderResult<UsageWeek[]>>;
 }
+
+/** A schedule plus each game's calendar date, so a caller can build a fallback kickoff. */
+export interface ScheduleWithDates {
+  games: ScheduleGame[];
+  /** gameId to YYYY-MM-DD (America/New_York). Games without a valid date are absent. */
+  gamedays: ReadonlyMap<string, string>;
+}
+
+export interface NflverseProvider extends ScheduleProvider, UsageProvider {
+  getScheduleWithDates(season: number): Promise<ProviderResult<ScheduleWithDates>>;
+}

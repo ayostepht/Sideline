@@ -416,3 +416,19 @@ describe("ADR-006: download cache", () => {
     expect(await bad.getSchedule(2026)).toMatchObject({ ok: false, reason: "parse" });
   });
 });
+
+describe("T1.5c: schedule with dates", () => {
+  it("returns a YYYY-MM-DD gameday for each game id", async () => {
+    const s = await server();
+    const p = createNflverseProvider({
+      enabled: true,
+      dataDir: await mkdtemp(join(tmpdir(), "nfl-dates-")),
+      fetch: s.fetch,
+      now: () => T0,
+    });
+    const r = await p.getScheduleWithDates(2026);
+    if (!r.ok) throw new Error(r.message);
+    expect(r.data.gamedays.size).toBe(r.data.games.length);
+    expect(r.data.gamedays.get("2026_01_CLE_JAX")).toBe("2026-09-13");
+  });
+});

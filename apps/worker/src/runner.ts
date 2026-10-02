@@ -2,6 +2,7 @@ import { finishRun, startRun, type DbHandle } from "@sideline/db";
 import type { AppConfig, SyncJobName } from "@sideline/shared";
 import { createCallCounter, type RateLimiter } from "@sideline/sleeper";
 import type { Logger } from "pino";
+import { JOB_TABLES, recomputeHooks, type RecomputeRegistry } from "./recompute.js";
 import type { JobRegistry } from "./registry.js";
 import type { Job, JobContext, RunOutcome } from "./types.js";
 
@@ -12,6 +13,8 @@ export interface RunnerDeps {
   config: AppConfig;
   now: () => Date;
   signal: () => AbortSignal;
+  /** Derived-table recompute hooks; defaults to the process-wide registry. */
+  recompute?: RecomputeRegistry;
 }
 
 function errMessage(e: unknown): string {
@@ -103,6 +106,12 @@ export async function runJobs(
     }
     out.push(await runJob(deps, job));
   }
+  const changed = new Set<string>();
+  for (const o of out) {
+    if (o.status !== "failed" && o.rowsChanged > 0)
+      for (const t of JOB_TABLES[o.job]) changed.add(t);
+  }
+  await (deps.recompute ?? recomputeHooks).run(deps.db, changed, deps.logger);
   return out;
 }
 

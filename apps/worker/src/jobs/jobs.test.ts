@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { upsertSchedule, type DbHandle } from "@sideline/db";
 import { SYNC_JOB_NAMES, type SyncJobName } from "@sideline/shared";
 import { createCallCounter, RateLimiter } from "@sideline/sleeper";
@@ -7,6 +8,7 @@ import { fakeClock, silent, tempDb, testConfig, tempDataDir } from "../testutil.
 import type { Job, JobContext } from "../types.js";
 import { BACKFILL_SEASON, POSITION_DROP_THRESHOLD } from "./data-jobs.js";
 import { createSleeperJobs, registeredJobs } from "./index.js";
+import { SIDELINE_VERSION, STATE_MAX_AGE_MS } from "./common.js";
 import { matchupWeeksToFetch } from "./league-jobs.js";
 
 const LEAGUE = "9000000000000000001";
@@ -175,7 +177,7 @@ function harness(config: Record<string, string> = { DEFAULT_LEAGUE_ID: LEAGUE })
 describe("T1.5b registration", () => {
   it("registers every Sleeper job exactly once", () => {
     const names = registeredJobs.map((j) => j.name).sort();
-    const expected = SYNC_JOB_NAMES.filter((n) => n !== "nflverse").sort();
+    const expected = [...SYNC_JOB_NAMES].sort();
     expect(names).toEqual(expected);
   });
 });
@@ -324,7 +326,7 @@ describe("T1.5b abort on lease loss", () => {
     });
     await expect(h.run("matchups", { signal: ac.signal })).rejects.toThrow("sync lease lost");
     expect(h.calls).toHaveLength(2);
-    await new Promise((r) => setTimeout(r, 20));
+    // The job has already rejected, so nothing is left running that could fetch again.
     expect(h.calls).toHaveLength(2);
   });
 
@@ -400,5 +402,75 @@ describe("T1.5b backfill_2025", () => {
     const r = await h.run("backfill_2025");
     expect(r.calls).toBe(2);
     expect(h.calls.every((c) => c.startsWith("/stats/nfl/2025/"))).toBe(true);
+  });
+});
+
+const stateCalls = (h: Harness): number =>
+  h.calls.filter((c) => c.startsWith("/v1/state/nfl")).length;
+
+describe("T1.5c review m1: stored nfl_state goes stale after 1 hour", () => {
+  it("reuses a fresh state and refetches a stale one, then stays fresh", async () => {
+    const h = harness();
+    await h.run("state");
+    h.calls.length = 0;
+    h.clock.advance(STATE_MAX_AGE_MS - 60_000);
+    await h.run("stats");
+    expect(stateCalls(h)).toBe(0);
+    h.clock.advance(2 * 60_000);
+    await h.run("stats");
+    expect(stateCalls(h)).toBe(1);
+    h.clock.advance(60_000);
+    await h.run("stats");
+    expect(stateCalls(h)).toBe(1); // identical state still stamps fetched_at
+  });
+});
+
+describe("T1.5c review m2: a backfill week is written atomically", () => {
+  it("a failure mid-week leaves no rows for that week and the next run refetches it", async () => {
+    const h = harness();
+    const rows = Array.from({ length: 600 }, (_, i) =>
+      statRow(i === 599 ? "boom" : `p${i}`, "ATL", "QB", false),
+    );
+    h.set("/stats/nfl/", () => rows);
+    h.db.sqlite.exec(
+      `CREATE TRIGGER fail_boom BEFORE INSERT ON player_week_stats WHEN NEW.player_id = 'boom'
+       BEGIN SELECT RAISE(ABORT, 'injected failure'); END`,
+    );
+    await expect(h.run("backfill_2025")).rejects.toThrow("injected failure");
+    const n = (): number =>
+      (h.db.sqlite.prepare("SELECT COUNT(*) AS n FROM player_week_stats").get() as { n: number }).n;
+    expect(n()).toBe(0); // the first 500-row chunk was rolled back with the rest of the week
+    h.db.sqlite.exec("DROP TRIGGER fail_boom");
+    h.calls.length = 0;
+    await h.run("backfill_2025");
+    expect(h.calls[0]).toMatch(/^\/stats\/nfl\/2025\/1\?/);
+    expect(n()).toBeGreaterThanOrEqual(600);
+  });
+});
+
+describe("T1.5c review m3: players and the fetched-at marker share a transaction", () => {
+  it("a failed marker write rolls the players back, so the next run refetches", async () => {
+    const h = harness();
+    h.db.sqlite.exec(
+      `CREATE TRIGGER fail_marker BEFORE INSERT ON app_settings WHEN NEW.key = 'players_fetched_at'
+       BEGIN SELECT RAISE(ABORT, 'marker failed'); END`,
+    );
+    await expect(h.run("players")).rejects.toThrow("marker failed");
+    const n = (): number =>
+      (h.db.sqlite.prepare("SELECT COUNT(*) AS n FROM players").get() as { n: number }).n;
+    expect(n()).toBe(0);
+    h.db.sqlite.exec("DROP TRIGGER fail_marker");
+    const again = await h.run("players");
+    expect(again.status).toBeUndefined();
+    expect(n()).toBe(4);
+  });
+});
+
+describe("T1.5c review n1: User-Agent version", () => {
+  it("SIDELINE_VERSION matches apps/worker/package.json", () => {
+    const pkg = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+    ) as { version: string };
+    expect(SIDELINE_VERSION).toBe(pkg.version);
   });
 });

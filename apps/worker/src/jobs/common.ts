@@ -2,10 +2,13 @@ import { createDbEtagStore, upsertNflState } from "@sideline/db";
 import type { NflState, SeasonType } from "@sideline/shared";
 import { createDefaultSleeperClient, mapState, type SleeperClient } from "@sideline/sleeper";
 import type { JobContext } from "../types.js";
-import { readState } from "./db-reads.js";
+import { readState, readStateFetchedAt, touchStateFetchedAt } from "./db-reads.js";
 
 /** Sent as `Sideline/<version> (self-hosted)`. Keep in step with the worker package version. */
 export const SIDELINE_VERSION = "0.1.0";
+
+/** Stored nfl_state older than this is refetched (the week rolls over on Tuesdays). */
+export const STATE_MAX_AGE_MS = 60 * 60 * 1000;
 
 /** Last regular-season week; weeks above it are never requested. */
 export const MAX_REGULAR_WEEK = 18;
@@ -40,15 +43,30 @@ export function checkAbort(ctx: JobContext): void {
   }
 }
 
-/** Persisted state; fetched (and stored) only when missing. */
+/** Persisted state; fetched (and stored) when missing or older than STATE_MAX_AGE_MS. */
 export async function loadState(ctx: JobContext, client: SleeperClient): Promise<NflState> {
   const stored = readState(ctx.db);
-  if (stored) return stored;
+  const fetchedAt = readStateFetchedAt(ctx.db);
+  if (
+    stored &&
+    fetchedAt !== null &&
+    ctx.now().getTime() - Date.parse(fetchedAt) < STATE_MAX_AGE_MS
+  ) {
+    return stored;
+  }
   checkAbort(ctx);
   const res = await client.getState(callOpts(ctx));
   const state = mapState(res.data);
-  upsertNflState(ctx.db, state, ctx.now().toISOString());
+  storeState(ctx, state);
   return state;
+}
+
+/** Upserts the state and stamps the fetch time even when the values did not change. */
+export function storeState(ctx: JobContext, state: NflState): { rowsChanged: number } {
+  const at = ctx.now().toISOString();
+  const out = upsertNflState(ctx.db, state, at);
+  touchStateFetchedAt(ctx.db, at);
+  return out;
 }
 
 export interface WeekCursor {

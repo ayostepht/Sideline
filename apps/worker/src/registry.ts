@@ -1,7 +1,7 @@
 import type { SyncJobName } from "@sideline/shared";
 import type { Job } from "./types.js";
 
-/** Order used for `all`. `backfill_2025` runs only when requested explicitly. */
+/** Order used for `all`. `nflverse` precedes `projections`: pregame snapshots need kickoffs. `backfill_2025` runs only when requested explicitly. */
 export const ALL_ORDER: readonly SyncJobName[] = [
   "state",
   "league",
@@ -12,8 +12,8 @@ export const ALL_ORDER: readonly SyncJobName[] = [
   "players",
   "trending",
   "stats",
-  "projections",
   "nflverse",
+  "projections",
 ];
 
 export interface JobRegistry {
