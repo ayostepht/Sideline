@@ -86,6 +86,8 @@ Remove an item when it is done; the archive keeps history.
 
 - **G2 UX review minors (frontend-engineer, `docs/reviews/2026-10-02-G2-ux.md`).** m1 onboarding ready view alignment at 1280; m2 League rosters list duplicates standings on desktop; m3 team detail back link and top bar label; m4 theme toggle labels at 390; m5 sync summary wording and tooltip; m6 one shared content width across pages; n1 reserve a stat slot in roster rows. Also: `pnpm screens` cannot capture 404 routes (devops-engineer).
 
+- **G2 gate leftovers.** Missing `favicon.ico` (console 404; with the PWA work, frontend-engineer). `.playwright-mcp/` not in `.gitignore` (devops-engineer). Gallery states not asserted one by one; NAV-6 mocks the league-switch POST (qa-engineer).
+
 ### Data and backend
 
 - **G2 code review minors (backend-engineer, `docs/reviews/2026-10-02-G2-code.md`).** m1 wrap `startOnboarding` writes in an immediate transaction; m2 seed env identity once at boot instead of on GET (busy_timeout already set); m3 zod or column test for `league-views.ts` row casts; m4 cache the player-search owner map if profiles show it; shared response schemas for `/api/onboarding/league` and `PATCH /api/settings`; a route-listing test that every mutating route uses `guardedWrite`.
@@ -128,4 +130,4 @@ Remove an item when it is done; the archive keeps history.
 
 ## Questions for Steph
 
-- TEAM-3 flaky e2e test (see Phase 2 backlog above): fix now, accept as a known/logged flake, or reduce Playwright concurrency for that suite? Will present with run instructions at the G2 gate.
+- **G2 checkpoint (asked 2026-10-02, see `docs/gates/G2.md`):** look and feel approval; TEAM-3 flake decision (fix now, accept with a deadline, or fewer parallel workers for that spec); which UX minors to fix before Phase 3.

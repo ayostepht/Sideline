@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, G2 gate started. Baseline verify 710 green at 549d972. qa-engineer gate run and code-reviewer phase review dispatched in parallel. One known flake (TEAM-3) left as a question for Steph at G2.
+Last updated: 2026-10-02, G2 automated checks PASS (gate re-run 11/11 after M1 fix 1aaa95d), live onboarding and LAN check done, `docs/gates/G2.md` written. Waiting for Steph's G2 human checkpoint.
 
 ## 1. Resume in five steps
 
@@ -20,14 +20,13 @@ Last updated: 2026-10-02, G2 gate started. Baseline verify 710 green at 549d972.
 
 ## 3. In flight
 
-- Gate run 1 (549d972): 10/11 pass; UI1 failed only on TEAM-3 (3 of 5 runs failed: gate, 1 of 3 spec re-runs, full re-run). Metrics are in the qa report summary below and in `docs/gates/latest.json` (uncommitted; it is rewritten by the final gate run). Summary: unit 710, integration 23, e2e 288 (287 pass), axe 102/102, LH Home and League 96/100/96/100, route JS max 169,028 B (settings), gallery 193,357 B, docker amd64 100.7 MB with health in 1.5 s, coverage all met, lint warnings 0, U4 clean, U6 traced (gallery states lack assertions; NAV-6 mocks the switch POST).
-- G2-M1 done and committed (1aaa95d): verify 721, integration 23. Not yet through e2e (the full gate re-run covers it).
-- G2-ux (ux-reviewer): all routes, read-only, screenshots in `.screens/`.
-- After the ux review: save the ux report, fix any ux Majors, then re-run the full gate, then the live onboarding (copy `data/sideline.sqlite` to a temp DATA_DIR so the `/players/nfl` daily guard carries over; blank SLEEPER_USERNAME and DEFAULT_LEAGUE_ID in env) and the LAN check, then G2.md and stop for Steph.
+- Nothing. Waiting on Steph's replies to the G2 questions (`docs/gates/G2.md`, Human checkpoint). Do not start Phase 3.
 
 ## 4. Next steps (in order)
 
-1. G2 gate: `pnpm gate --amd64`; code-reviewer on `git diff main...phase/2-shell`; full coverage run; live onboarding by the orchestrator (about 22 calls); LAN check (`pnpm dev:lan` plus a request with a non-localhost Origin); archive 390 and 1280 px screenshots from the seeded dir to `docs/gates/G2/screens/` after eyeballing each; write `docs/gates/G2.md`; stop for Steph with run instructions (LAN URL, `dev:lan` and worker commands, macOS firewall prompt) and questions, including the TEAM-3 flaky test decision (see PROGRESS "Questions for Steph": fix now, accept as known, or reduce Playwright concurrency).
+1. Apply Steph's G2 answers: TEAM-3 decision; any UX minors she wants now (frontend-engineer); re-run affected checks, then the full gate if code changed.
+2. On approval: merge `phase/2-shell` to `main`, tag `gate-G2`, archive the Phase 2 task table to `docs/archive/`, trim done backlog items, suggest `/clear`.
+3. Phase 3: read PLAN.md section 9 Phase 3 in full plus every section it cites; plan batches.
 
 ## 5. Briefs
 
