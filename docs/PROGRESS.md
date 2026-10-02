@@ -38,7 +38,7 @@
 | T1.2a | Sleeper HTTP core (limiter, retries, errors, ETag) | sleeper-data-engineer | A | Done | 1 | aab3c0c |
 | T1.1-fix | Review fixes m6-m9 (cron, TZ, transaction fields, timestamp note) | backend-engineer | A-fix | Done | 1 | see log |
 | T1.2a-fix | Review fixes m1-m3, m5, n1 (Retry-After cap, body cancel, monotonic limiter, timer injection) | sleeper-data-engineer | A-fix | Done | 1 | see log |
-| T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Not started | 0 | |
+| T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Done | 1 | see log |
 | T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | Not started | 0 | |
 | T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Not started | 0 | |
 | T1.4b | nflverse provider | sleeper-data-engineer | B | Not started | 0 | |
@@ -80,6 +80,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 - T1.0: pnpm prints a peer-dependency warning on install (not investigated). @types/better-sqlite3 9.6.0 may lag the v13 API. Worker stub scripts use root tsx; add tsx to the worker when real scripts land. Owner: devops-engineer (T1.8).
 - Per-project coverage (`vitest run --coverage --project X`) prints Unknown% because coverage globs are repo-relative; use the whole-repo run. Owner: qa-engineer (T1.7a).
 - T1.2b/T1.5b: pass a `Sideline/<version> (self-hosted)` user agent; `/players/nfl` calls pass `{ etag: false }`; the worker shares one `RateLimiter`.
+- P1: nflverse play-by-play for red-zone touches (TREND-2), ADR-006 item 6.
 - msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
 
 ## Questions for Steph

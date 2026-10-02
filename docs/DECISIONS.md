@@ -141,3 +141,24 @@ Date: 2026-10-02
 **Alternatives considered:** web calling Sleeper directly with its own limiter (rejected: two limiters can't enforce one budget); a separate seed script mapping fixtures to rows (rejected: duplicates the worker's mapping); 503 on a missing worker heartbeat (deferred to T4.3: no worker runs in the container until then).
 
 **Consequences:** the worker is the single gate to Sleeper. Health stays green in the Phase 1 to 3 container. The idempotency check measures real changes.
+
+## ADR-006: nflverse data decisions from the T1.4a spike
+
+Date: 2026-10-02
+
+**Decision**
+
+1. **Assets:** `https://github.com/nflverse/nflverse-data/releases/download/<tag>/<asset>.csv.gz` for `schedules/games`, `stats_player/stats_player_week_<season>` and `snap_counts/snap_counts_<season>`. The 2.5 MB `players` asset isn't needed by the provider.
+2. **Kickoff:** `gameday` plus `gametime` are America/New_York wall time, including international games. Convert with the IANA zone (DST ends 2026-11-01), never a fixed offset. A missing `gametime` uses the ADR-002 fallback with `kickoffApproximate: true`. Games can fall on any weekday (Wednesday, Friday, Saturday seen), so no code may assume Thu/Sun/Mon.
+3. **Spread sign:** positive `spread_line` means the home team is favored (moneylines agree in 280 of 285 2025 games and 75 of 77 2026 games). Implied totals: home = total/2 + spread/2, away = total/2 - spread/2. Lines exist only for about the next 1 to 2 weeks; null means no implied total.
+4. **Team codes:** the only difference is nflverse `LA` to Sleeper `LAR`.
+5. **Player join:** Sleeper `gsis_id` covers only about 26% of relevant players and often has a leading space. Join order: trimmed `gsis_id`, then normalized name plus team (plus position), else null usage. Name plus team matched 242 of 244 fixture players; misses are nicknames, handled by a small alias table. Snap counts join the same way.
+6. **Usage:** `target_share`, `air_yards_share` and snap `offense_pct` are provided as 0 to 1 fractions. `carry_share` is computed as player carries divided by the team's total carries in that game. Red-zone touches need play-by-play, so per ADR-005 item 13 TREND-2 ships without them (`rz_touches` null) and play-by-play goes to the P1 backlog.
+7. **Byes:** derived from the schedule (team absent in a week).
+8. **Freshness:** weekly assets lag about a day; a missing week means "no usage yet", not an error.
+
+**Context:** T1.4a spike, `docs/sleeper-api-notes.md` section 14.
+
+**Alternatives considered:** joining through the nflverse `players` asset (works for snaps via pfr id, but adds 2.5 MB downloads for no gain over name plus team).
+
+**Consequences:** T1.4b implements the join order, the alias table, the LA/LAR map, kickoff conversion and carry share. The Sleeper players table keeps a trimmed `gsis_id`.
