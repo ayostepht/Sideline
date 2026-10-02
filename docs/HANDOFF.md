@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 2 Batch F fully closed out (T2.6a-d, a code-review follow-up fix, ux review: APPROVE). One known flake (TEAM-3) left as a question for Steph at G2. Next: G2 gate. Plan: ADR-009 and the PROGRESS Phase 2 table.
+Last updated: 2026-10-02, G2 gate started. Baseline verify 710 green at 549d972. qa-engineer gate run and code-reviewer phase review dispatched in parallel. One known flake (TEAM-3) left as a question for Steph at G2.
 
 ## 1. Resume in five steps
 
@@ -20,7 +20,9 @@ Last updated: 2026-10-02, Phase 2 Batch F fully closed out (T2.6a-d, a code-revi
 
 ## 3. In flight
 
-- Nothing. Clean point to `/clear`. Phase 2 Batch F is fully closed out.
+- G2-qa (qa-engineer): `pnpm gate --amd64` plus metrics, U4 scan, U6 trace. Writes only `docs/gates/latest*.json`. If the session died, re-dispatch (no partial code possible).
+- G2-review (code-reviewer): full `main...phase/2-shell` review, read-only. Re-dispatch if lost.
+- Still to do after the gate run: ux-reviewer on all routes (not in parallel with the gate, both start servers), live onboarding, LAN check.
 
 ## 4. Next steps (in order)
 
