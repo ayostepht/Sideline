@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, G2 automated checks PASS (gate re-run 11/11 after M1 fix 1aaa95d), live onboarding and LAN check done, `docs/gates/G2.md` written. Waiting for Steph's G2 human checkpoint.
+Last updated: 2026-10-02, G2 run 3 after redesign PASS 11/11; UX review 2 APPROVE WITH FIXES (0 major); screenshots retaken; G2.md updated. Waiting for Steph's final approval and her calls on the scoreboard hero and remaining ux minors.
 
 ## 1. Resume in five steps
 
@@ -20,7 +20,7 @@ Last updated: 2026-10-02, G2 automated checks PASS (gate re-run 11/11 after M1 f
 
 ## 3. In flight
 
-- Redesign T2.7a-d committed (last code commit 8fd82a3). Full `pnpm gate --amd64` run 3 in flight (log in scratchpad; rerun if the session died). Then: ux-reviewer on the fresh `.screens/` (no server), retake `docs/gates/G2/screens/`, update G2.md (redesign, B1, ADR-011/012), show Steph for final approval.
+- Nothing running. Waiting on Steph (final look-and-feel approval; scoreboard hero now or Phase 3; which ux2 minors now).
 - G2-B1 done and committed (verify 728, integration 23). Full gate re-run still owed: run it once Steph's dev servers are off port 3000, batched with any other checkpoint fixes, then add B1 to G2.md.
 - Waiting on Steph's replies to the G2 questions (`docs/gates/G2.md`, Human checkpoint). Do not start Phase 3.
 
