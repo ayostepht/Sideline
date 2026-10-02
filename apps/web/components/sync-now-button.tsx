@@ -2,7 +2,7 @@
 
 import { Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { apiJson } from "../app/onboarding/_components/api";
+import { apiJson } from "../lib/client/api";
 import { parseRetryAfter } from "../lib/client/onboarding";
 import { Button } from "./ui/button";
 

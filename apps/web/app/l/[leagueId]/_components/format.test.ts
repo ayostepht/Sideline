@@ -73,9 +73,9 @@ describe("format", () => {
   });
 
   it("words the issues text", () => {
-    expect(issuesText(0)).toMatch(/^No starters/);
-    expect(issuesText(1)).toBe("1 starter is out or on bye");
-    expect(issuesText(3)).toBe("3 starters are out or on bye");
+    expect(issuesText(0)).toBe("No lineup issues this week");
+    expect(issuesText(1)).toBe("1 starter needs attention");
+    expect(issuesText(3)).toBe("3 starters need attention");
   });
 
   it("groups players and names unknowns", () => {

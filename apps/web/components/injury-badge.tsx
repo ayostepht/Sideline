@@ -11,12 +11,15 @@ const TONE_CLASS: Record<InjuryTone, string> = {
 export interface InjuryBadgeProps {
   /** Raw status ("Questionable", "IR", ...). Healthy or unknown renders nothing. */
   status: string | null | undefined;
+  /** Body part or note shown inline after the status ("Hamstring"). */
+  detail?: string | null | undefined;
   className?: string;
 }
 
-export function InjuryBadge({ status, className }: InjuryBadgeProps) {
+export function InjuryBadge({ status, detail, className }: InjuryBadgeProps) {
   const info = normalizeInjury(status);
   if (!info) return null;
+  const note = detail?.trim() ? detail.trim() : null;
   const Icon =
     info.tone === "negative"
       ? Cross
@@ -29,7 +32,7 @@ export function InjuryBadge({ status, className }: InjuryBadgeProps) {
     <span
       data-testid="injury-badge"
       role="img"
-      aria-label={`Injury status: ${info.full}`}
+      aria-label={`Injury status: ${info.full}${note ? `, ${note}` : ""}`}
       title={info.full}
       className={cn(
         "inline-flex items-center gap-1 rounded-[6px] px-1.5 py-0.5 text-xs font-semibold leading-4 whitespace-nowrap",
@@ -38,7 +41,7 @@ export function InjuryBadge({ status, className }: InjuryBadgeProps) {
       )}
     >
       <Icon className="size-3" aria-hidden />
-      <span aria-hidden>{info.short}</span>
+      <span aria-hidden>{note ? `${info.short}, ${note}` : info.short}</span>
     </span>
   );
 }

@@ -16,6 +16,10 @@ export interface PlayerRowProps {
   /** Right-side stat, already formatted. */
   stat?: ReactNode;
   statLabel?: string;
+  /** Body part shown inline next to the injury badge. */
+  injuryDetail?: string | null;
+  /** Extra badges on the second line (for example a bye badge). */
+  meta?: ReactNode;
   highlighted?: boolean;
   /** Screen reader text for a highlighted row. */
   highlightLabel?: string;
@@ -34,6 +38,8 @@ export function PlayerRow({
   slot,
   stat,
   statLabel,
+  injuryDetail,
+  meta,
   highlighted = false,
   highlightLabel = "Your player",
   href,
@@ -42,8 +48,8 @@ export function PlayerRow({
 }: PlayerRowProps) {
   const interactive = href !== undefined || onClick !== undefined;
   const cls = cn(
-    "flex min-h-11 w-full min-w-0 items-center gap-3 rounded-[8px] px-3 py-2 text-left md:max-w-2xl",
-    highlighted ? "bg-accent-soft" : "bg-transparent",
+    "flex min-h-11 w-full min-w-0 items-center gap-3 rounded-[8px] border-l-4 px-3 py-1 text-left md:max-w-2xl",
+    highlighted ? "border-primary bg-accent-soft" : "border-transparent bg-transparent",
     interactive && "transition-colors duration-150 hover:bg-muted active:bg-border",
     className,
   );
@@ -57,15 +63,27 @@ export function PlayerRow({
           {slot}
         </span>
       ) : null}
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="truncate text-base font-medium leading-5" title={name}>
-          {highlighted ? <span className="sr-only">{highlightLabel}: </span> : null}
-          {name}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate text-base font-medium leading-5" title={name}>
+            {highlighted ? <span className="sr-only">{highlightLabel}: </span> : null}
+            {name}
+          </span>
+          {highlighted ? (
+            <span
+              aria-hidden
+              className="shrink-0 rounded-[6px] bg-primary px-1.5 py-0.5 text-xs font-semibold leading-4 text-primary-foreground"
+              data-testid="player-row-highlight-tag"
+            >
+              {highlightLabel}
+            </span>
+          ) : null}
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <PositionBadge position={position} />
           <span>{team ? team : "No team"}</span>
-          <InjuryBadge status={injuryStatus} />
+          <InjuryBadge status={injuryStatus} detail={injuryDetail} />
+          {meta}
         </span>
       </span>
       {stat !== undefined ? (

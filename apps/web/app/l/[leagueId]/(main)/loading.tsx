@@ -1,4 +1,4 @@
-import { CardSkeleton, PlayerRowSkeleton } from "../../../components/skeletons";
+import { CardSkeleton, PlayerRowSkeleton } from "../../../../components/skeletons";
 
 export default function Loading() {
   return (

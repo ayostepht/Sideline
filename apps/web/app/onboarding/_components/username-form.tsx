@@ -41,6 +41,8 @@ export function UsernameForm({
     if (problem === null) onSubmit(value.trim());
   }
 
+  const unchanged =
+    unchangedFrom !== undefined && normalizeUsername(value) === normalizeUsername(unchangedFrom);
   const describedBy = [hint ? `${id}-hint` : null, shown ? `${id}-err` : null]
     .filter(Boolean)
     .join(" ");
@@ -86,15 +88,17 @@ export function UsernameForm({
       ) : null}
       <Button
         type="submit"
-        disabled={
-          pending ||
-          (unchangedFrom !== undefined &&
-            normalizeUsername(value) === normalizeUsername(unchangedFrom))
-        }
+        disabled={pending || unchanged}
+        aria-describedby={unchanged ? `${id}-why` : undefined}
         data-testid={`${testIdPrefix}-username-submit`}
       >
         {pending ? "Working..." : submitLabel}
       </Button>
+      {unchanged ? (
+        <p id={`${id}-why`} className="-mt-2 text-sm text-muted-foreground">
+          Enter a different username to continue.
+        </p>
+      ) : null}
     </form>
   );
 }

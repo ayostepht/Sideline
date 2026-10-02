@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../../components/ui/card";
-import { apiJson } from "../../../../onboarding/_components/api";
+import { apiJson } from "../../../../../lib/client/api";
 import { UsernameForm } from "../../../../onboarding/_components/username-form";
 import dynamic from "next/dynamic";
 
@@ -169,6 +169,9 @@ export function SettingsSections({
             >
               {switching ? "Switching..." : "Switch"}
             </Button>
+            {target === "" ? (
+              <p className="-mt-2 text-sm text-muted-foreground">Choose a league to switch.</p>
+            ) : null}
           </div>
         ) : (
           <p className="mt-2 text-sm text-muted-foreground">

@@ -8,18 +8,6 @@ import { Badge } from "../../../../components/ui/badge";
 import { displayName, formatPoints, formatRecord, groupPlayers, isOnBye } from "./format";
 import { ScrollToTarget } from "./scroll-to";
 
-function RowExtras({ p, week }: { p: TeamPlayerRow; week: number | null }) {
-  const bye = isOnBye(p, week);
-  const part = p.injuryStatus ? p.injuryBodyPart : null;
-  if (!bye && !part) return undefined;
-  return (
-    <span className="flex flex-col items-end gap-1">
-      {bye ? <Badge variant="info">Bye</Badge> : null}
-      {part ? <span className="text-xs font-normal text-muted-foreground">{part}</span> : null}
-    </span>
-  );
-}
-
 function Section({
   id,
   title,
@@ -63,7 +51,7 @@ export function TeamView({
   const renderRow = (p: TeamPlayerRow, slot: string | undefined) => {
     const on = highlight === p.playerId;
     const unknown = p.name.trim() === "";
-    const extras = unknown ? undefined : RowExtras({ p, week });
+    const bye = !unknown && isOnBye(p, week);
     return (
       <div
         key={p.playerId}
@@ -77,7 +65,8 @@ export function TeamView({
           {...(unknown ? {} : { team: p.nflTeam })}
           injuryStatus={unknown ? null : p.injuryStatus}
           {...(slot === undefined ? {} : { slot })}
-          {...(extras === undefined ? {} : { stat: extras })}
+          injuryDetail={unknown ? null : p.injuryBodyPart}
+          meta={bye ? <Badge variant="info">Bye</Badge> : null}
           highlighted={on}
           highlightLabel="Search result"
           className="md:max-w-none"

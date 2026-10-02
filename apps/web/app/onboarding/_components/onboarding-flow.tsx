@@ -20,7 +20,7 @@ import {
   type OnboardingStep,
 } from "../../../lib/client/onboarding";
 import { cn } from "../../../lib/client/cn";
-import { apiJson } from "./api";
+import { apiJson } from "../../../lib/client/api";
 import { FirstSync } from "./first-sync";
 import { UsernameForm } from "./username-form";
 
@@ -203,7 +203,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
           id="onboarding-step"
           ref={headingRef}
           tabIndex={-1}
-          className="mb-4 text-lg font-semibold outline-none"
+          className={view.kind === "done" ? "sr-only" : "mb-4 text-lg font-semibold outline-none"}
         >
           {TITLES[view.kind]}
         </h2>
@@ -289,14 +289,17 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
         ) : null}
 
         {view.kind === "done" ? (
-          <div className="flex flex-col gap-4" data-testid="onboarding-done">
-            <p className="text-sm text-muted-foreground">
+          <div
+            className="flex flex-col gap-4 sm:items-center sm:text-center"
+            data-testid="onboarding-done"
+          >
+            <p className="text-base font-medium">
               {initial.activeLeagueName
                 ? `${initial.activeLeagueName} is ready.`
                 : "Your league is ready."}
             </p>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button asChild className="w-full sm:w-auto">
                 <Link
                   href={`/l/${encodeURIComponent(initial.activeLeagueId ?? "")}`}
                   data-testid="onboarding-go-home"
@@ -304,7 +307,12 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
                   Go to Home
                 </Link>
               </Button>
-              <Button variant="outline" onClick={startOver} data-testid="onboarding-start-over">
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={startOver}
+                data-testid="onboarding-start-over"
+              >
                 Start over
               </Button>
             </div>

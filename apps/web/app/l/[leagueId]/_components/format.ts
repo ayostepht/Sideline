@@ -38,8 +38,28 @@ export function countStarterIssues(players: readonly TeamPlayerRow[], week: numb
 }
 
 export function issuesText(count: number): string {
-  if (count === 0) return "No starters are out or on bye";
-  return count === 1 ? "1 starter is out or on bye" : `${count} starters are out or on bye`;
+  if (count === 0) return "No lineup issues this week";
+  return count === 1 ? "1 starter needs attention" : `${count} starters need attention`;
+}
+
+const ISSUE_LABELS: Record<IssueReason, string> = { out: "Out", ir: "IR", bye: "Bye" };
+
+export function issueLabel(reason: IssueReason): string {
+  return ISSUE_LABELS[reason];
+}
+
+/** Starters that are out, on IR or PUP, or on bye in `week`, with the reason. */
+export function starterIssues(
+  players: readonly TeamPlayerRow[],
+  week: number | null,
+): { player: TeamPlayerRow; reason: IssueReason }[] {
+  const out: { player: TeamPlayerRow; reason: IssueReason }[] = [];
+  for (const player of players) {
+    if (player.slot !== "starter") continue;
+    const reason = issueReason(player, week);
+    if (reason !== null) out.push({ player, reason });
+  }
+  return out;
 }
 
 export interface TeamSections {

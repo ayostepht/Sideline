@@ -1,14 +1,14 @@
 import { Trophy } from "lucide-react";
 import Link from "next/link";
-import { DataFreshness } from "../../../../components/data-freshness";
-import { DbError } from "../../../../components/db-error";
-import { EmptyState } from "../../../../components/empty-state";
-import { StaleBanner } from "../../../../components/stale-banner";
-import { leagueBase, parseWeek } from "../../../../lib/client/nav";
-import { getLeagueOverview, getStandings } from "../../../../lib/server/league-views";
-import { formatRecord } from "../_components/format";
-import { readPage } from "../_components/load";
-import { StandingsList } from "../_components/standings";
+import { DataFreshness } from "../../../../../components/data-freshness";
+import { DbError } from "../../../../../components/db-error";
+import { EmptyState } from "../../../../../components/empty-state";
+import { StaleBanner } from "../../../../../components/stale-banner";
+import { leagueBase, parseWeek } from "../../../../../lib/client/nav";
+import { getLeagueOverview, getStandings } from "../../../../../lib/server/league-views";
+import { formatRecord } from "../../_components/format";
+import { readPage } from "../../_components/load";
+import { StandingsList } from "../../_components/standings";
 
 export default async function LeaguePage({
   params,
@@ -52,11 +52,14 @@ export default async function LeaguePage({
             </h2>
             <StandingsList rows={rows} leagueId={leagueId} week={week} />
           </section>
-          <section aria-labelledby="league-rosters-h" className="flex flex-col gap-2">
+          <section aria-labelledby="league-rosters-h" className="hidden flex-col gap-2 lg:flex">
             <h2 id="league-rosters-h" className="text-base font-semibold">
               Rosters
             </h2>
-            <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" data-testid="league-rosters">
+            <ul
+              className="flex max-w-3xl flex-col divide-y overflow-hidden rounded-[12px] border bg-card"
+              data-testid="league-rosters"
+            >
               {[...rows]
                 .sort((a, b) => a.rosterId - b.rosterId)
                 .map((r) => (
@@ -64,7 +67,7 @@ export default async function LeaguePage({
                     <Link
                       href={`${leagueBase(leagueId)}/league/teams/${r.rosterId}${weekQs}`}
                       data-testid="league-roster-link"
-                      className="flex min-h-11 items-center justify-between gap-3 rounded-[12px] border bg-card px-3 py-3 text-sm hover:bg-muted"
+                      className="flex min-h-11 items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-muted"
                     >
                       <span className="min-w-0 truncate font-medium">{r.teamName}</span>
                       <span className="shrink-0 tabular-nums text-muted-foreground">

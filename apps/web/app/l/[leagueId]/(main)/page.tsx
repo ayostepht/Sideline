@@ -1,27 +1,25 @@
 import { ChevronRight, CircleAlert, CircleCheck, Trophy } from "lucide-react";
 import Link from "next/link";
-import { DataFreshness } from "../../../components/data-freshness";
-import { DbError } from "../../../components/db-error";
-import { EmptyState } from "../../../components/empty-state";
-import { InjuryBadge } from "../../../components/injury-badge";
-import { PositionBadge } from "../../../components/position-badge";
-import { StaleBanner } from "../../../components/stale-banner";
-import { Badge } from "../../../components/ui/badge";
-import { buttonVariants } from "../../../components/ui/button";
-import { Card, CardContent, CardHeader } from "../../../components/ui/card";
-import { leagueBase, parseWeek } from "../../../lib/client/nav";
-import { getLeagueOverview, getMyTeam, getStandings } from "../../../lib/server/league-views";
+import { DataFreshness } from "../../../../components/data-freshness";
+import { DbError } from "../../../../components/db-error";
+import { EmptyState } from "../../../../components/empty-state";
+import { StaleBanner } from "../../../../components/stale-banner";
+import { Badge } from "../../../../components/ui/badge";
+import { buttonVariants } from "../../../../components/ui/button";
+import { Card, CardContent, CardHeader } from "../../../../components/ui/card";
+import { leagueBase, parseWeek } from "../../../../lib/client/nav";
+import { getLeagueOverview, getMyTeam, getStandings } from "../../../../lib/server/league-views";
 import {
-  countStarterIssues,
   displayName,
   formatPoints,
   formatRecord,
-  isOnBye,
+  issueLabel,
   issuesText,
   selectStandingsSnippet,
-} from "./_components/format";
-import { readPage } from "./_components/load";
-import { NoTeamState } from "./_components/no-team";
+  starterIssues,
+} from "../_components/format";
+import { readPage } from "../_components/load";
+import { NoTeamState } from "../_components/no-team";
 
 export default async function HomePage({
   params,
@@ -81,32 +79,7 @@ export default async function HomePage({
             </p>
           </CardHeader>
           <CardContent>
-            <HomeIssues players={team.data.players} week={week} />
-            <ul className="mt-2 flex flex-col" data-testid="home-starters">
-              {team.data.players
-                .filter((p) => p.slot === "starter")
-                .map((p) => (
-                  <li
-                    key={p.playerId}
-                    className="flex min-h-9 items-center gap-2 py-1 text-sm"
-                    data-testid="home-starter"
-                  >
-                    <span className="w-9 shrink-0 text-xs font-medium text-muted-foreground">
-                      {p.starterSlot}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate" title={displayName(p)}>
-                      {displayName(p)}
-                    </span>
-                    {p.name.trim() !== "" ? (
-                      <>
-                        {isOnBye(p, week) ? <Badge variant="info">Bye</Badge> : null}
-                        <InjuryBadge status={p.injuryStatus} />
-                        <PositionBadge position={p.position} />
-                      </>
-                    ) : null}
-                  </li>
-                ))}
-            </ul>
+            <HomeIssues players={team.data.players} week={week} base={base} />
             <Link
               href={`${base}/team${week === null ? "" : `?week=${week}`}`}
               className={`${buttonVariants({ variant: "outline" })} mt-3 w-full sm:w-auto`}
@@ -173,19 +146,48 @@ export default async function HomePage({
 function HomeIssues({
   players,
   week,
+  base,
 }: {
-  players: Parameters<typeof countStarterIssues>[0];
+  players: Parameters<typeof starterIssues>[0];
   week: number | null;
+  base: string;
 }) {
-  const n = countStarterIssues(players, week);
+  const issues = starterIssues(players, week);
+  const n = issues.length;
   const Icon = n === 0 ? CircleCheck : CircleAlert;
+  const weekQs = week === null ? "" : `&week=${week}`;
   return (
-    <p
-      className={`flex items-center gap-2 text-sm font-medium ${n === 0 ? "text-positive" : "text-warning"}`}
-      data-testid="home-issues"
-    >
-      <Icon className="size-4 shrink-0" aria-hidden />
-      {issuesText(n)}
-    </p>
+    <div data-testid="home-issues">
+      <p
+        className={`flex items-center gap-2 text-base font-semibold ${n === 0 ? "text-positive" : "text-warning"}`}
+      >
+        <Icon className="size-5 shrink-0" aria-hidden />
+        {issuesText(n)}
+        {n > 0 ? ":" : ""}
+      </p>
+      {n > 0 ? (
+        <ul className="mt-1 flex flex-col" data-testid="home-starters">
+          {issues.map(({ player, reason }) => (
+            <li key={player.playerId} data-testid="home-starter">
+              <Link
+                href={`${base}/team?highlight=${encodeURIComponent(player.playerId)}${weekQs}`}
+                className="flex min-h-11 items-center gap-2 rounded-[8px] px-1 text-sm hover:bg-muted"
+              >
+                <span className="min-w-0 flex-1 truncate font-medium" title={displayName(player)}>
+                  {displayName(player)}
+                </span>
+                <span className="shrink-0 text-xs text-muted-foreground">{player.starterSlot}</span>
+                {reason === "bye" ? (
+                  <Badge variant="info">Bye</Badge>
+                ) : (
+                  <span className="shrink-0 text-xs font-semibold">({issueLabel(reason)})</span>
+                )}
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
   );
 }

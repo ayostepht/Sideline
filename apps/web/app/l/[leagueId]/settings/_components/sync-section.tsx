@@ -1,13 +1,13 @@
 "use client";
 
 import type { SyncJobStatus, SyncStatusResponse } from "@sideline/shared";
-import { AlertCircle, CheckCircle2, Circle, Loader2, MinusCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { DataFreshness } from "../../../../../components/data-freshness";
+import { formatAge } from "../../../../../components/freshness";
 import { ErrorState } from "../../../../../components/empty-state";
 import { Button } from "../../../../../components/ui/button";
 import { SETTINGS_POLL_DEADLINE_MS, parseRetryAfter } from "../../../../../lib/client/onboarding";
-import { apiJson } from "../../../../onboarding/_components/api";
+import { apiJson } from "../../../../../lib/client/api";
 
 const JOB_LABELS: Record<string, string> = {
   state: "NFL week and season",
@@ -24,36 +24,56 @@ const JOB_LABELS: Record<string, string> = {
   nflverse: "Extra NFL data",
 };
 
-function RunStatus({ run }: { run: SyncJobStatus["lastRun"] }) {
-  if (run === null)
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-        <Circle className="size-3.5" aria-hidden /> Never run
-      </span>
-    );
-  if (run.status === "success")
-    return (
-      <span className="inline-flex items-center gap-1 text-xs">
-        <CheckCircle2 className="size-3.5 text-positive" aria-hidden /> OK
-      </span>
-    );
-  if (run.status === "failed")
-    return (
-      <span className="inline-flex items-center gap-1 text-xs">
-        <AlertCircle className="size-3.5 text-negative" aria-hidden /> Failed
-      </span>
-    );
-  if (run.status === "running")
-    return (
-      <span className="inline-flex items-center gap-1 text-xs">
-        <Loader2 className="size-3.5 text-primary motion-safe:animate-spin" aria-hidden /> Running
-      </span>
-    );
-  return (
-    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-      <MinusCircle className="size-3.5" aria-hidden /> Skipped
-    </span>
+type JobState = "running" | "failed" | "never" | "stale" | "ok";
+
+function jobState(j: SyncJobStatus): JobState {
+  if (j.lastRun?.status === "running") return "running";
+  if (j.lastRun?.status === "failed") return "failed";
+  if (j.lastSuccessAt === null) return "never";
+  return j.stale ? "stale" : "ok";
+}
+
+/** One status per job: icon plus text. */
+function JobStatus({ state }: { state: JobState }) {
+  switch (state) {
+    case "running":
+      return (
+        <span className="inline-flex items-center gap-1 text-xs">
+          <Loader2 className="size-3.5 text-primary motion-safe:animate-spin" aria-hidden /> Running
+        </span>
+      );
+    case "failed":
+      return (
+        <span className="inline-flex items-center gap-1 text-xs">
+          <AlertCircle className="size-3.5 text-negative" aria-hidden /> Failed
+        </span>
+      );
+    case "never":
+      return <span className="text-xs text-muted-foreground">Not run yet</span>;
+    case "stale":
+      return (
+        <span className="inline-flex items-center gap-1 text-xs">
+          <AlertTriangle className="size-3.5 text-warning" aria-hidden /> Out of date
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 text-xs">
+          <CheckCircle2 className="size-3.5 text-positive" aria-hidden /> Up to date
+        </span>
+      );
+  }
+}
+
+/** "11 of 12 up to date. Last sync 1 day ago". */
+export function syncSummary(jobs: readonly SyncJobStatus[], now: number): string {
+  const upToDate = jobs.filter((j) => jobState(j) === "ok" || jobState(j) === "running").length;
+  const times = jobs.flatMap((j) =>
+    j.lastSuccessAt === null ? [] : [Date.parse(j.lastSuccessAt)],
   );
+  const latest = times.length === 0 ? null : new Date(Math.max(...times)).toISOString();
+  const last = latest === null ? "No sync yet." : `Last sync ${formatAge(latest, now)}.`;
+  return `${upToDate} of ${jobs.length} up to date. ${last}`;
 }
 
 export function SyncSection() {
@@ -156,7 +176,7 @@ export function SyncSection() {
           data-testid="settings-sync-message"
         >
           {retryIn > 0
-            ? "Sync is rate limited. You can sync again soon."
+            ? "Sync is rate limited. Try again soon."
             : (message ?? (busy ? "Sync in progress." : ""))}
         </p>
         {retryIn > 0 ? (
@@ -165,6 +185,9 @@ export function SyncSection() {
           </span>
         ) : null}
       </div>
+      <p className="text-sm text-muted-foreground" data-testid="settings-sync-cooldown">
+        You can sync again a few minutes after the last run.
+      </p>
       {loadError && data === null ? (
         <ErrorState
           title="Couldn't load sync status"
@@ -184,35 +207,44 @@ export function SyncSection() {
               Couldn't refresh. Showing the last result.
             </p>
           ) : null}
-          <ul className="flex flex-col" data-testid="settings-sync-jobs">
-            {data.jobs.map((j) => (
-              <li
-                key={j.job}
-                className="flex flex-col gap-1 border-b border-border py-2 last:border-b-0"
-                data-testid="settings-sync-job"
-                data-job={j.job}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <span className="min-w-0 truncate text-sm font-medium">
-                    {JOB_LABELS[j.job] ?? j.job}
-                  </span>
-                  <RunStatus run={j.lastRun} />
-                </div>
-                <DataFreshness
-                  freshness={{ updatedAt: j.lastSuccessAt, stale: j.stale }}
-                  now={now}
-                />
-                {j.lastRun?.error ? (
-                  <details className="text-xs text-muted-foreground">
-                    <summary className="flex min-h-11 cursor-pointer items-center">
-                      Last error
-                    </summary>
-                    <p className="break-words pb-2">{j.lastRun.error.slice(0, 200)}</p>
-                  </details>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <p className="text-sm font-medium tabular-nums" data-testid="settings-sync-summary">
+            {syncSummary(data.jobs, now)}
+          </p>
+          <details data-testid="settings-sync-details">
+            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
+              Details
+            </summary>
+            <ul className="flex flex-col" data-testid="settings-sync-jobs">
+              {data.jobs.map((j) => (
+                <li
+                  key={j.job}
+                  className="flex flex-col gap-1 border-b border-border py-2 last:border-b-0"
+                  data-testid="settings-sync-job"
+                  data-job={j.job}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="min-w-0 truncate text-sm font-medium">
+                      {JOB_LABELS[j.job] ?? j.job}
+                    </span>
+                    <JobStatus state={jobState(j)} />
+                  </div>
+                  {j.lastSuccessAt !== null ? (
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      Updated {formatAge(j.lastSuccessAt, now)}
+                    </span>
+                  ) : null}
+                  {j.lastRun?.error ? (
+                    <details className="text-xs text-muted-foreground">
+                      <summary className="flex min-h-11 cursor-pointer items-center">
+                        Last error
+                      </summary>
+                      <p className="break-words pb-2">{j.lastRun.error.slice(0, 200)}</p>
+                    </details>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </details>
         </>
       )}
     </div>

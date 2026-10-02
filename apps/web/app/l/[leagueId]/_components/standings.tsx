@@ -1,4 +1,5 @@
 import type { StandingsRow } from "@sideline/shared";
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "../../../../components/ui/badge";
 import { leagueBase } from "../../../../lib/client/nav";
@@ -21,7 +22,7 @@ function TeamCell({ r }: { r: StandingsRow }) {
         </span>
         {r.isMine ? <YouBadge /> : null}
       </span>
-      {r.managerName ? (
+      {r.managerName && r.managerName.trim().toLowerCase() !== r.teamName.trim().toLowerCase() ? (
         <span className="truncate text-xs text-muted-foreground">{r.managerName}</span>
       ) : null}
     </span>
@@ -63,15 +64,13 @@ export function StandingsList({
                 <span className="block text-xs text-muted-foreground">
                   {formatPoints(r.pointsFor)} PF
                 </span>
-                <span className="block text-xs text-muted-foreground">
-                  {formatPoints(r.pointsAgainst)} PA
-                </span>
               </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             </Link>
           </li>
         ))}
       </ol>
-      <div className="hidden overflow-hidden rounded-[12px] border bg-card lg:block">
+      <div className="hidden max-w-3xl overflow-hidden rounded-[12px] border bg-card lg:block">
         <table className="w-full text-sm" data-testid="standings-table">
           <caption className="sr-only">League standings</caption>
           <thead className="bg-muted text-left text-xs text-muted-foreground">

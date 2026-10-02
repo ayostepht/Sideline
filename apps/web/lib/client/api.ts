@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-type Schemas = typeof import("./schemas");
+type Schemas = typeof import("../../app/onboarding/_components/schemas");
 export type SchemaKey = keyof Schemas;
 
 export type ApiOutcome<T> =
@@ -47,7 +47,7 @@ export async function apiJson<K extends SchemaKey>(
         headers: res.headers,
       };
     }
-    const schema: z.ZodType = (await import("./schemas"))[schemaKey];
+    const schema: z.ZodType = (await import("../../app/onboarding/_components/schemas"))[schemaKey];
     const parsed = schema.safeParse(json);
     if (!parsed.success) {
       return {

@@ -16,7 +16,7 @@ import {
   type FirstSyncJob,
   type FirstSyncState,
 } from "../../../lib/client/onboarding";
-import { apiJson } from "./api";
+import { apiJson } from "../../../lib/client/api";
 
 const LABELS: Record<FirstSyncJob, string> = {
   league: "League settings",
