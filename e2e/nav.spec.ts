@@ -62,6 +62,32 @@ test.describe("Navigation (PLAN 6.3)", () => {
     await expect(tabs.getByTestId("nav-tab-more")).toHaveAttribute("aria-current", "page");
   });
 
+  test("NAV-2b: the More sheet marks the current item with aria-current on My Team and League", async ({
+    page,
+  }) => {
+    if (isDesktop(page.viewportSize()?.width)) return;
+    for (const key of ["team", "league"] as const) {
+      await page.goto(`${L}/${key}`);
+      await page.getByTestId("nav-tab-more").click();
+      const sheet = page.getByTestId("nav-more-sheet");
+      await expect(sheet).toBeVisible();
+      await expect(sheet.getByTestId(`nav-more-${key}`)).toHaveAttribute("aria-current", "page");
+      await expect(sheet.locator('[aria-current="page"]')).toHaveCount(1);
+    }
+  });
+
+  test("NAV-3b: two immediate clicks on Previous week end on the week two earlier", async ({
+    page,
+  }) => {
+    await page.goto(`${L}/team?week=6`);
+    const prev = page.getByTestId("week-prev");
+    await expect(prev).toBeEnabled();
+    await prev.click();
+    await prev.click();
+    await expect(page).toHaveURL(/week=4/);
+    await expect(page.getByTestId("week-selector")).toContainText("Week 4");
+  });
+
   test("NAV-3: week selector next and previous update ?week= and keep other params", async ({
     page,
   }) => {

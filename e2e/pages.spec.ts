@@ -14,8 +14,9 @@ test.describe("Home (PLAN 6.4 Home v1)", () => {
     const card = page.getByTestId("home-team-card");
     await expect(card).toContainText(DATA.myTeamName);
     await expect(page.getByTestId("home-rank")).toHaveText(/^Rank \d+$/);
-    await expect(page.getByTestId("home-issues")).toBeVisible();
-    await expect(page.getByTestId("home-starters")).toBeVisible();
+    // Home lists only flagged starters; the fixture has none in week 4.
+    await expect(page.getByTestId("home-issues")).toContainText("No lineup issues this week");
+    await expect(page.getByTestId("home-starters")).toHaveCount(0);
     const mine = page.getByTestId("home-standings").locator('[data-mine="true"]');
     await expect(mine).toHaveCount(1);
     await expect(mine).toContainText("You");
@@ -35,6 +36,16 @@ test.describe("Home (PLAN 6.4 Home v1)", () => {
     await page.getByTestId("home-see-league").click();
     await expect(page).toHaveURL(new RegExp(`${L}/league`));
     await expect(page.getByTestId("league-page")).toBeVisible();
+  });
+
+  test("HOME-1b: See full roster from the lineup issues area opens the roster", async ({
+    page,
+  }) => {
+    await page.goto(L);
+    await expect(page.getByTestId("home-issues")).toContainText("No lineup issues this week");
+    await page.getByTestId("home-see-roster").click();
+    await expect(page).toHaveURL(new RegExp(`${L}/team`));
+    await expect(page.getByTestId("team-view")).toBeVisible();
   });
 
   test("HOME-3: '/' redirects to the active league (ADR-009 item 2)", async ({ page }) => {
@@ -64,11 +75,20 @@ test.describe("League (PLAN 6.4 League)", () => {
     await expect(page.locator('[data-testid="standings-you"]:visible')).toHaveCount(1);
   });
 
-  test("LEAGUE-2: every team has a roster link that opens its team page", async ({ page }) => {
+  test("LEAGUE-2: every team opens its team page (roster links on desktop, standings cards on mobile)", async ({
+    page,
+  }) => {
     await page.goto(`${L}/league`);
-    const links = page.getByTestId("league-roster-link");
-    await expect(links).toHaveCount(DATA.teamCount);
-    await links.first().click();
+    const desktop = isDesktop(page.viewportSize()?.width);
+    await expect(page.getByTestId("league-rosters")).toBeVisible({ visible: desktop });
+    if (desktop) {
+      const links = page.getByTestId("league-roster-link");
+      await expect(links).toHaveCount(DATA.teamCount);
+      await links.first().click();
+    } else {
+      await expect(page.getByTestId("league-roster-link").first()).toBeHidden();
+      await page.getByTestId("standings-card").first().click();
+    }
     await expect(page).toHaveURL(new RegExp(`${L}/league/teams/\\d+`));
     await expect(page.getByTestId("team-view")).toBeVisible();
   });
@@ -93,12 +113,13 @@ test.describe("Team detail and My Team (PLAN 6.4)", () => {
     const hit = page.getByTestId("team-highlighted-row");
     await expect(hit).toHaveCount(1);
     await expect(hit).toHaveAttribute("id", `player-${DATA.myPlayerId}`);
-    await expect(hit).toContainText("Search result");
+    await expect(hit).toBeVisible();
+    await expect(hit.getByTestId("player-row-highlight-tag")).toBeVisible();
   });
 
   test("TEAM-3: an unknown roster id shows the not-found page", async ({ page }) => {
-    // The HTTP status is 200 here (the page streams under loading.tsx); see the T2.5b report.
-    await page.goto(`${L}/league/teams/9999`);
+    const res = await page.goto(`${L}/league/teams/9999`);
+    expect(res?.status()).toBe(404);
     await expect(page.getByRole("heading", { name: "We could not find that page" })).toBeVisible();
     await expect(page.getByTestId("team-view")).toHaveCount(0);
   });
@@ -140,6 +161,22 @@ test.describe("States (PLAN 6.5, ADR-009 item 2)", () => {
       const res = await page.goto(`${L}/${seg}`);
       expect(res?.ok(), seg).toBe(true);
       await expect(page.getByRole("heading", { level: 1 }), seg).toBeVisible();
+    }
+  });
+
+  test("STATE-3: each placeholder page links to Home and My Team and the links navigate", async ({
+    page,
+  }) => {
+    for (const seg of ["lineup", "matchup", "waivers", "players"]) {
+      await page.goto(`${L}/${seg}`);
+      await expect(page.getByTestId("stub-page"), seg).toBeVisible();
+      await page.getByTestId("stub-link-home").click();
+      await expect(page, seg).toHaveURL(new RegExp(`${L}$`));
+      await expect(page.getByTestId("home-page"), seg).toBeVisible();
+      await page.goto(`${L}/${seg}`);
+      await page.getByTestId("stub-link-team").click();
+      await expect(page, seg).toHaveURL(new RegExp(`${L}/team$`));
+      await expect(page.getByTestId("team-view"), seg).toBeVisible();
     }
   });
 });

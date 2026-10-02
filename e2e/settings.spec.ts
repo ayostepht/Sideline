@@ -34,7 +34,14 @@ test.describe("Settings v1 (PLAN 6.4)", () => {
     await button.click();
     // Another project may have synced a moment ago: queued, already queued, or rate limited are all valid.
     await expect(message).toHaveText(/Sync queued|already queued|rate limited|in progress/);
-    await expect(page.getByTestId("settings-sync-jobs")).toBeVisible();
+    await expect(page.getByTestId("settings-sync-summary")).toBeVisible();
+    await expect(page.getByTestId("settings-sync-cooldown")).toBeVisible();
+    // Job rows live in a collapsed details element until opened.
+    const details = page.getByTestId("settings-sync-details");
+    await expect(details).not.toHaveAttribute("open", /.*/);
+    await details.locator("summary").click();
+    await expect(details).toHaveAttribute("open", /.*/);
+    await expect(page.getByTestId("settings-sync-job").first()).toBeVisible();
     await expect(page.getByTestId("settings-page")).toBeVisible();
   });
 
