@@ -16,6 +16,8 @@ export interface PlayerRowProps {
   stat?: ReactNode;
   statLabel?: string;
   highlighted?: boolean;
+  /** Screen reader text for a highlighted row. */
+  highlightLabel?: string;
   /** Renders the row as a link. */
   href?: string;
   /** Renders the row as a button (client parents only). */
@@ -32,6 +34,7 @@ export function PlayerRow({
   stat,
   statLabel,
   highlighted = false,
+  highlightLabel = "Your player",
   href,
   onClick,
   className,
@@ -55,6 +58,7 @@ export function PlayerRow({
       ) : null}
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="truncate text-base font-medium leading-5" title={name}>
+          {highlighted ? <span className="sr-only">{highlightLabel}: </span> : null}
           {name}
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
@@ -75,12 +79,7 @@ export function PlayerRow({
   );
   if (href !== undefined) {
     return (
-      <Link
-        href={href}
-        className={cls}
-        data-testid="player-row"
-        aria-current={highlighted ? "true" : undefined}
-      >
+      <Link href={href} className={cls} data-testid="player-row">
         {content}
       </Link>
     );

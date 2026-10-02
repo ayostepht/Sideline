@@ -30,10 +30,40 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "../../../components/ui/toggle-group";
 import { Tooltip } from "../../../components/ui/tooltip";
+import { ErrorState } from "../../../components/empty-state";
+import { WhySheet } from "../../../components/why-sheet";
 import { Section } from "./gallery-core";
+import { MANY_REASONS } from "./gallery-data";
 
-export function GalleryClient({ part }: { part: "theme" | "primitives" }) {
+export function GalleryClient({
+  part,
+  open,
+}: {
+  part: "theme" | "primitives" | "why";
+  /** Preopen one overlay for screenshots and axe: "sheet", "dialog" or "why". */
+  open?: string | undefined;
+}) {
   if (part === "theme") return <ThemeToggle />;
+  if (part === "why") {
+    return (
+      <Section title="WhySheet, ErrorState retry (interactive)">
+        <div className="flex flex-wrap items-center gap-3">
+          <WhySheet
+            defaultOpen={open === "why"}
+            title="Why start Sample Runner"
+            summary={{ label: "Projected points", value: "14.2" }}
+            reasons={MANY_REASONS}
+          />
+          <ErrorState
+            title="Could not load picks"
+            detail="Tap retry to try again."
+            onRetry={() => undefined}
+            className="py-4"
+          />
+        </div>
+      </Section>
+    );
+  }
   return (
     <>
       <Section title="Button">
@@ -73,7 +103,7 @@ export function GalleryClient({ part }: { part: "theme" | "primitives" }) {
       </Section>
       <Section title="Sheet, Dialog, Popover, Tooltip">
         <div className="flex flex-wrap items-center gap-2">
-          <Sheet>
+          <Sheet defaultOpen={open === "sheet"}>
             <SheetTrigger asChild>
               <Button variant="outline" data-testid="gallery-sheet-trigger">
                 Open sheet
@@ -87,7 +117,7 @@ export function GalleryClient({ part }: { part: "theme" | "primitives" }) {
               <p className="py-2 text-sm">Sheet body.</p>
             </SheetContent>
           </Sheet>
-          <Dialog>
+          <Dialog defaultOpen={open === "dialog"}>
             <DialogTrigger asChild>
               <Button variant="outline">Open dialog</Button>
             </DialogTrigger>
