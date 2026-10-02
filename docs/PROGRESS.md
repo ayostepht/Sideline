@@ -28,6 +28,12 @@ Updated: 2026-10-02, after commit d155036 (T1.3a-fix); Batch C dispatched.
   - **T1.6** (backend-engineer, `apps/web/app/api/**`, `apps/web/lib/server/**`).
 
   If interrupted, `git status` shows each one's partial files by path. Verify each against its acceptance criteria in this file's "Batch C brief essentials", or discard that path (`git checkout -- <path> && git clean -fd <path>`) and re-dispatch.
+- **Batch C status:**
+  - T1.6 delivered but not committed (`apps/web/app/api`, `apps/web/lib/server`; coverage 96.9%). It is blocked on two things:
+    - the T1.5a worker lint error, which T1.5a owns;
+    - `pnpm build` failing because Turbopack can't resolve `.js` imports in workspace TS packages. A devops fix, T1.6-build, is in flight in `apps/web/next.config.ts`.
+  - Commit T1.6 after the build passes.
+  - Open question for the Batch C review: the T1.6 staleness cadences (stats 1 h, projections 6 h, nflverse 24 h) must match the worker's cadences. Move one cadence table into `@sideline/shared`.
 - **Batch C brief essentials:**
   - **T1.3b:**
     - idempotent upserts that count real changes only;
