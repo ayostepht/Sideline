@@ -48,7 +48,7 @@ export function UsernameForm({
     .join(" ");
 
   return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-3">
+    <form onSubmit={submit} noValidate className="flex flex-col gap-2">
       <label htmlFor={id} className="text-sm font-medium">
         {label}
       </label>
@@ -74,7 +74,7 @@ export function UsernameForm({
         aria-invalid={shown ? true : undefined}
         aria-describedby={describedBy || undefined}
         data-testid={`${testIdPrefix}-username-input`}
-        className="min-h-11 w-full rounded-[8px] border border-input bg-card px-3 text-base text-foreground placeholder:text-muted-foreground"
+        className="min-h-11 w-full rounded-control border border-input bg-card px-3 text-base text-foreground placeholder:text-muted-foreground"
       />
       {shown ? (
         <p

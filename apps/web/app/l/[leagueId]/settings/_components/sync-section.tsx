@@ -39,7 +39,8 @@ function JobStatus({ state }: { state: JobState }) {
     case "running":
       return (
         <span className="inline-flex items-center gap-1 text-xs">
-          <Loader2 className="size-3.5 text-primary motion-safe:animate-spin" aria-hidden /> Running
+          <Loader2 className="size-3.5 text-foreground motion-safe:animate-spin" aria-hidden />{" "}
+          Running
         </span>
       );
     case "failed":
@@ -216,7 +217,7 @@ export function SyncSection() {
             {syncSummary(data.jobs, now)}
           </p>
           <details data-testid="settings-sync-details">
-            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-primary">
+            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-link">
               Details
             </summary>
             <ul className="flex flex-col" data-testid="settings-sync-jobs">

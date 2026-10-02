@@ -194,7 +194,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <p aria-live="polite" className="sr-only" data-testid="onboarding-live">
         {view.kind === "polling" ? `${phaseLabel}...` : ""}
       </p>
@@ -203,7 +203,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
           id="onboarding-step"
           ref={headingRef}
           tabIndex={-1}
-          className={view.kind === "done" ? "sr-only" : "mb-4 text-lg font-semibold outline-none"}
+          className={view.kind === "done" ? "sr-only" : "mb-3 text-lg font-bold outline-none"}
         >
           {TITLES[view.kind]}
         </h2>
@@ -223,7 +223,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
         {view.kind === "polling" ? (
           <div className="flex items-center gap-3" data-testid="onboarding-progress">
             <Loader2
-              className="size-5 shrink-0 text-primary motion-safe:animate-spin"
+              className="size-5 shrink-0 text-foreground motion-safe:animate-spin"
               aria-hidden
             />
             <p
@@ -243,8 +243,8 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
               detail="Sideline needs it to fetch data from Sleeper. Start it from the project folder, then try again."
               className="px-0 py-4"
             />
-            <p className="mb-4 text-center">
-              <code className="rounded-[8px] bg-muted px-2 py-1 font-mono text-sm">
+            <p className="mb-3 text-center">
+              <code className="rounded-control bg-muted px-2 py-1 font-mono text-sm">
                 pnpm dev:worker
               </code>
             </p>
@@ -263,7 +263,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
         ) : null}
 
         {view.kind === "failed" ? (
-          <div className="flex flex-col gap-4" data-testid="onboarding-failed">
+          <div className="flex flex-col gap-3" data-testid="onboarding-failed">
             <p role="alert" className="flex items-start gap-2 text-sm">
               <AlertCircle className="mt-0.5 size-4 shrink-0 text-negative" aria-hidden />
               <span data-testid="onboarding-error-message">{view.message}</span>
@@ -289,17 +289,14 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
         ) : null}
 
         {view.kind === "done" ? (
-          <div
-            className="flex flex-col gap-4 sm:items-center sm:text-center"
-            data-testid="onboarding-done"
-          >
-            <p className="text-base font-medium">
+          <div className="flex flex-col gap-3 text-left" data-testid="onboarding-done">
+            <p className="text-base font-bold">
               {initial.activeLeagueName
                 ? `${initial.activeLeagueName} is ready.`
                 : "Your league is ready."}
             </p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-              <Button asChild className="w-full sm:w-auto">
+            <div className="flex flex-col gap-2">
+              <Button asChild className="w-full">
                 <Link
                   href={`/l/${encodeURIComponent(initial.activeLeagueId ?? "")}`}
                   data-testid="onboarding-go-home"
@@ -309,7 +306,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
               </Button>
               <Button
                 variant="outline"
-                className="w-full sm:w-auto"
+                className="w-full"
                 onClick={startOver}
                 data-testid="onboarding-start-over"
               >
@@ -354,7 +351,7 @@ function LeaguePicker({
   }
   return (
     <form
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (selected) onSelect(selected);
@@ -366,8 +363,10 @@ function LeaguePicker({
           <label
             key={l.leagueId}
             className={cn(
-              "relative flex min-h-14 cursor-pointer items-center gap-3 rounded-[12px] border bg-card px-4 py-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary",
-              selected === l.leagueId ? "border-primary" : "border-border",
+              "relative flex min-h-14 cursor-pointer items-center gap-3 rounded-card border bg-card px-3 py-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring",
+              selected === l.leagueId
+                ? "border-foreground outline-1 outline-foreground bg-accent-soft"
+                : "border-border",
             )}
             data-testid="onboarding-league-option"
           >
@@ -380,7 +379,7 @@ function LeaguePicker({
               className="sr-only"
             />
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{l.name}</span>
+              <span className="block truncate text-sm font-bold">{l.name}</span>
               <span className="block text-xs tabular-nums text-muted-foreground">
                 {l.season} season, {l.totalRosters} teams
               </span>
@@ -390,7 +389,7 @@ function LeaguePicker({
               className={cn(
                 "flex size-6 shrink-0 items-center justify-center rounded-full border",
                 selected === l.leagueId
-                  ? "border-primary bg-primary text-primary-foreground"
+                  ? "border-foreground bg-primary text-primary-foreground"
                   : "border-input",
               )}
             >

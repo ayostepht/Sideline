@@ -34,6 +34,7 @@ export default async function TeamDetailPage({
       now={read.now}
       highlight={hl ?? null}
       heading={team.roster.teamName}
+      backHref={`${leagueBase(leagueId)}/league`}
     />
   );
 }

@@ -25,7 +25,7 @@ export default async function MyTeamPage({
   const week = parseWeek(sp.week) ?? read.value.overview.data.currentWeek;
   if (!read.value.team.ok) {
     return (
-      <div className="flex flex-col gap-4" data-testid="team-page">
+      <div className="flex flex-col gap-3" data-testid="team-page">
         <h1 className="text-2xl font-semibold tracking-tight">My Team</h1>
         <NoTeamState leagueId={leagueId} />
       </div>

@@ -23,7 +23,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ leagu
     return <DbError retryHref={`/l/${encodeURIComponent(leagueId)}/settings`} />;
   }
   return (
-    <div className="flex flex-col gap-4" data-testid="settings-page">
+    <div className="flex flex-col gap-3" data-testid="settings-page">
       <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
       <SettingsSections
         leagueId={leagueId}

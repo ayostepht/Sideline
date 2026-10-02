@@ -4,7 +4,7 @@ import type { LeagueChoice } from "@sideline/shared";
 import { useRouter } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
 import { Button } from "../../../../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../../components/ui/card";
+import { Card, CardContent, CardHeader } from "../../../../../components/ui/card";
 import { apiJson } from "../../../../../lib/client/api";
 import { UsernameForm } from "../../../../onboarding/_components/username-form";
 import dynamic from "next/dynamic";
@@ -39,9 +39,9 @@ function Section({
     <Card data-testid={testId}>
       <section aria-labelledby={id}>
         <CardHeader>
-          <CardTitle id={id} className="text-base">
+          <h2 id={id} className="sl-label">
             {title}
-          </CardTitle>
+          </h2>
         </CardHeader>
         <CardContent>{children}</CardContent>
       </section>
@@ -112,7 +112,7 @@ export function SettingsSections({
   return (
     <>
       <Section title="Account" testId="settings-account">
-        <p className="mb-3 text-sm text-muted-foreground">
+        <p className="mb-2 text-sm text-muted-foreground">
           Sleeper username:{" "}
           <span className="font-medium text-foreground" data-testid="settings-username">
             {username ?? "not set"}
@@ -139,7 +139,7 @@ export function SettingsSections({
           </span>
         </p>
         {others.length > 0 ? (
-          <div className="mt-3 flex flex-col gap-3">
+          <div className="mt-2 flex flex-col gap-2">
             <label htmlFor={selectId} className="text-sm font-medium">
               Switch league
             </label>
@@ -147,7 +147,7 @@ export function SettingsSections({
               id={selectId}
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              className="min-h-11 w-full rounded-[8px] border border-input bg-card px-3 text-base text-foreground"
+              className="min-h-11 w-full rounded-control border border-input bg-card px-3 text-base text-foreground"
               data-testid="settings-league-select"
             >
               <option value="">Choose a league</option>

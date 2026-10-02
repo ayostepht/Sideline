@@ -158,12 +158,6 @@
   }
 }
 
-/* Pages not yet migrated use text-primary for links and spinners. Lime text fails on white,
-   so route it to --primary-text (dark text in light, lime in dark). Migrate to text-link in T2.7b. */
-.text-primary {
-  color: var(--primary-text);
-}
-
 /* Scoreboard section label: small, uppercase, tracked. */
 @utility sl-label {
   font-size: 11px;

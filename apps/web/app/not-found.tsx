@@ -27,7 +27,7 @@ function safeHome(): { href: string; label: string } {
 export default function NotFound() {
   const home = safeHome();
   return (
-    <main className="mx-auto max-w-xl p-4">
+    <main className="mx-auto max-w-xl p-3">
       <EmptyState
         icon={SearchX}
         title="We could not find that page"
@@ -37,7 +37,7 @@ export default function NotFound() {
             <Link href={home.href}>{home.label}</Link>
           </Button>
         }
-        className="py-24"
+        className="py-16"
       />
     </main>
   );

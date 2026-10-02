@@ -1,5 +1,6 @@
 import type { TeamDetail, TeamPlayerRow } from "@sideline/shared";
-import { Plus } from "lucide-react";
+import { ChevronLeft, Plus } from "lucide-react";
+import Link from "next/link";
 import { DataFreshness } from "../../../../components/data-freshness";
 import { EmptyState } from "../../../../components/empty-state";
 import { PlayerRow } from "../../../../components/player-row";
@@ -21,12 +22,10 @@ function Section({
 }) {
   return (
     <section aria-labelledby={`team-${id}-h`} data-testid={`team-section-${id}`}>
-      <h2 id={`team-${id}-h`} className="mb-1 px-3 text-sm font-semibold text-muted-foreground">
+      <h2 id={`team-${id}-h`} className="sl-label mb-1">
         {title} <span className="tabular-nums">({count})</span>
       </h2>
-      <div className="flex flex-col divide-y rounded-[12px] border bg-card py-1 md:max-w-2xl">
-        {children}
-      </div>
+      <div className="flex flex-col divide-y rounded-card border bg-card">{children}</div>
     </section>
   );
 }
@@ -37,6 +36,7 @@ export function TeamView({
   now,
   highlight,
   heading,
+  backHref,
 }: {
   team: TeamDetail;
   week: number | null;
@@ -44,6 +44,8 @@ export function TeamView({
   highlight: string | null;
   /** The h1 text. */
   heading: string;
+  /** When set, shows a back link above the heading. */
+  backHref?: string;
 }) {
   const { roster } = team;
   const g = groupPlayers(team.players);
@@ -79,10 +81,20 @@ export function TeamView({
       <EmptyState title="No players yet" message="This roster is empty." />
     ) : null;
   return (
-    <div className="flex flex-col gap-4" data-testid="team-view">
+    <div className="flex flex-col gap-3" data-testid="team-view">
       <div>
+        {backHref ? (
+          <Link
+            href={backHref}
+            className="-ml-1 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-link underline-offset-4 hover:underline"
+            data-testid="team-back-link"
+          >
+            <ChevronLeft className="size-4" aria-hidden />
+            League
+          </Link>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="min-w-0 break-words text-2xl font-semibold tracking-tight">{heading}</h1>
+          <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight">{heading}</h1>
           {roster.isMine ? (
             <Badge variant="accent" data-testid="team-mine-badge">
               Your team
@@ -91,7 +103,7 @@ export function TeamView({
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           {roster.managerName ? `${roster.managerName} · ` : ""}
-          <span className="tabular-nums">
+          <span className="font-bold tabular-nums">
             {formatRecord(roster)} · {formatPoints(roster.pointsFor)} PF
           </span>
         </p>

@@ -9,7 +9,7 @@ export default function RootError({
   retry: () => void;
 }) {
   return (
-    <main className="mx-auto max-w-xl p-4">
+    <main className="mx-auto max-w-xl p-3">
       <h1 className="sr-only">Sideline</h1>
       <ErrorState
         title="Something went wrong"

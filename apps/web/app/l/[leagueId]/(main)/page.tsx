@@ -45,7 +45,7 @@ export default async function HomePage({
   const freshness = overview.data.freshness;
 
   return (
-    <div className="flex flex-col gap-4" data-testid="home-page">
+    <div className="flex flex-col gap-3" data-testid="home-page">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Home</h1>
         <DataFreshness freshness={freshness} now={now} className="mt-1" />
@@ -53,7 +53,7 @@ export default async function HomePage({
       <StaleBanner freshness={freshness} now={now} />
       {week === null ? (
         <p
-          className="rounded-[8px] border bg-card px-3 py-2 text-sm text-muted-foreground"
+          className="rounded-card border bg-card px-3 py-2 text-sm text-muted-foreground"
           data-testid="home-preseason"
         >
           The season has not started. Weekly details like byes and matchups begin once it does.
@@ -64,13 +64,13 @@ export default async function HomePage({
         <Card data-testid="home-team-card">
           <CardHeader>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="min-w-0 break-words text-base font-semibold leading-6">
+              <h2 className="min-w-0 break-words text-base font-bold leading-6">
                 {team.data.roster.teamName}
               </h2>
               <Badge variant="accent">Your team</Badge>
             </div>
             <p className="text-sm tabular-nums text-muted-foreground">
-              <span className="font-medium text-foreground">{formatRecord(team.data.roster)}</span>
+              <span className="font-bold text-foreground">{formatRecord(team.data.roster)}</span>
               {" · "}
               {formatPoints(team.data.roster.pointsFor)} PF
               {" · "}
@@ -82,7 +82,7 @@ export default async function HomePage({
             <HomeIssues players={team.data.players} week={week} base={base} />
             <Link
               href={`${base}/team${week === null ? "" : `?week=${week}`}`}
-              className={`${buttonVariants({ variant: "outline" })} mt-3 w-full sm:w-auto`}
+              className={`${buttonVariants({ variant: "outline" })} mt-2 w-full sm:w-auto`}
               data-testid="home-see-roster"
             >
               See full roster
@@ -98,7 +98,7 @@ export default async function HomePage({
 
       <Card data-testid="home-standings">
         <CardHeader>
-          <h2 className="text-base font-semibold leading-6">Standings</h2>
+          <h2 className="sl-label">Standings</h2>
         </CardHeader>
         <CardContent>
           {rows.length === 0 ? (
@@ -108,13 +108,13 @@ export default async function HomePage({
               message="Standings show up after the first sync."
             />
           ) : (
-            <ol className="flex flex-col">
+            <ol className="flex flex-col divide-y">
               {selectStandingsSnippet(rows).map((r) => (
                 <li
                   key={r.rosterId}
                   data-mine={r.isMine ? "true" : undefined}
                   data-testid="home-standings-row"
-                  className={`flex min-h-11 items-center gap-3 rounded-[8px] px-2 py-2 text-sm ${
+                  className={`flex min-h-11 items-center gap-3 px-2 py-1 text-sm ${
                     r.isMine ? "bg-accent-soft" : ""
                   }`}
                 >
@@ -124,7 +124,7 @@ export default async function HomePage({
                   </span>
                   <span className="min-w-0 flex-1 truncate">{r.teamName}</span>
                   {r.isMine ? <Badge variant="accent">You</Badge> : null}
-                  <span className="shrink-0 tabular-nums">{formatRecord(r)}</span>
+                  <span className="shrink-0 font-bold tabular-nums">{formatRecord(r)}</span>
                 </li>
               ))}
             </ol>
@@ -171,7 +171,7 @@ function HomeIssues({
             <li key={player.playerId} data-testid="home-starter">
               <Link
                 href={`${base}/team?highlight=${encodeURIComponent(player.playerId)}${weekQs}`}
-                className="flex min-h-11 items-center gap-2 rounded-[8px] px-1 text-sm hover:bg-muted"
+                className="flex min-h-11 items-center gap-2 rounded-control px-1 text-sm hover:bg-muted"
               >
                 <span className="min-w-0 flex-1 truncate font-medium" title={displayName(player)}>
                   {displayName(player)}

@@ -35,7 +35,7 @@ function StateIcon({ state }: { state: FirstSyncState }) {
   if (state === "done") return <CheckCircle2 className="size-5 text-positive" aria-hidden />;
   if (state === "failed") return <AlertCircle className="size-5 text-negative" aria-hidden />;
   if (state === "running")
-    return <Loader2 className="size-5 text-primary motion-safe:animate-spin" aria-hidden />;
+    return <Loader2 className="size-5 text-foreground motion-safe:animate-spin" aria-hidden />;
   return <Circle className="size-5 text-muted-foreground" aria-hidden />;
 }
 
@@ -108,7 +108,7 @@ export function FirstSync({
   const { states, allDone } = firstSyncProgress(jobs, sinceMs);
   const failedJob = failedFirstSyncJob(states);
   return (
-    <div className="flex flex-col gap-4" data-testid="onboarding-sync">
+    <div className="flex flex-col gap-3" data-testid="onboarding-sync">
       <ul className="flex flex-col gap-1" data-testid="onboarding-sync-jobs">
         {FIRST_SYNC_JOBS.map((job) => (
           <li
@@ -150,7 +150,7 @@ export function FirstSync({
       {timedOut ? (
         <Link
           href={homeHref}
-          className="inline-flex min-h-11 items-center self-start text-sm font-medium text-primary underline underline-offset-4"
+          className="inline-flex min-h-11 items-center self-start text-sm font-medium text-link underline underline-offset-4"
           data-testid="onboarding-go-home"
         >
           Go to Home anyway

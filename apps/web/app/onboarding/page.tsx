@@ -31,7 +31,7 @@ export default function OnboardingPage() {
     if (!isMissingTableError(err)) return <DbError retryHref="/onboarding" />;
   }
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-4 py-8">
+    <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-4 px-3 py-6">
       <p className="text-lg font-semibold tracking-tight" data-testid="onboarding-wordmark">
         Sideline
       </p>
