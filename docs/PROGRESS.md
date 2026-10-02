@@ -5,7 +5,7 @@
 | Phase | Gate | Branch | Status |
 |---|---|---|---|
 | 0 Bootstrap and API spike | G0 | `phase/0-bootstrap` (merged) | Done, G0 PASS 2026-10-01 |
-| 1 Data layer and sync | G1 | `phase/1-data` | In progress (plan approved 2026-10-02, ADR-005) |
+| 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
 | 2 App shell and league views | G2 (human) | | Not started |
 | 3 Scoring, projections, optimizer | G3 (human) | | Not started |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | | Not started |
@@ -57,6 +57,8 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T1.8 | Docker and build with SQLite | devops-engineer | D | Done (container health 200 degraded in 2 s, verified by orchestrator) | 1 | 847c7e0 |
 | T1.5c | nflverse job, derived hook, db:seed:fixtures | sleeper-data-engineer | E | Done | 1 | 8433f87 |
 | T1.7b | Integration suites | qa-engineer | F | Done | 1 | 08c4d7a |
+| T1.7a-fix | Contract suite without skipIf (gate U4) | qa-engineer | G1 | Done | 1 | 9233328 |
+| T1.8-fix | Gate standalone server temp DATA_DIR and failure logs (UI1/UI2); e2e health expects degraded | devops-engineer, orchestrator | G1 | Done | 1 | 49956b7, 0d0c0c3 |
 | G1 | Gate | qa-engineer, code-reviewer, orchestrator | G | Not started | 0 | |
 
 Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live worker; renewed DB lease), projection real-row rule documented per endpoint with a week 5 non-empty test and bye handling via schedule, red-zone touches dropped to P1 if they need play-by-play.
@@ -97,6 +99,9 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 - Batch E review (docs/reviews/2026-10-02-p1-batchE-code.md), sleeper-data-engineer: m1 `storeState` in one transaction; m2 recompute changed-tables should include failed jobs with rowsChanged > 0; m3 zod for the fixture manifest; m4 test that a later real gametime replaces an approximate kickoff.
 - T1.7b follow-ups: backoff/timeout integration tests hook the client retry warn log in `makeClient` (apps/worker/src/jobs/common.ts); an injectable `sleep` on job deps would make them sturdier (sleeper-data-engineer). RATE-1 sees about 107 calls per game-window hour; the 300/min cap itself is covered by limiter unit tests.
 - Batch F review (docs/reviews/2026-10-02-p1-batchF-code.md), qa-engineer: m1 iteration guard in `drive()` (sync-harness.ts) so a changed retry log shape fails instead of hanging; m2 comment that RATE-1 checks schedule cadence and limiter enforcement lives in limiter unit tests.
+- G1: worker CLI does not load `.env`; without DEFAULT_LEAGUE_ID the league jobs skip with no log reason. Log the reason (sleeper-data-engineer); decide whether local `pnpm run sync` loads `.env` (devops-engineer).
+- G1: gate JSON includes a local Chrome path with the OS user name; write home-relative paths (devops-engineer).
+- G1: CONTRACT_PLAYERS=1 widens the contract include to all of tests/contract; CONTRACT-3 body has not yet run live.
 - T1.5a-fix: worker function coverage 67% (lines 83%); `seedLastAttempts` uses raw SQL in the worker instead of a `@sideline/db` helper. Fold into T1.5b or T1.7b.
 - T1.7a: tests/fixtures/README.md section (what each fixture is, sanitization, fake id ranges, how to re-record) still open; Lighthouse `DATA_DIR=$(mktemp -d)` startServerCommand unverified (run `pnpm lhci` once at G1); e2e/Lighthouse temp DATA_DIRs never cleaned up. The contract suite was run live once by the agent (5 GETs, all shapes passed, nothing written); /players/nfl not yet run.
 - T1.5b: move `apps/worker/src/jobs/db-reads.ts` raw SQL into packages/db helpers (backend-engineer); pregame snapshots need nflverse kickoffs, so T1.5c should order nflverse before projections in `ALL_ORDER`; `SIDELINE_VERSION` constant must track package version; consider `etag: false` for regular stats/projections to keep multi-MB bodies out of http_cache.
