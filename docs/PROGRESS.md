@@ -85,7 +85,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.3a-fix | Batch C review M1 (404 loop), M2 (layout errors), m1, m2, m3 | frontend-engineer | C-fix | Done (orchestrator: verify 662 tests, e2e 75, a11y 36 on the combined tree; `/l/[leagueId]` 161,611 B) | 1 | 2a08728 |
 | T2.2b-fix2 | Batch C review m4, m5; getLeagueChoices tests | backend-engineer | C-fix | Done (lib/server and app/api 98.4% lines) | 1 | cfb098d |
 | T2.3a-fix2 | Shell UX review M1 (768 layout, sidebar stays at 1024 per PLAN 6.3), M2 (desktop header title and week label), m1 to m4, n1 | frontend-engineer | C-fix | Done (orchestrator: verify 662, e2e 75; `/l/[leagueId]` 161,725 B) | 1 | 41fd0c1 |
-| T2.3b | Onboarding and Settings v1 | frontend-engineer | D | In progress | 1 | |
+| T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Done (orchestrator: verify 676, e2e 75; /onboarding 154.6 KB, settings 164.3 KB) | 1 | 9490c57 |
 | T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Done (targeted checks; routes about 161.6 KB) | 1 | fbc6204 |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
 | T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | Not started | 0 | |
@@ -175,6 +175,8 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - Shell UX review (docs/reviews/2026-10-02-p2-batchC-ux.md): M3 (single-league mobile name has no settings route from the top bar) accepted as Minor, Settings is in More; m5 onboarding wordmark goes to T2.3b; add `/l/<id>` shell routes to axe and capture Syncing, not-found, More sheet and search states in T2.5b/T2.4.
 
 - T2.3c: Home team card, "You" row, Bye badge and highlight were never seen with a stored user (seeded DB has none); T2.5b should exercise them on the onboarding server after onboarding. Stale freshness text and StaleBanner show together (redundant; T2.4 to judge). Home issue count = starters Out, IR, PUP or on bye in the selected week. test ids listed in the T2.3c report: standings-*, home-*, team-*, no-team-*, league-rosters.
+
+- T2.3b: standalone/`next start` server reports `db.migrated: false` on a seeded DB unless `SIDELINE_MIGRATIONS_DIR` is set (bundled import.meta.url path); APIs behind withMigratedDb then answer 503. Docker sets the env var. Investigate in Batch E (backend, devops). Two `start-standalone.mjs` at once race on copying .next/static. No shared Input/Select component (native controls styled in route folders). 429 countdown wired but not exercised live.
 
 ## Questions for Steph
 

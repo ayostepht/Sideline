@@ -18,15 +18,13 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
-## 3. In flight (Batch D)
+## 3. In flight
 
-- T2.3b (frontend-engineer): app/onboarding/**, app/l/[leagueId]/settings/**, `_components/` under them, new pure helpers in lib/client.
-- T2.3c done (fbc6204).
-- Both treat apps/web/components as read-only and wait on `pgrep -f "[n]ext build"` before building.
+- code-reviewer on Batch D (diff 41fd0c1..9490c57). Save as `docs/reviews/2026-10-02-p2-batchD-code.md`.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit T2.3b and T2.3c separately (exact paths). Then code-reviewer on Batch D.
+1. Save the Batch D review; fix Blocker and Major. Also investigate the standalone `db.migrated: false` issue (PROGRESS backlog, T2.3b).
 2. Batch E: T2.4 UX review (all routes; capture Syncing, not-found, More sheet, search states) and T2.5b (e2e onboarding on the fixture server, navigation, pages into `existingRoutes` for axe and no-hscroll, Lighthouse on `/l/1000000000000000001` and League, data function perf on the fixture DB, review items in PROGRESS backlog).
 3. Batch F fix round, then G2 gate: live onboarding run by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan`, non-localhost origin), screenshots archived from the seeded dir only, then stop for Steph.
 
