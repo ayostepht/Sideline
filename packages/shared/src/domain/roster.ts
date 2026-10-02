@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * A team's roster. Player id arrays hold Sleeper player ids.
- * `starters` may contain the string "0" for an empty lineup slot (Sleeper behavior, kept as-is).
+ * `starters` may contain the string "0", which means an empty lineup slot (Sleeper behavior, kept as-is).
  * `fpts` and `fptsAgainst` are decimals already combined from Sleeper's integer and `_decimal` parts
  * (366 + 28 -> 366.28). `ownerId` is null for orphaned teams.
  */

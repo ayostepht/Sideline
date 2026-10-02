@@ -3,7 +3,7 @@ import { z } from "zod";
 /**
  * One roster's side of a weekly matchup. `matchupId` pairs two rosters; null when on a bye or
  * not yet scheduled. Points are decimals in the league's scoring. `startersPoints` is parallel to
- * `starters`; `playersPoints` maps player id to points.
+ * `starters`; `playersPoints` maps player id to points. A `starters` entry "0" means an empty slot.
  */
 export const MatchupSchema = z.strictObject({
   leagueId: z.string(),
