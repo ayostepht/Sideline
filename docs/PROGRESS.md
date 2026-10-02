@@ -88,8 +88,8 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Done (orchestrator: verify 676, e2e 75; /onboarding 154.6 KB, settings 164.3 KB) | 1 | 9490c57 |
 | T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Done (targeted checks; routes about 161.6 KB) | 1 | fbc6204 |
 | T2.2d | Standalone server detects migrations without SIDELINE_MIGRATIONS_DIR | backend-engineer | D-fix | Done (503 not reproducible from the build checkout; root cause was a baked absolute path; now an embedded migrations manifest) | 1 | 7dc548f |
-| T2.3b-fix | Batch D review M2, M3, m1 to m9, n2 (M1 after T2.2e) | frontend-engineer | D-fix | In progress | 1 | |
-| T2.2e | `syncSince` on POST /api/onboarding/league (Batch D review M1, server side) | backend-engineer | D-fix | In progress | 1 | |
+| T2.3b-fix | Batch D review M1 (syncSince, sent as follow-up), M2, M3, m1 to m9, n2 | frontend-engineer | D-fix | In progress | 1 | |
+| T2.2e | `syncSince` on POST /api/onboarding/league (Batch D review M1, server side) | backend-engineer | D-fix | Done (77 tests; coverage confirmed at the next full coverage run) | 1 | 06a5188 |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
 | T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | Not started | 0 | |
 | T2.6 | Fix round | frontend-engineer | F | Not started | 0 | |
