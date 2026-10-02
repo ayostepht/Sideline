@@ -142,6 +142,15 @@ test.describe("Team detail and My Team (PLAN 6.4)", () => {
     await expect(page.getByTestId("team-view")).toBeVisible();
     await expect(page.getByTestId("team-mine-badge")).toHaveCount(0);
   });
+
+  test("MYTEAM-3: My Team for an unknown league shows the not-found page (no soft 404)", async ({
+    page,
+  }) => {
+    const res = await page.goto(`/l/${DATA.unknownLeagueId}/team`);
+    expect(res?.status()).toBe(404);
+    await expect(page.getByRole("heading", { name: "We could not find that page" })).toBeVisible();
+    await expect(page.getByTestId("team-view")).toHaveCount(0);
+  });
 });
 
 test.describe("States (PLAN 6.5, ADR-009 item 2)", () => {
