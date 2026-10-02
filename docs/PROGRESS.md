@@ -51,7 +51,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Done (targeted checks; worker coverage 83.8%) | 1 | 45c4b9e |
 | T1.6 | Health, sync status, sync run API | backend-engineer | C | Done (build fix T1.6-build by devops-engineer in 34e0e78) | 1 | 7995e8e |
 | T1.6-fix | Batch C review M3, m1: shared SYNC_CADENCE_MS (projections 60 min), findActiveRequest, enqueue with created flag, web uses them | backend-engineer | C-fix | Done | 1 | be35d5f |
-| T1.5a-fix | Batch C review M1, M3 (worker side), m2-m4: CLI heartbeat re-check, shared cadences, reap only pre-acquire rows, seed lastAttempt from any run, shutdown timeout | sleeper-data-engineer | C-fix | In progress | 1 | |
+| T1.5a-fix | Batch C review M1, M3 (worker side), m2-m4: CLI heartbeat re-check, shared cadences, reap only pre-acquire rows, seed lastAttempt from any run, shutdown timeout | sleeper-data-engineer | C-fix | Done (orchestrator lint/format fix; worker coverage 83% lines) | 1 | 4b021b2 |
 | T1.5b | Sleeper sync jobs and 2025 backfill | sleeper-data-engineer | D | Not started | 0 | |
 | T1.7a | Integration and contract harness | qa-engineer | D | Not started | 0 | |
 | T1.8 | Docker and build with SQLite | devops-engineer | D | Not started | 0 | |
@@ -92,6 +92,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 - T1.4a review m6/m8 (sleeper-data-engineer): nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, root from import.meta.url, write-then-swap; label 14f join rates as spike measurements or add `--report`.
 - T1.5c: compute the ADR-002 fallback kickoff when nflverse gametime is missing (provider returns kickoffUtc null, kickoffApproximate true); pass PlayerRef.gsisId as stored. getUsage re-parses cached files each call (fine at this size).
 - Batch B review (docs/reviews/2026-10-02-p1-batchB-code.md): m2, m3, m7 providers cache meta zod, guarded/atomic cache writes, season_type filter (sleeper-data-engineer); m4 log loud position-drop counts (T1.5b); m5 stats rows without gp are did-not-play (T3.1); m6 document starters "0" = empty slot in shared (T1.3b).
+- T1.5a-fix: worker function coverage 67% (lines 83%); `seedLastAttempts` uses raw SQL in the worker instead of a `@sideline/db` helper. Fold into T1.5b or T1.7b.
 - msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
 
 ## Questions for Steph

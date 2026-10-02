@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, after commit be35d5f (T1.6-fix); T1.5a-fix dispatched.
+Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch C fixes complete; nothing in flight.
 
 ## 1. Resume in five steps
 
@@ -21,27 +21,20 @@ Last updated: 2026-10-02, after commit be35d5f (T1.6-fix); T1.5a-fix dispatched.
   - B0, T1.0;
   - T1.1, T1.2a, T1.3a (each plus its review fix);
   - T1.4a, T1.2b, T1.4b, T1.3b, T1.5a;
-  - T1.6 plus the T1.6-build devops fix, and T1.6-fix (be35d5f, shared `SYNC_CADENCE_MS`).
+  - T1.6 plus the T1.6-build devops fix, and T1.6-fix (be35d5f, shared `SYNC_CADENCE_MS`);
+  - T1.5a-fix (4b021b2).
 
   Commit ids are in the PROGRESS.md task table.
-- **Reviews:** saved in `docs/reviews/2026-10-02-p1-*`. Batch A and Batch B findings are all fixed. Batch C fixes are in progress.
-- **Last full check:** `pnpm verify` green (455 tests). `pnpm build` passes. Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
+- **Reviews:** saved in `docs/reviews/2026-10-02-p1-*`. Batch A, B and C findings are all fixed (Minor items in the PROGRESS backlog).
+- **Last full check:** `pnpm verify` green (461 tests). `pnpm build` passes. Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
 
 ## 3. In flight
 
-| Task | Agent | Writes to | Done when |
-|---|---|---|---|
-| T1.5a-fix (Batch C review M1, M3 worker side, m2-m4) | sleeper-data-engineer | `apps/worker/**` | All of: CLI re-checks the heartbeat during its wait and exits 1 with "worker stopped" (a test covers mid-wait staleness); worker cadences come from shared `SYNC_CADENCE_MS`; reap only rows started before lease acquisition; lastAttempt seeded from the latest run, failed runs included; shutdown raced at about 8 s; `pnpm verify` green; worker coverage at least 75% |
+Nothing. Next is Batch D.
 
 ## 4. Next steps (in order)
 
-1. **Commit T1.5a-fix** once it is verified. It fixes these review findings from `docs/reviews/2026-10-02-p1-batchC-code.md`:
-   - **M1:** the CLI re-checks the heartbeat while waiting. If the worker goes stale, it prints "worker stopped", fails the request if still pending, and exits 1. Test with a heartbeat that goes stale mid-wait.
-   - **M3:** the worker builds its cadences from `SYNC_CADENCE_MS` (cron jobs and game-window speedups stay worker-local).
-   - **m2:** reap only rows started before the lease was acquired.
-   - **m3:** seed lastAttempt from the latest run, failed runs included.
-   - **m4:** race shutdown with about 8 s.
-2. **Batch D**, three agents in parallel:
+1. **Batch D**, three agents in parallel:
    - **T1.5b** (sleeper-data-engineer, `apps/worker/src/jobs` plus `packages/sleeper`). Sleeper jobs:
      - state, league, users, rosters;
      - matchups: current week, backfill of completed weeks, and future weeks through `playoff_week_start - 1`;
@@ -68,9 +61,9 @@ Last updated: 2026-10-02, after commit be35d5f (T1.6-fix); T1.5a-fix dispatched.
      - G0 N1: `--only` writes `latest.partial.json`;
      - G0 N4: wait for the port to be released;
      - declare `tsx` in `packages/db` and `apps/worker`.
-3. **Orchestrator integration fix** after Batch D: point root `test:integration` and `test:contract` at the new Vitest projects (two lines in root `package.json`).
-4. **Batch D code review.**
-5. **Batch E: T1.5c** (sleeper-data-engineer):
+2. **Orchestrator integration fix** after Batch D: point root `test:integration` and `test:contract` at the new Vitest projects (two lines in root `package.json`).
+3. **Batch D code review.**
+4. **Batch E: T1.5c** (sleeper-data-engineer):
    - the nflverse job through `createNflverseProvider` (ok and degraded both work when the flag is off or a download fails);
    - compute the ADR-002 fallback kickoff when `kickoffApproximate`;
    - pin the kickoff `Z` format with a test (Batch C m7);
@@ -78,7 +71,7 @@ Last updated: 2026-10-02, after commit be35d5f (T1.6-fix); T1.5a-fix dispatched.
    - `db:seed:fixtures`: a full worker sync from a fixture-backed fetch into `DATA_DIR`.
 
    Then a code review.
-6. **Batch F: T1.7b** (qa-engineer), integration suites:
+5. **Batch F: T1.7b** (qa-engineer), integration suites:
    - a full sync from fixtures with per-table counts;
    - idempotency: the second run has `rows_changed = 0`;
    - MSW 500, 429 and timeout failures;
@@ -88,7 +81,7 @@ Last updated: 2026-10-02, after commit be35d5f (T1.6-fix); T1.5a-fix dispatched.
    - CLI cases: worker alive, no worker, lease held, and a run longer than the lease expiry.
 
    Then a code review.
-7. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
+6. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
    - `pnpm test:contract` run live once;
    - the orchestrator live smoke: `pnpm run sync --once` into a gitignored `./data`, the day's single `/players/nfl` fetch, then a second run with near-zero changes;
    - `pnpm fixtures:check` and an identifier scan;
