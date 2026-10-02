@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 2 Batch F (T2.6a to d done; T2.6d left one known flake, TEAM-3, logged as a question for Steph; code and ux review of the full Batch F diff in flight). Plan: ADR-009 and the PROGRESS Phase 2 table.
+Last updated: 2026-10-02, Phase 2 Batch F fully closed out (T2.6a-d, a code-review follow-up fix, ux review: APPROVE). One known flake (TEAM-3) left as a question for Steph at G2. Next: G2 gate. Plan: ADR-009 and the PROGRESS Phase 2 table.
 
 ## 1. Resume in five steps
 
@@ -15,18 +15,16 @@ Last updated: 2026-10-02, Phase 2 Batch F (T2.6a to d done; T2.6d left one known
 ## 2. Where things stand
 
 - **Phase 1 done** (G1 PASS, tag `gate-G1`). **Phase 2 in progress** on `phase/2-shell`; T2.0 to T2.5b committed.
-- **Baseline:** `pnpm verify` 710 unit tests; integration 23; e2e 285 (TEAM-3 flakes about 1 in 9-45 runs under parallel load, known issue, see PROGRESS backlog and Questions). Route JS: `/l/[leagueId]` about 161.6 KB, settings 168.5 KB, gallery 189.2 KB (not rechecked after T2.6d; expect no material change, markup/logic only).
+- **Baseline:** `pnpm verify` 710 unit tests; integration 23; e2e 286 (added MYTEAM-3; TEAM-3 flakes about 1 in 9-45 runs under parallel load, known issue, see PROGRESS backlog and Questions). Route JS: `/l/[leagueId]` about 161.6 KB, settings 168.5 KB, gallery 189.2 KB (not rechecked after T2.6d; expect no material change, markup/logic only).
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
 ## 3. In flight
 
-- Batch F code review (code-reviewer) and ux review (ux-reviewer) of the full Batch F diff (976a355..bdca45e), both dispatched, awaiting results. If either comes back with Blocker/Major findings, fix before G2.
+- Nothing. Clean point to `/clear`. Phase 2 Batch F is fully closed out.
 
 ## 4. Next steps (in order)
 
-1. Read the code-reviewer and ux-reviewer reports when they land; fix Blocker/Major findings (small ones directly if under 15 lines, else back to frontend-engineer); save reports to `docs/reviews/2026-10-02-p2-batchF2-code.md` and `-ux.md` (or similar); Minor findings go to the PROGRESS backlog.
-2. Decide the TEAM-3 flaky test question (see PROGRESS "Questions for Steph") before or as part of the G2 gate: `apps/web/lib/client/nav.ts`'s `resolvePendingAfterUrlChange` and the five new `loading.tsx` files (settings, lineup, matchup, players, waivers) are done and verified (T2.6d, commit bdca45e); only the TEAM-3 e2e flake under heavy parallel load remains open, root-caused but with no fix available in frontend-engineer's owned paths.
-3. G2 gate: `pnpm gate --amd64`; code-reviewer on `git diff main...phase/2-shell`; full coverage run; live onboarding by the orchestrator (about 22 calls); LAN check (`pnpm dev:lan` plus a request with a non-localhost Origin); archive 390 and 1280 px screenshots from the seeded dir to `docs/gates/G2/screens/` after eyeballing each; write `docs/gates/G2.md`; stop for Steph with run instructions (LAN URL, `dev:lan` and worker commands, macOS firewall prompt) and questions (including TEAM-3).
+1. G2 gate: `pnpm gate --amd64`; code-reviewer on `git diff main...phase/2-shell`; full coverage run; live onboarding by the orchestrator (about 22 calls); LAN check (`pnpm dev:lan` plus a request with a non-localhost Origin); archive 390 and 1280 px screenshots from the seeded dir to `docs/gates/G2/screens/` after eyeballing each; write `docs/gates/G2.md`; stop for Steph with run instructions (LAN URL, `dev:lan` and worker commands, macOS firewall prompt) and questions, including the TEAM-3 flaky test decision (see PROGRESS "Questions for Steph": fix now, accept as known, or reduce Playwright concurrency).
 
 ## 5. Briefs
 
