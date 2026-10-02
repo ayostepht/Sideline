@@ -1,5 +1,6 @@
 import path from "node:path";
-import { startStandaloneServer, type RunningServer } from "../lib/server.js";
+import { appendFileSync } from "node:fs";
+import { ServerStartError, startStandaloneServer, type RunningServer } from "../lib/server.js";
 import { runLogged, readTail, type ExecResult } from "./exec.js";
 import type { GateFlags } from "./flags.js";
 import type { PreviousReport } from "./report.js";
@@ -71,9 +72,22 @@ export class GateContext {
   }
 
   /** Starts (once) the standalone server shared by the e2e and a11y checks. */
-  async ensureServer(): Promise<RunningServer> {
+  async ensureServer(id: string): Promise<RunningServer> {
     if (this.server !== null) return this.server;
-    this.server = await startStandaloneServer({ root: this.root, logFile: this.logFile("server") });
+    try {
+      this.server = await startStandaloneServer({
+        root: this.root,
+        logFile: this.logFile("server"),
+      });
+    } catch (err) {
+      if (err instanceof ServerStartError) {
+        appendFileSync(
+          this.logFile(id),
+          `\n${err.message}\nserver output (last 100 lines):\n${err.tail}\n`,
+        );
+      }
+      throw err;
+    }
     return this.server;
   }
 
