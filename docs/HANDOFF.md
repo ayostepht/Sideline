@@ -27,12 +27,14 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - T2.5a (qa-engineer): playwright.config.ts, lighthouserc.json, e2e, tests. Seeded servers, fixture worker smoke, route list, gallery axe (UX M2).
 - Reviews saved: batch B code (10fc521), batch B UX (a5e32da).
 
-- code-reviewer on Batch C part 1 (diff a5e32da..494e0bd, e2e excluded). Save as `docs/reviews/2026-10-02-p2-batchC-code.md`.
+- Batch C code review saved (a34f1df): M1 404 redirect loop, M2 layout errors uncaught.
+- T2.3a-fix (frontend-engineer): apps/web/app, components, lib/client. M1, M2, m1, m2, m3.
+- T2.2b-fix2 (backend-engineer): apps/web/lib/server. m4, m5, getLeagueChoices tests.
 
 ## 4. Next steps (in order)
 
 1. Verify and commit each in-flight task separately (exact paths).
-2. When T2.3a and T2.5a land: code review of Batch C plus ux-reviewer on the shell (seeded screens only).
+2. When T2.3a-fix and T2.5a land: ux-reviewer on the shell (seeded screens only), then Batch D (T2.3b, T2.3c; builds one at a time).
 3. Then Batches D to G.
 
 ## 5. Standing rules for every brief
