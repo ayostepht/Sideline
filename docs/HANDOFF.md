@@ -20,7 +20,7 @@ Last updated: 2026-10-02, G2 run 3 after redesign PASS 11/11; UX review 2 APPROV
 
 ## 3. In flight
 
-- Nothing running. Waiting on Steph (final look-and-feel approval; scoreboard hero now or Phase 3; which ux2 minors now).
+- T2.8 (frontend-engineer) in flight: Steph chose the small ux fixes now plus neon purple #DF00FE (ADR-011 amendment). Uncommitted edits in `apps/web/app` and `apps/web/components` are this task. Then: qa-engineer e2e updates for its E2E IMPACT, full gate, ux check of the new screens, retake G2 screenshots, show Steph. Scoreboard hero deferred to Phase 3 (Steph did not choose it now).
 - G2-B1 done and committed (verify 728, integration 23). Full gate re-run still owed: run it once Steph's dev servers are off port 3000, batched with any other checkpoint fixes, then add B1 to G2.md.
 - Waiting on Steph's replies to the G2 questions (`docs/gates/G2.md`, Human checkpoint). Do not start Phase 3.
 
