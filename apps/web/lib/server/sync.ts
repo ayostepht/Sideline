@@ -16,6 +16,7 @@ import {
   SyncStatusResponseSchema,
   type SyncJobName,
   type SyncJobStatus,
+  type SyncRequest,
 } from "@sideline/shared";
 import { z } from "zod";
 import { getDb } from "./db";
@@ -35,7 +36,7 @@ export function isStale(job: SyncJobName, lastSuccessIso: string | null, nowMs: 
 }
 
 /** Runs `fn` against a migrated DB, or returns a 503 result. */
-function withMigratedDb(fn: (h: DbHandle) => ApiResult): ApiResult {
+export function withMigratedDb(fn: (h: DbHandle) => ApiResult): ApiResult {
   try {
     const dbState = getDb();
     if (!dbState.ok) return errorResult(503, "db_unavailable", "Database unavailable.");
@@ -83,29 +84,30 @@ export function requestSync(rawBody: string, now: Date = new Date()): ApiResult 
     return errorResult(400, "invalid_body", summary);
   }
   const { job } = parsed.data;
-  return withMigratedDb((h) => {
-    const active = findActiveRequest(h, job, now);
-    if (active) return { status: 200, body: runBody(active, true) };
-    const last = lastRequestAt(h, job);
-    if (last !== null) {
-      const elapsed = now.getTime() - Date.parse(last);
-      if (elapsed < REQUEST_DEBOUNCE_MS) {
-        const retryAfter = Math.max(1, Math.ceil((REQUEST_DEBOUNCE_MS - elapsed) / 1000));
-        return errorResult(
-          429,
-          "rate_limited",
-          `Sync was requested recently. Try again in ${retryAfter}s.`,
-          {
-            "Retry-After": String(retryAfter),
-          },
-        );
-      }
+  return withMigratedDb((h) => requestSyncOn(h, job, now));
+}
+
+/** Debounce and dedupe rules shared by POST /api/sync/run and league selection. */
+export function requestSyncOn(h: DbHandle, job: SyncRequest["job"], now: Date): ApiResult {
+  const active = findActiveRequest(h, job, now);
+  if (active) return { status: 200, body: runBody(active, true) };
+  const last = lastRequestAt(h, job);
+  if (last !== null) {
+    const elapsed = now.getTime() - Date.parse(last);
+    if (elapsed < REQUEST_DEBOUNCE_MS) {
+      const retryAfter = Math.max(1, Math.ceil((REQUEST_DEBOUNCE_MS - elapsed) / 1000));
+      return errorResult(
+        429,
+        "rate_limited",
+        `Sync was requested recently. Try again in ${retryAfter}s.`,
+        { "Retry-After": String(retryAfter) },
+      );
     }
-    // Another process may have queued one between the probe and enqueue; then created is false.
-    const { request, created } = enqueueRequest(h, job, "api", now);
-    const deduplicated = !created;
-    return { status: deduplicated ? 200 : 202, body: runBody(request, deduplicated) };
-  });
+  }
+  // Another process may have queued one between the probe and enqueue; then created is false.
+  const { request, created } = enqueueRequest(h, job, "api", now);
+  const deduplicated = !created;
+  return { status: deduplicated ? 200 : 202, body: runBody(request, deduplicated) };
 }
 
 function runBody(request: z.input<typeof SyncRunResponseSchema>["request"], deduplicated: boolean) {

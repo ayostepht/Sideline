@@ -5,10 +5,17 @@ import {
   HealthResponseSchema,
   type HealthResponse,
 } from "@sideline/shared";
-import { isMigrated, latestRunPerJob, readHeartbeat } from "@sideline/db";
+import { isMigrated, latestRunPerJob, readHeartbeat, type DbHandle } from "@sideline/db";
 import pkg from "../../package.json";
 import { getDb } from "./db";
 import type { ApiResult } from "./http";
+
+/** True when the worker heartbeat is fresh (same rule as health's worker status "ok"). */
+export function isWorkerLive(h: DbHandle, now: Date): boolean {
+  const hb = readHeartbeat(h);
+  const at = hb === null ? Number.NaN : Date.parse(hb.at);
+  return !Number.isNaN(at) && deriveWorkerStatus(at, now.getTime()) === "ok";
+}
 
 /** Builds the health payload. Never throws: any failure becomes status 'error'. */
 export function getHealth(now: Date = new Date()): ApiResult {
