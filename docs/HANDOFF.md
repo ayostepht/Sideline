@@ -20,7 +20,7 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight (Batch E)
 
-- T2.4 (ux-reviewer): all Phase 2 routes, seeded screens only. Save as `docs/reviews/2026-10-02-p2-T2.4-ux.md`.
+- T2.4 saved: docs/reviews/2026-10-02-p2-T2.4-ux.md (M1 doubled freshness to T2.6; M2 a11y routes in T2.5b).
 - T2.5b (qa-engineer): e2e/**, tests/**, playwright.config.ts, lighthouserc.json. Onboarding e2e, navigation, pages, search, settings, axe on all routes, Lighthouse, perf integration test, requirements trace. Waits for the screens run before building.
 
 ## 4. Next steps (in order)

@@ -91,7 +91,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.3b-fix | Batch D review M1 (syncSince, sent as follow-up), M2, M3, m1 to m9, n2 | frontend-engineer | D-fix | Done (orchestrator: verify 688, e2e 75; /onboarding 158,973 B, settings 168,563 B) | 1 | 20da03b |
 | T2.2e | `syncSince` on POST /api/onboarding/league (Batch D review M1, server side) | backend-engineer | D-fix | Done (77 tests; coverage confirmed at the next full coverage run) | 1 | 06a5188 |
 | T2.2f | Fixture seed stores the fixture user identity, league choices, active league (`--no-identity` keeps anonymous) | sleeper-data-engineer | E0 | Done (orchestrator: verify 690, e2e 75) | 1 | 0b3f9f8 |
-| T2.4 | UX review of gallery and pages | ux-reviewer | E | In progress | 1 | |
+| T2.4 | UX review of gallery and pages | ux-reviewer | E | Done (2 Major: doubled freshness, a11y coverage in T2.5b; 7 Minor to T2.6) | 1 | see docs/reviews/2026-10-02-p2-T2.4-ux.md |
 | T2.5b | E2E, axe, Lighthouse, data function perf | qa-engineer | E | In progress | 1 | |
 | T2.6 | Fix round | frontend-engineer | F | Not started | 0 | |
 | G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
