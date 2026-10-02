@@ -68,6 +68,13 @@ export function handleOnboardingStatus(now: Date = new Date()): ApiResult {
   }));
 }
 
+/**
+ * Response: `{ activeLeagueId, sync, syncSince }`. `syncSince` is the server-clock `requested_at`
+ * (ISO) of the `all` sync request this selection queued or reused, or null when `sync` is
+ * "rate_limited" (same league, no new sync is coming; treat it as already synced). Any job run
+ * that finishes at or after `syncSince` belongs to this sync. `PATCH /api/settings` with a
+ * `leagueId` returns the same `sync` and `syncSince` fields next to `settings` and `onboarding`.
+ */
 export function handleSelectLeague(rawBody: string, now: Date = new Date()): ApiResult {
   const body = parseBody(rawBody);
   if (!body.ok) return body.result;
@@ -78,7 +85,10 @@ export function handleSelectLeague(rawBody: string, now: Date = new Date()): Api
     if (r.kind === "invalid_league") {
       return errorResult(400, "invalid_league", "That league is not one of your leagues.");
     }
-    return { status: 200, body: { activeLeagueId: r.activeLeagueId, sync: r.sync } };
+    return {
+      status: 200,
+      body: { activeLeagueId: r.activeLeagueId, sync: r.sync, syncSince: r.syncSince },
+    };
   });
 }
 
@@ -131,6 +141,14 @@ export function handlePatchSettings(
     if (r.kind === "invalid_league") {
       return errorResult(400, "invalid_league", "That league is not one of your leagues.");
     }
-    return { status: 200, body: { settings: getSettings(h, env), onboarding: null, sync: r.sync } };
+    return {
+      status: 200,
+      body: {
+        settings: getSettings(h, env),
+        onboarding: null,
+        sync: r.sync,
+        syncSince: r.syncSince,
+      },
+    };
   });
 }

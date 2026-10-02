@@ -95,7 +95,15 @@ describe("GET /api/onboarding/status and POST /api/onboarding/league", () => {
     saveUserLeagues(h, "u7", 2026, CHOICES, new Date());
     const ok = await post(leagueRoute, JSON.stringify({ leagueId: "L1" }));
     expect(ok.status).toBe(200);
-    expect(await json(ok)).toEqual({ activeLeagueId: "L1", sync: "queued" });
+    expect(await json(ok)).toEqual({
+      activeLeagueId: "L1",
+      sync: "queued",
+      syncSince: (
+        h.sqlite.prepare("SELECT requested_at AS r FROM sync_requests WHERE job = 'all'").get() as {
+          r: string;
+        }
+      ).r,
+    });
   });
   it("400 for a league not in the choices and for invalid bodies", async () => {
     const h = setup();
@@ -173,7 +181,15 @@ describe("/api/settings", () => {
     saveUserLeagues(h, "u7", 2026, CHOICES, new Date());
     const r = await patch(JSON.stringify({ leagueId: "L1" }));
     expect(r.status).toBe(200);
-    expect(await json(r)).toMatchObject({ settings: { activeLeagueId: "L1" }, sync: "queued" });
+    expect(await json(r)).toMatchObject({
+      settings: { activeLeagueId: "L1" },
+      sync: "queued",
+      syncSince: (
+        h.sqlite.prepare("SELECT requested_at AS r FROM sync_requests WHERE job = 'all'").get() as {
+          r: string;
+        }
+      ).r,
+    });
     const again = await patch(JSON.stringify({ leagueId: "L1" }));
     expect(await json(again)).toMatchObject({ sync: "pending_reused" });
     expect((await patch(JSON.stringify({ leagueId: "L2" }))).status).toBe(400);

@@ -290,15 +290,27 @@ describe("selectLeague", () => {
         .prepare("SELECT COUNT(*) AS n FROM sync_requests WHERE job = 'all' AND status = ?")
         .get(status) as { n: number }
     ).n;
+  const requestedAt = (h: DbHandle, status: string) =>
+    (
+      h.sqlite
+        .prepare(
+          "SELECT requested_at AS r FROM sync_requests WHERE job = 'all' AND status = ? ORDER BY id DESC LIMIT 1",
+        )
+        .get(status) as { r: string }
+    ).r;
   it("first selection queues an all sync; a second change reuses the pending one", () => {
     const h = seedChoices();
     expect(selectLeague(h, "L2", SEED_NOW)).toEqual({
       kind: "selected",
       activeLeagueId: "L2",
       sync: "queued",
+      syncSince: requestedAt(h, "pending"),
     });
     expect(getActiveLeagueId(h)).toBe("L2");
-    expect(selectLeague(h, "L1", SEED_NOW)).toMatchObject({ sync: "pending_reused" });
+    expect(selectLeague(h, "L1", SEED_NOW)).toMatchObject({
+      sync: "pending_reused",
+      syncSince: requestedAt(h, "pending"),
+    });
     expect(allCount(h, "pending")).toBe(1);
     expect(getActiveLeagueId(h)).toBe("L1");
   });
@@ -323,7 +335,10 @@ describe("selectLeague", () => {
     const h = seedChoices();
     selectLeague(h, "L1", SEED_NOW);
     workerFinish(h, "done");
-    expect(selectLeague(h, "L1", SEED_NOW)).toMatchObject({ sync: "rate_limited" });
+    expect(selectLeague(h, "L1", SEED_NOW)).toMatchObject({
+      sync: "rate_limited",
+      syncSince: null,
+    });
     expect(allCount(h, "pending")).toBe(0);
   });
 });

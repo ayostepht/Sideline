@@ -13,6 +13,7 @@ import {
   type DbHandle,
 } from "@sideline/db";
 import {
+  SyncRunResponseSchema,
   UserJobParamsSchema,
   type OnboardingStatus,
   type OnboardingUser,
@@ -141,6 +142,8 @@ export type SelectLeagueResult =
       kind: "selected";
       activeLeagueId: string;
       sync: "queued" | "pending_reused" | "rate_limited";
+      /** Server-clock `requested_at` of the sync this selection belongs to; null when none is coming. */
+      syncSince: string | null;
     };
 
 /** Accepts only a league from the stored choices; sets it active and queues an `all` sync. */
@@ -158,5 +161,8 @@ export function selectLeague(h: DbHandle, leagueId: string, now: Date): SelectLe
     : requestSyncOn(h, "all", now);
   const sync =
     res.status === 429 ? "rate_limited" : res.status === 202 ? "queued" : "pending_reused";
-  return { kind: "selected", activeLeagueId: leagueId, sync };
+  const parsedRun = SyncRunResponseSchema.safeParse(res.body);
+  const syncSince =
+    sync !== "rate_limited" && parsedRun.success ? parsedRun.data.request.requestedAt : null;
+  return { kind: "selected", activeLeagueId: leagueId, sync, syncSince };
 }
