@@ -14,7 +14,7 @@
 
 ## Resume point (read this first after /clear or a new session)
 
-Updated: 2026-10-02, after commit 7995e8e (T1.6); Batch C done, review in flight.
+Updated: 2026-10-02, Batch C review saved; fixes in progress.
 
 - **Branch:** `phase/1-data`. Plan: ADR-005 (approved by Steph with changes); nflverse facts: ADR-006. Phase 1 task table below.
 - **Committed and verified:**
@@ -33,8 +33,16 @@ Updated: 2026-10-02, after commit 7995e8e (T1.6); Batch C done, review in flight
   - Full `pnpm verify` is green (452 tests) and `pnpm build` passes.
   - Standalone `/api/health` returns 200 "degraded" on an empty `DATA_DIR`.
   - Coverage: api 100%, lib/server 97%, worker 83.8%, db 95%, providers 97.5%, sleeper 100%, shared 100%.
-- **In flight:** the Batch C code review (code-reviewer, read-only) of commits fd8023f, 45c4b9e, 34e0e78 and 7995e8e, to be saved as `docs/reviews/2026-10-02-p1-batchC-code.md`. If interrupted, re-run it.
-- **Known item for the review:** the T1.6 staleness cadences (`apps/web/lib/server/sync.ts` JOB_CADENCE_MS: projections 6 h) and the worker cadences (`apps/worker/src/schedule.ts`: projections hourly) must come from one table in `@sideline/shared`.
+- **Batch C review saved:** `docs/reviews/2026-10-02-p1-batchC-code.md`, CHANGES REQUIRED with 3 Major findings.
+- **In flight:** T1.6-fix (backend-engineer; `packages/shared`, `packages/db`, `apps/web/lib/server`, `apps/web/app/api`).
+- **Then:** T1.5a-fix (sleeper-data-engineer, `apps/worker`). It runs sequentially, because it consumes the new shared cadence table.
+- **If interrupted:** check `git status` in those paths and verify against the review findings, or discard and re-dispatch.
+- **M2 carries into the T1.5b brief as a hard requirement:**
+  - the Sleeper HTTP client accepts an AbortSignal;
+  - every job passes `ctx.signal`;
+  - jobs check `signal.aborted` before each request;
+  - a test proves no fetch happens after a mid-job lease loss.
+- **Other review items carried into later briefs:** m5 (externals and the docker native-binding smoke) to T1.8; m7 (kickoff `Z` format test) to T1.5c; m6 (freshness from `sync_runs`) for Phase 2; n1 (body size cap) to T6.1.
 - **Batch C brief essentials:**
   - **T1.3b:**
     - idempotent upserts that count real changes only;
@@ -63,7 +71,7 @@ Updated: 2026-10-02, after commit 7995e8e (T1.6); Batch C done, review in flight
     - `pnpm build` passes;
     - api and `lib/server` coverage at least 75%.
 - **Next steps, in order:**
-  1. Save the Batch C review; fix Blocker and Major findings plus the cadence-table unification. Then Batch D. Batch C briefs, kept for reference:
+  1. Commit T1.6-fix, then dispatch and commit T1.5a-fix. Then Batch D (T1.5b with M2, T1.7a, T1.8 with m5). Batch C briefs, kept for reference:
      - T1.3b (backend-engineer, `packages/db`): idempotent upserts counting real changes only; projection snapshot upsert (only when fetched_at is before kickoff); `http_cache` EtagStore; `computed_cache`; read helpers for health and sync status.
      - T1.5a (sleeper-data-engineer, `apps/worker`):
        - croner scheduler with PLAN 3.1 cadences and `SYNC_*_CRON` overrides;
@@ -123,6 +131,8 @@ Updated: 2026-10-02, after commit 7995e8e (T1.6); Batch C done, review in flight
 | T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Done (targeted checks; full verify pending T1.5a) | 1 | fd8023f |
 | T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Done (targeted checks; worker coverage 83.8%) | 1 | 45c4b9e |
 | T1.6 | Health, sync status, sync run API | backend-engineer | C | Done (build fix T1.6-build by devops-engineer in 34e0e78) | 1 | 7995e8e |
+| T1.6-fix | Batch C review M3, m1: shared SYNC_CADENCE_MS (projections 60 min), findActiveRequest, enqueue with created flag, web uses them | backend-engineer | C-fix | In progress | 1 | |
+| T1.5a-fix | Batch C review M1, M3 (worker side), m2-m4: CLI heartbeat re-check, shared cadences, reap only pre-acquire rows, seed lastAttempt from any run, shutdown timeout | sleeper-data-engineer | C-fix | Not started (after T1.6-fix) | 0 | |
 | T1.5b | Sleeper sync jobs and 2025 backfill | sleeper-data-engineer | D | Not started | 0 | |
 | T1.7a | Integration and contract harness | qa-engineer | D | Not started | 0 | |
 | T1.8 | Docker and build with SQLite | devops-engineer | D | Not started | 0 | |
