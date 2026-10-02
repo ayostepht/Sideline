@@ -54,7 +54,9 @@ Date: 2026-10-01
 | Logging | pino 10.3.1, pino-pretty 13.1.3 | |
 | Scripts | tsx | 4.23.15 |
 
-Still to pin when first installed (owning task records the version here): Tailwind CSS, shadcn/ui, Radix, lucide-react, Recharts, TanStack Table (T2.1); better-sqlite3, Drizzle ORM, drizzle-kit (T1.3); croner or node-cron (T1.5).
+Still to pin when first installed (owning task records the version here): Tailwind CSS, shadcn/ui, Radix, lucide-react, Recharts, TanStack Table (T2.1).
+
+Pinned in T1.0 (2026-10-02): better-sqlite3 13.0.3 (SQLite 3.53.4), drizzle-orm 0.45.3, drizzle-kit 0.31.11, @types/better-sqlite3 9.6.0, croner 10.0.1, csv-parse 7.0.3; zod 4.6.5 and pino 10.3.1 also as runtime dependencies of the packages that use them.
 
 **Context:** Phase 0 scaffold (T0.1, T0.2), current stable releases on 2026-10-01.
 
@@ -135,5 +137,7 @@ Date: 2026-10-02
 **Context:** Phase 1 planning on 2026-10-02, approved by Steph with changes (items 3, 6, 12, 13).
 
 **Alternatives considered:** web calling Sleeper directly with its own limiter (rejected: two limiters can't enforce one budget); a separate seed script mapping fixtures to rows (rejected: duplicates the worker's mapping); 503 on a missing worker heartbeat (deferred to T4.3: no worker runs in the container until then).
+
+14. **`pnpm run sync`, not `pnpm sync`.** pnpm 12 has a built-in `sync` command that shadows the root script, so the CLI is invoked as `pnpm run sync --once [--job=name]`. Root scripts delegate with `pnpm -C <dir> run` because `--filter` turns the stub exit code 2 into 1. PLAN 10.6 amended.
 
 **Consequences:** the worker is the single gate to Sleeper. Health stays green in the Phase 1 to 3 container. The idempotency check measures real changes.

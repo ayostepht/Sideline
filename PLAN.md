@@ -498,7 +498,7 @@ Listed under each phase in section 9.
 | `pnpm screens` | screenshots of configured routes at 390/768/1280 in light and dark into `.screens/` |
 | `pnpm validate:scoring` | SCORE-2 report |
 | `pnpm backtest` | MATCH-3 report |
-| `pnpm sync --once [--job=name]` | run sync jobs manually |
+| `pnpm run sync --once [--job=name]` | run sync jobs manually (`run` is required: pnpm 12 has a built-in `sync`, ADR-005) |
 | `pnpm db:migrate` / `db:seed:fixtures` | database utilities |
 | `pnpm gate` | verify, coverage, integration, build, e2e, a11y, lhci, docker build, container health smoke; writes `docs/gates/latest.json` |
 

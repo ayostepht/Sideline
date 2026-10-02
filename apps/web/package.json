@@ -12,9 +12,13 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@sideline/db": "workspace:*",
+    "@sideline/shared": "workspace:*",
     "next": "16.3.8",
+    "pino": "10.3.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/react": "19.3.0",

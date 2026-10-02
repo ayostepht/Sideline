@@ -6,6 +6,18 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "sync": "tsx ../../scripts/not-implemented.ts T1.5a sync",
+    "db:seed:fixtures": "tsx ../../scripts/not-implemented.ts T1.5c db:seed:fixtures"
+  },
+  "dependencies": {
+    "@sideline/core": "workspace:*",
+    "@sideline/db": "workspace:*",
+    "@sideline/providers": "workspace:*",
+    "@sideline/shared": "workspace:*",
+    "@sideline/sleeper": "workspace:*",
+    "croner": "10.0.1",
+    "pino": "10.3.1",
+    "zod": "4.6.5"
   }
 }

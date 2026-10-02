@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   // Trace from the monorepo root so the standalone bundle includes workspace packages.
   outputFileTracingRoot: monorepoRoot,
   poweredByHeader: false,
+  serverExternalPackages: ["better-sqlite3"],
+  transpilePackages: ["@sideline/shared", "@sideline/db"],
 };
 
 export default nextConfig;

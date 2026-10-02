@@ -33,7 +33,7 @@
 | ID | Title | Agent | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|
 | T1.B0 | Branch, ADR-005, PLAN amendments, coverage config | orchestrator | 0 | Done | 1 | |
-| T1.0 | Dependency preinstall, workspace links, script wiring, next.config | devops-engineer | A0 | Not started | 0 | |
+| T1.0 | Dependency preinstall, workspace links, script wiring, next.config | devops-engineer | A0 | Done | 1 | (this commit) |
 | T1.1 | Shared domain types, DTOs, env config | backend-engineer | A | Not started | 0 | |
 | T1.2a | Sleeper HTTP core (limiter, retries, errors, ETag) | sleeper-data-engineer | A | Not started | 0 | |
 | T1.4a | nflverse spike and fixture recorder | sleeper-data-engineer | A | Not started | 0 | |
@@ -75,6 +75,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 - G0 review N3: `reuseExistingServer: !CI` in playwright.config.ts can reuse a stale local server. Owner: qa-engineer.
 - G0 review N4: UI3 should wait for port 3000 to be released after stopping the shared server. Owner: devops-engineer.
 - G0 review n1 and Batch C n2: document the Lighthouse script-size unit; update tests/fixtures/README.md fake id ranges, manifest keys and the short-name word-boundary rule. Owner: qa-engineer.
+- T1.0: pnpm prints a peer-dependency warning on install (not investigated). @types/better-sqlite3 9.6.0 may lag the v13 API. Worker stub scripts use root tsx; add tsx to the worker when real scripts land. Owner: devops-engineer (T1.8).
 - msw is 3.0.1; @vitest/mocker lists an optional msw ^2 peer (browser mode only, unused). Briefs using MSW must point agents at msw 3 APIs.
 
 ## Questions for Steph
