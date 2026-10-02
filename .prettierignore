@@ -1,0 +1,22 @@
+pnpm-lock.yaml
+node_modules
+dist
+.next
+out
+coverage
+.turbo
+.screens
+.gate
+.lighthouseci
+playwright-report
+test-results
+.spike-cache
+data
+tests/fixtures
+scripts/fixtures/out
+
+# Orchestrator-owned docs and plan
+docs/
+PLAN.md
+CLAUDE.md
+.claude/

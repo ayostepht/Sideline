@@ -1,0 +1,211 @@
+{
+  "startedAt": "2026-10-02T01:32:19.588Z",
+  "finishedAt": "2026-10-02T01:33:45.869Z",
+  "gitCommit": "4471a1418937f391f9417d48e7287179d3d145f0",
+  "gitBranch": "phase/0-bootstrap",
+  "dirty": true,
+  "partial": false,
+  "baselines": {
+    "eslintWarnings": 0
+  },
+  "checks": [
+    {
+      "id": "U1",
+      "name": "Typecheck, lint, format, unit tests (pnpm verify)",
+      "status": "PASS",
+      "durationMs": 13644,
+      "logFile": ".gate/logs/U1.log",
+      "metrics": {
+        "eslintWarnings": 0,
+        "eslintErrors": 0,
+        "previousEslintWarnings": 0
+      }
+    },
+    {
+      "id": "U2a",
+      "name": "Unit tests with coverage thresholds",
+      "status": "PASS",
+      "durationMs": 1480,
+      "logFile": ".gate/logs/U2a.log",
+      "metrics": {
+        "coverage": {
+          "apps/worker": {
+            "linesPct": 100,
+            "branchesPct": null
+          },
+          "packages/core": {
+            "linesPct": 100,
+            "branchesPct": null
+          },
+          "packages/db": {
+            "linesPct": 100,
+            "branchesPct": null
+          },
+          "packages/providers": {
+            "linesPct": 100,
+            "branchesPct": null
+          },
+          "packages/shared": {
+            "linesPct": 100,
+            "branchesPct": null
+          },
+          "packages/sleeper": {
+            "linesPct": 100,
+            "branchesPct": null
+          }
+        }
+      }
+    },
+    {
+      "id": "U2b",
+      "name": "Integration tests",
+      "status": "SKIPPED",
+      "durationMs": 187,
+      "logFile": ".gate/logs/U2b.log",
+      "reason": "not implemented (stub)"
+    },
+    {
+      "id": "U3a",
+      "name": "Production build and route JS budget",
+      "status": "PASS",
+      "durationMs": 2829,
+      "logFile": ".gate/logs/U3a.log",
+      "metrics": {
+        "routeJsGzipBytes": {
+          "/": 133532,
+          "/_global-error": 133532,
+          "/_not-found": 133532
+        },
+        "budgetBytes": 204800
+      }
+    },
+    {
+      "id": "U4",
+      "name": "Static scan: skips, any, lint disables, TODOs",
+      "status": "PASS",
+      "durationMs": 10,
+      "logFile": ".gate/logs/U4.log",
+      "metrics": {
+        "filesScanned": 91,
+        "findings": 0,
+        "byRule": {}
+      }
+    },
+    {
+      "id": "UI1",
+      "name": "E2E suite on all Playwright projects (includes UI5)",
+      "status": "PASS",
+      "durationMs": 5515,
+      "logFile": ".gate/logs/UI1.log",
+      "metrics": {
+        "expected": 33,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "projects": [
+          "desktop-chromium",
+          "mobile-iphone",
+          "mobile-pixel"
+        ],
+        "tags": {
+          "UI2": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0
+          },
+          "UI5": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "UI2",
+      "name": "axe accessibility, light and dark",
+      "status": "PASS",
+      "durationMs": 3208,
+      "logFile": ".gate/logs/UI2.log",
+      "metrics": {
+        "expected": 12,
+        "unexpected": 0,
+        "flaky": 0,
+        "skipped": 0,
+        "projects": [
+          "desktop-chromium",
+          "mobile-iphone",
+          "mobile-pixel"
+        ],
+        "tags": {
+          "UI2": {
+            "passed": 12,
+            "failed": 0,
+            "skipped": 0
+          },
+          "UI5": {
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0
+          }
+        }
+      }
+    },
+    {
+      "id": "UI3",
+      "name": "Lighthouse mobile budgets",
+      "status": "PASS",
+      "durationMs": 31709,
+      "logFile": ".gate/logs/UI3.log",
+      "metrics": {
+        "scores": {
+          "http://127.0.0.1:3000/": {
+            "performance": 100,
+            "accessibility": 100,
+            "best-practices": 96,
+            "seo": 100
+          }
+        },
+        "budgets": {
+          "performance": 0.85,
+          "accessibility": 0.95,
+          "best-practices": 0.95
+        },
+        "chromePath": "/Users/stephtanner/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+      }
+    },
+    {
+      "id": "U3b",
+      "name": "Docker image builds, starts, serves /api/health",
+      "status": "PASS",
+      "durationMs": 13460,
+      "logFile": ".gate/logs/U3b.log",
+      "metrics": {
+        "image": "sideline-gate:native",
+        "imageSizeBytes": 93346692,
+        "imageSizeMb": 89,
+        "architecture": "arm64",
+        "startupSeconds": 0.5
+      }
+    },
+    {
+      "id": "U3c",
+      "name": "Docker image for linux/amd64 builds, starts, serves /api/health",
+      "status": "PASS",
+      "durationMs": 14194,
+      "logFile": ".gate/logs/U3c.log",
+      "metrics": {
+        "image": "sideline-gate:amd64",
+        "imageSizeBytes": 93240936,
+        "imageSizeMb": 88.9,
+        "architecture": "amd64",
+        "startupSeconds": 1.2
+      }
+    }
+  ],
+  "summary": {
+    "pass": 9,
+    "fail": 0,
+    "skipped": 1
+  }
+}
