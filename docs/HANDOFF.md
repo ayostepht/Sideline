@@ -21,7 +21,7 @@ Last updated: 2026-10-02, G2 gate started. Baseline verify 710 green at 549d972.
 ## 3. In flight
 
 - G2-qa (qa-engineer): `pnpm gate --amd64` plus metrics, U4 scan, U6 trace. Writes only `docs/gates/latest*.json`. If the session died, re-dispatch (no partial code possible).
-- G2-review (code-reviewer): full `main...phase/2-shell` review, read-only. Re-dispatch if lost.
+- G2-review done: saved `docs/reviews/2026-10-02-G2-code.md`. M1 (cross-origin writes, backend-engineer, `lib/server/http.ts`) to fix after the gate run, then re-run the full gate (PLAN 10.4 step 4). Minors to backlog.
 - Still to do after the gate run: ux-reviewer on all routes (not in parallel with the gate, both start servers), live onboarding, LAN check.
 
 ## 4. Next steps (in order)
