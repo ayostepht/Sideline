@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch C fixes complete; nothing in flight.
+Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch D (T1.5b, T1.7a, T1.8) dispatched.
 
 ## 1. Resume in five steps
 
@@ -30,7 +30,13 @@ Last updated: 2026-10-02, after commit 4b021b2 (T1.5a-fix). Batch C fixes comple
 
 ## 3. In flight
 
-Nothing. Next is Batch D.
+Batch D, dispatched 2026-10-02. Briefs and done-criteria match section 4, step 1.
+
+| Task | Agent | Writes to |
+|---|---|---|
+| T1.5b | sleeper-data-engineer | `apps/worker/src/jobs/**`, `packages/sleeper/src/**` |
+| T1.7a | qa-engineer | `tests/**`, `e2e/**`, vitest, playwright and lighthouse configs |
+| T1.8 | devops-engineer | `Dockerfile`, `docker/`, compose, `apps/web/next.config.ts`, `scripts/gate*`, package.json deps, lockfile |
 
 ## 4. Next steps (in order)
 
