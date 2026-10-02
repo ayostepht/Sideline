@@ -45,11 +45,11 @@
 .dark {
   --background: #0c0a09;
   --foreground: #fafaf9;
-  --card: #1a1716;
+  --card: #231f1d;
   --card-foreground: #fafaf9;
-  --muted: #262220;
+  --muted: #2d2927;
   --muted-foreground: #a8a29e;
-  --border: #38332f;
+  --border: #4a4440;
   --input: #8a837d;
   --primary: #818cf8;
   --primary-foreground: #0c0a09;

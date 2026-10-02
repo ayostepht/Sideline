@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "../lib/client/cn";
@@ -41,9 +42,9 @@ export function PlayerRow({
 }: PlayerRowProps) {
   const interactive = href !== undefined || onClick !== undefined;
   const cls = cn(
-    "flex min-h-11 w-full min-w-0 items-center gap-3 rounded-[8px] px-3 py-2 text-left",
+    "flex min-h-11 w-full min-w-0 items-center gap-3 rounded-[8px] px-3 py-2 text-left md:max-w-2xl",
     highlighted ? "bg-accent-soft" : "bg-transparent",
-    interactive && "transition-colors duration-150 hover:bg-muted",
+    interactive && "transition-colors duration-150 hover:bg-muted active:bg-border",
     className,
   );
   const content = (
@@ -74,6 +75,9 @@ export function PlayerRow({
             <span className="block text-xs text-muted-foreground">{statLabel}</span>
           ) : null}
         </span>
+      ) : null}
+      {interactive ? (
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       ) : null}
     </>
   );

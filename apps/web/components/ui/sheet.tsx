@@ -12,7 +12,7 @@ export const SheetTrigger = DialogPrimitive.Trigger;
 export const SheetClose = DialogPrimitive.Close;
 
 const sheetVariants = cva(
-  "fixed z-50 flex flex-col gap-2 border bg-card p-4 text-card-foreground shadow-lg sl-anim-sheet",
+  "fixed z-50 flex flex-col gap-2 border bg-card p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-card-foreground shadow-lg sl-anim-sheet",
   {
     variants: {
       side: {
@@ -37,6 +37,15 @@ export function SheetContent({
     <DialogPrimitive.Portal>
       <DialogOverlay />
       <DialogPrimitive.Content className={cn(sheetVariants({ side }), className)} {...props}>
+        {side !== "right" ? (
+          <span
+            aria-hidden
+            className={cn(
+              "mx-auto -mt-1 mb-1 h-1 w-8 shrink-0 rounded-full bg-muted-foreground/40",
+              side === undefined || side === "responsive" ? "lg:hidden" : "",
+            )}
+          />
+        ) : null}
         {children}
         <DialogPrimitive.Close
           aria-label="Close"

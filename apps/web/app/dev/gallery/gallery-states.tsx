@@ -1,4 +1,5 @@
 import { Inbox, Search } from "lucide-react";
+import type { ReactNode } from "react";
 import { DataFreshness } from "../../../components/data-freshness";
 import { EmptyState, ErrorState } from "../../../components/empty-state";
 import { ReasonChips } from "../../../components/reason-chips";
@@ -41,18 +42,28 @@ export function GalleryStates() {
         </Card>
       </Section>
       <Section title="Sparkline">
-        <div className="flex flex-wrap items-center gap-6">
-          <Sparkline
-            label="Points by week, rising"
-            values={[8, 11, 9, 14, 17]}
-            labels={["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5"]}
-            reference={11}
-            referenceLabel="Season average"
-          />
-          <Sparkline label="Points by week with a bye" values={[12, 9, null, 15, 10]} />
-          <Sparkline label="One game played" values={[12]} />
-          <Sparkline label="Flat scoring" values={[7, 7, 7, 7]} />
-          <Sparkline label="No games yet" values={[]} />
+        <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
+          <SparkExample name="Normal">
+            <Sparkline
+              label="Points by week, rising"
+              values={[8, 11, 9, 14, 17]}
+              labels={["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5"]}
+              reference={11}
+              referenceLabel="Season average"
+            />
+          </SparkExample>
+          <SparkExample name="Gaps">
+            <Sparkline label="Points by week with a bye" values={[12, 9, null, 15, 10]} />
+          </SparkExample>
+          <SparkExample name="Flat">
+            <Sparkline label="Flat scoring" values={[7, 7, 7, 7]} />
+          </SparkExample>
+          <SparkExample name="Single point">
+            <Sparkline label="One game played" values={[12]} />
+          </SparkExample>
+          <SparkExample name="Empty">
+            <Sparkline label="No games yet" values={[]} />
+          </SparkExample>
         </div>
       </Section>
       <Section title="DataFreshness and StaleBanner">
@@ -125,5 +136,14 @@ export function GalleryStates() {
         </div>
       </Section>
     </>
+  );
+}
+
+function SparkExample({ name, children }: { name: string; children: ReactNode }) {
+  return (
+    <figure className="flex flex-col gap-1">
+      <figcaption className="text-xs text-muted-foreground">{name}</figcaption>
+      {children}
+    </figure>
   );
 }

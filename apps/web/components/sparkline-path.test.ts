@@ -25,6 +25,10 @@ describe("buildSparkline", () => {
     const g = buildSparkline([3, 3, 3], 100, 20);
     expect(g.points.every((p) => p.y === 10)).toBe(true);
   });
+  it("keeps a flat series as a centered line", () => {
+    const g = buildSparkline([3, 3], 96, 32);
+    expect(g.path).toBe("M2 16L94 16");
+  });
   it("includes the reference in the domain", () => {
     const g = buildSparkline([5, 6], 100, 22, 10, 2);
     expect(g.referenceY).toBe(2);

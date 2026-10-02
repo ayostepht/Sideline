@@ -9,7 +9,7 @@ export function ReasonChip({ reason }: { reason: Reason }) {
   return (
     <li
       className={cn(
-        "inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border bg-muted px-2 py-1 text-xs leading-4",
+        "inline-flex max-w-full min-w-0 items-center gap-1 rounded-full border bg-muted px-2.5 py-1.5 text-[13px] leading-4 sm:py-1 sm:text-xs",
         imp.sign === "up" && "text-positive",
         imp.sign === "down" && "text-negative",
         imp.sign === "none" && "text-foreground",
@@ -58,7 +58,9 @@ export function ReasonChips({ reasons, max, className, trailing }: ReasonChipsPr
         <ReasonChip key={r.code} reason={r} />
       ))}
       {hidden > 0 ? (
-        <li className="text-xs text-muted-foreground tabular-nums">+{hidden} more</li>
+        <li className="text-[13px] text-muted-foreground tabular-nums sm:text-xs">
+          +{hidden} more
+        </li>
       ) : null}
       {trailing ? <li className="list-none">{trailing}</li> : null}
     </ul>
