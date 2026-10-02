@@ -8,6 +8,7 @@ import {
   NAV_ITEMS,
   normalizeSearchQuery,
   parseWeek,
+  resolvePendingAfterUrlChange,
   resolveWeek,
   searchResultHref,
   switchLeagueHref,
@@ -113,5 +114,45 @@ describe("stepWeek", () => {
     expect(stepWeek(18, 1)).toBeNull();
     expect(stepWeek(2, -1)).toBe(1);
     expect(stepWeek(17, 1)).toBe(18);
+  });
+});
+
+describe("resolvePendingAfterUrlChange (m1: week-selector resync race)", () => {
+  it("leaves nothing pending alone", () => {
+    expect(resolvePendingAfterUrlChange(null, 4)).toBeNull();
+  });
+  it("clears pending once the URL confirms that exact target", () => {
+    expect(resolvePendingAfterUrlChange(5, 5)).toBeNull();
+  });
+  it("keeps a newer pending target when a stale, older commit lands out of order", () => {
+    // week=4, click Next (pending=5), click Next again before the URL commits (pending=6),
+    // then the first replace's URL finally lands at 5 (not 6).
+    expect(resolvePendingAfterUrlChange(6, 5)).toBe(6);
+  });
+
+  it("reproduces the double-click-before-commit sequence end to end", () => {
+    // Simulates the component's ref without React: `pending` plays the role of the
+    // `pending` ref in week-selector.tsx, `week` the URL-derived state.
+    let pending: number | null = null;
+    let week = 4;
+    const click = () => {
+      const next = stepWeek(pending ?? week, 1);
+      if (next === null) return;
+      pending = next; // go(next)
+    };
+    const urlCommits = (confirmed: number) => {
+      week = confirmed;
+      pending = resolvePendingAfterUrlChange(pending, confirmed);
+    };
+
+    click(); // pending=5, replace(5) in flight
+    click(); // pending=6, replace(6) in flight (base came from pending, not stale `week`)
+    urlCommits(5); // the first replace's URL lands late; must not clobber pending=6
+    expect(pending).toBe(6);
+    click(); // must step from 6, not from the stale week=5
+    expect(pending).toBe(7);
+
+    urlCommits(7); // the real latest replace finally lands
+    expect(pending).toBeNull();
   });
 });

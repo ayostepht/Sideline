@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { apiJson } from "../lib/client/api";
 import { parseRetryAfter } from "../lib/client/onboarding";
@@ -16,8 +17,14 @@ type State =
 /** Minutes to show for a rate limit wait, at least 1. */
 export const waitMinutes = (seconds: number): number => Math.max(1, Math.ceil(seconds / 60));
 
+/** Seconds to wait from a Retry-After header, defaulting to 60 (the server debounce) when unusable. */
+export function retryAfterSeconds(headers: Headers | null | undefined, nowMs: number): number {
+  return parseRetryAfter(headers?.get("Retry-After") ?? null, nowMs) ?? 60;
+}
+
 /** Calls POST /api/sync/run and reports the outcome in a polite live region. */
 export function SyncNowButton() {
+  const router = useRouter();
   const [state, setState] = useState<State>({ kind: "idle" });
 
   useEffect(() => {
@@ -25,6 +32,15 @@ export function SyncNowButton() {
     const id = setTimeout(() => setState({ kind: "idle" }), 6000);
     return () => clearTimeout(id);
   }, [state.kind]);
+
+  // Refresh server data a moment after a sync starts, so stale banners and content elsewhere on
+  // the page clear once the worker has had a chance to pick up the job, instead of lingering
+  // until the next unrelated navigation.
+  useEffect(() => {
+    if (state.kind !== "done") return;
+    const id = setTimeout(() => router.refresh(), 2000);
+    return () => clearTimeout(id);
+  }, [state.kind, router]);
 
   async function run() {
     setState({ kind: "pending" });
@@ -34,8 +50,7 @@ export function SyncNowButton() {
     });
     if (r.ok) setState({ kind: "done" });
     else if (r.status === 429) {
-      const seconds = parseRetryAfter(r.headers?.get("Retry-After") ?? null, Date.now()) ?? 60;
-      setState({ kind: "limited", seconds });
+      setState({ kind: "limited", seconds: retryAfterSeconds(r.headers, Date.now()) });
     } else setState({ kind: "error", message: r.message });
   }
 

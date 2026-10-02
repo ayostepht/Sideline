@@ -52,6 +52,24 @@ export function stepWeek(base: number, delta: number): number | null {
   return next < 1 || next > MAX_WEEK ? null : next;
 }
 
+/**
+ * What a "pending navigation" ref should become after the URL's confirmed week changes.
+ *
+ * `pending` tracks a week the user just clicked toward, whose `router.replace` hasn't landed
+ * in the URL yet. If nothing is pending, there is nothing to resync (the current `week` state
+ * is already the source of truth). If something is pending, only clear it once the URL catches
+ * up to that exact target: an older, slower commit landing out of order (e.g. two quick clicks
+ * each kick off a navigation, and the first one's URL commits after the second click already
+ * moved the pending target forward) must not clobber a newer click that is still in flight,
+ * which would make a later click compute its next step from a stale base.
+ */
+export function resolvePendingAfterUrlChange(
+  pending: number | null,
+  confirmedWeek: number,
+): number | null {
+  return pending === confirmedWeek ? null : pending;
+}
+
 /** Selected week: explicit ?week= wins, else the league's current week, else null (preseason). */
 export function resolveWeek(
   raw: string | null | undefined,

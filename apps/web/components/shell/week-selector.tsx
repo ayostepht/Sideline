@@ -3,7 +3,13 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { MAX_WEEK, resolveWeek, stepWeek, withWeekParam } from "../../lib/client/nav";
+import {
+  MAX_WEEK,
+  resolvePendingAfterUrlChange,
+  resolveWeek,
+  stepWeek,
+  withWeekParam,
+} from "../../lib/client/nav";
 
 const WeekMenu = lazy(() => import("./week-menu"));
 const iconBtn =
@@ -15,10 +21,12 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
   const params = useSearchParams();
   const [armed, setArmed] = useState(false);
   const week = resolveWeek(params.get("week"), currentWeek);
-  // Latest requested week. Updated on click so fast double clicks stack before the URL catches up.
-  const requested = useRef<number | null>(week);
+  // A click's target week while its router.replace is in flight, else null. Stacked clicks
+  // compute their next step from this (not from `week`), so a slow URL commit never clobbers a
+  // newer click (see resolvePendingAfterUrlChange).
+  const pending = useRef<number | null>(null);
   useEffect(() => {
-    requested.current = week;
+    if (week !== null) pending.current = resolvePendingAfterUrlChange(pending.current, week);
   }, [week]);
 
   if (week === null) {
@@ -35,12 +43,12 @@ export function WeekSelector({ currentWeek }: { currentWeek: number | null }) {
 
   const go = (next: number) => {
     if (next < 1 || next > MAX_WEEK) return;
-    requested.current = next;
+    pending.current = next;
     router.replace(`${pathname}?${withWeekParam(params.toString(), next)}`, { scroll: false });
   };
 
   const step = (delta: number) => {
-    const next = stepWeek(requested.current ?? week, delta);
+    const next = stepWeek(pending.current ?? week, delta);
     if (next !== null) go(next);
   };
 

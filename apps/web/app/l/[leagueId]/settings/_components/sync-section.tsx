@@ -67,10 +67,15 @@ function JobStatus({ state }: { state: JobState }) {
 
 /** "11 of 12 up to date. Last sync 1 day ago". */
 export function syncSummary(jobs: readonly SyncJobStatus[], now: number): string {
-  const upToDate = jobs.filter((j) => jobState(j) === "ok" || jobState(j) === "running").length;
-  const times = jobs.flatMap((j) =>
-    j.lastSuccessAt === null ? [] : [Date.parse(j.lastSuccessAt)],
-  );
+  if (jobs.length === 0) return "No sync data yet.";
+  // A running job only counts as up to date if it has a prior success; a job that is running
+  // for the very first time has no data to show yet, so it should not count.
+  const upToDate = jobs.filter(
+    (j) => jobState(j) === "ok" || (jobState(j) === "running" && j.lastSuccessAt !== null),
+  ).length;
+  const times = jobs
+    .map((j) => (j.lastSuccessAt === null ? Number.NaN : Date.parse(j.lastSuccessAt)))
+    .filter((t) => !Number.isNaN(t));
   const latest = times.length === 0 ? null : new Date(Math.max(...times)).toISOString();
   const last = latest === null ? "No sync yet." : `Last sync ${formatAge(latest, now)}.`;
   return `${upToDate} of ${jobs.length} up to date. ${last}`;
@@ -186,7 +191,7 @@ export function SyncSection() {
         ) : null}
       </div>
       <p className="text-sm text-muted-foreground" data-testid="settings-sync-cooldown">
-        You can sync again a few minutes after the last run.
+        You can sync again about a minute after the last run.
       </p>
       {loadError && data === null ? (
         <ErrorState
