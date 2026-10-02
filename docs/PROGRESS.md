@@ -57,6 +57,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | T2.7a | Visual identity part 1 (ADR-011): tokens, Inter, radius, primitives, gallery swatches | frontend-engineer | G2 | Done (verify 728, build OK, all text pairs AA by agent's computed ratios; e2e and screens after T2.7b) | 1 | 7dc84e1 |
 | T2.7b | Visual identity part 2: page density and layout, plus ux minors m1, m2, m3, m6 | frontend-engineer | G2 | Done (verify 728, build OK; m3 top bar label left: lives in components/shell; e2e pending port 3000) | 1 | 27ae22d |
 | T2.7c | E2E updates for the redesign (rosters list removed, back link, strings, h2) | qa-engineer | G2 | Committed, not yet run (port 3000 in use); orchestrator scoped TEAM-4 locators | 1 | 43ce389 |
+| T2.7d | TEAM-3 serial (ADR-012), DEVTOOLS-1, first e2e and axe run of the redesign | qa-engineer | G2 | In progress | 1 | |
 | G2-reviews | Batch F code and UX review (closeout) | code-reviewer, ux-reviewer | G | Done (code: 1 Major found and fixed same session, see T2.6d-fix; UX: APPROVE, no Blocker/Major) | 1 | see docs/reviews/2026-10-02-p2-batchF2-{code,ux}.md |
 | G2 | Gate and human checkpoint | qa-engineer, code-reviewer, ux-reviewer, orchestrator | G | Not started | 0 | |
 
@@ -137,4 +138,4 @@ Remove an item when it is done; the archive keeps history.
 
 ## Questions for Steph
 
-- **G2 checkpoint (asked 2026-10-02, see `docs/gates/G2.md`):** look and feel approval; TEAM-3 flake decision (fix now, accept with a deadline, or fewer parallel workers for that spec); which UX minors to fix before Phase 3.
+- **G2 checkpoint (asked 2026-10-02, see `docs/gates/G2.md`):** answered: TEAM-3 option (c) and dev tools local-only (ADR-012); palette and design direction given (ADR-011). Still open: final look-and-feel approval after the redesign screenshots.
