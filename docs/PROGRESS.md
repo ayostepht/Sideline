@@ -28,6 +28,10 @@
 | T0.3b-fix | Batch C review fixes (m8-m10, m12) | sleeper-data-engineer | C-fix | Done (restarted once after the same interruption) | 1 | 5f4a760 |
 | G0 | Gate | qa-engineer, code-reviewer, orchestrator | E | PASS | 1 | see `docs/gates/G0.md`, tag `gate-G0` |
 
+## Next up: Phase 1 (data layer and sync)
+
+Resume point after `/clear`: branch `phase/1-data` from `main` (at tag `gate-G0`). Batch A: T1.1 shared types/DTOs (backend-engineer) alone, since contracts come first. Batch B: T1.2 sleeper client, T1.3 db schema, T1.4 nflverse provider (all depend on T1.1). Then T1.5 worker plus T1.6 health/sync API, then T1.7 integration tests and the G1 gate. Phase 1 briefs must carry over ADR-002 (projection placeholder rows and position leak, ETag/304, projection snapshots by fetch time, kickoff times from nflverse, 2025 backfill), the T1.3 `allowBuilds` note for better-sqlite3, and the T1.6 coverage decision for `apps/web/app/api`.
+
 ## Standing rules for briefs
 
 - Real identifiers (username, league id, league name, user ids, manager and team names) are read from `.env` and never written to tracked files (ADR-000).
