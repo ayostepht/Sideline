@@ -234,7 +234,7 @@ Date: 2026-10-02
 
 **Later additions**
 
-18. **Team detail has no loading boundary** (2026-10-02, T2.6b, Batch F review M1). A `loading.tsx` above a page makes Next stream a 200 before `notFound()` runs, so an unknown rosterId returned a soft 404. Loading boundaries live in route groups (`(main)` for Home, `league/(list)` for League) and team detail has none, so it returns a real 404. Other pages keep their own boundaries.
+18. **Pages that call `notFound()` get no loading boundary** (2026-10-02, T2.6b, Batch F review M1; amended 2026-10-02, Batch F closeout review). A `loading.tsx` above a page makes Next stream a 200 before `notFound()` runs, so an unknown id returns a soft 404 instead of a real one. Loading boundaries live in route groups (`(main)` for Home, `league/(list)` for League) scoped away from pages that call `notFound()`. Team detail (`league/teams/[rosterId]`) and My Team (`team/`) both call `notFound()` and have no loading boundary at all (My Team's `loading.tsx` was removed in the closeout round; it had the same soft-404 gap team detail did before T2.6b). Other pages (no `notFound()` call) keep their own boundaries.
 
 **Context:** Phase 2 planning on 2026-10-02, approved by Steph with answers 14 to 17.
 
