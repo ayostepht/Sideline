@@ -14,25 +14,49 @@
 
 ## Resume point (read this first after /clear or a new session)
 
-Updated: 2026-10-02, after the Batch B review (fix in progress). The orchestrator rewrites this section after every commit.
+Updated: 2026-10-02, after commit d155036 (T1.3a-fix); Batch C dispatched.
 
 - **Branch:** `phase/1-data`. Plan: ADR-005 (approved by Steph with changes); nflverse facts: ADR-006. Phase 1 task table below.
 - **Committed and verified:**
   - B0, T1.0, T1.1 (plus fix), T1.2a (plus fix), T1.4a, T1.3a, T1.2b, T1.4b.
   - Batch A and B work is done.
   - Reviews saved: `docs/reviews/2026-10-02-p1-batchA-part1-code.md` and `-part2-code.md`.
-- **Batch B review saved:** `docs/reviews/2026-10-02-p1-batchB-code.md`, CHANGES REQUIRED with 3 Major findings, all in `packages/db`.
-- **In flight:** T1.3a-fix (backend-engineer, `packages/db/**` only):
-  - **M1:** `rosters.waiver_position`; `waiver_budget_used` becomes real.
-  - **M2:** `leagues.total_rosters`.
-  - **M3:** `reapStale` for requests and runs stuck in `running`.
-  - **m1:** unique lease holder ids.
-  - **n1:** duplicate import.
+- **Batch B review fixed:** M1 to M3 closed in d155036 (`reapStale`, `enqueue` stale threshold 15 min, a column for every shared field, enforced by `schema.test.ts`).
+- **In flight: Batch C**, three agents in parallel:
+  - **T1.3b** (backend-engineer, `packages/db/**` plus a doc comment in `packages/shared` for starters "0").
+  - **T1.5a** (sleeper-data-engineer, `apps/worker/**`).
+  - **T1.6** (backend-engineer, `apps/web/app/api/**`, `apps/web/lib/server/**`).
 
-  If interrupted, check `git status` under `packages/db` and verify against those findings, or discard and re-dispatch. The 0000 migration may be regenerated, since no persistent DB exists yet.
+  If interrupted, `git status` shows each one's partial files by path. Verify each against its acceptance criteria in this file's "Batch C brief essentials", or discard that path (`git checkout -- <path> && git clean -fd <path>`) and re-dispatch.
+- **Batch C brief essentials:**
+  - **T1.3b:**
+    - idempotent upserts that count real changes only;
+    - chunked bulk players;
+    - trending replaces each type's set;
+    - projections write latest plus a pregame snapshot (only when fetched_at is before kickoff);
+    - a DB-backed EtagStore (structurally typed);
+    - `computed_cache` get, put and invalidate;
+    - `tableCounts`;
+    - a second identical upsert reports 0 changes.
+  - **T1.5a:**
+    - the worker holds the lease while alive (renew every 30 s, TTL 2 min) and calls `reapStale(olderThanMs=0)` after acquiring it;
+    - heartbeat every 30 s;
+    - polls `sync_requests` every 5 s;
+    - cadences from PLAN 3.1 with `SYNC_*_CRON` overrides;
+    - game windows from `schedule` (kickoff to kickoff + 4 h) or the PLAN 3.4 fallback;
+    - jobs implement an interface; one shared `RateLimiter`; `sync_runs` record calls and changes;
+    - the CLI enqueues and waits when a worker is alive, otherwise takes the lease and runs directly;
+    - tests use fake jobs.
+  - **T1.6:**
+    - health per ADR-005 item 6 (503 only on DB failure; never migrates);
+    - sync status;
+    - `POST /api/sync/run` returns the existing pending or running request (`deduplicated: true`), else 429 with Retry-After within 60 s of the last request for that job, else enqueues;
+    - 400 on a bad body;
+    - thin handlers, logic in `lib/server`;
+    - `pnpm build` passes;
+    - api and `lib/server` coverage at least 75%.
 - **Next steps, in order:**
-  1. Verify and commit T1.3a-fix. Then Batch C.
-  2. Batch C, three in parallel:
+  1. Verify and commit each Batch C task, then run the Batch C code review. Batch C briefs for reference:
      - T1.3b (backend-engineer, `packages/db`): idempotent upserts counting real changes only; projection snapshot upsert (only when fetched_at is before kickoff); `http_cache` EtagStore; `computed_cache`; read helpers for health and sync status.
      - T1.5a (sleeper-data-engineer, `apps/worker`):
        - croner scheduler with PLAN 3.1 cadences and `SYNC_*_CRON` overrides;
@@ -88,10 +112,10 @@ Updated: 2026-10-02, after the Batch B review (fix in progress). The orchestrato
 | T1.2b | Sleeper endpoints, schemas, real-row filters, mappers | sleeper-data-engineer | B | Done (agent hit the session limit after finishing; orchestrator verified; 712 non-test lines, mostly schemas, accepted) | 1 | 38ee8a4 |
 | T1.3a | DB schema, migrations, sync/heartbeat/request/lease helpers | backend-engineer | B | Done | 1 | 195826e |
 | T1.4b | nflverse provider | sleeper-data-engineer | B | Done (attempt 1 stopped at pause before writing; attempt 2 delivered; 693 non-test lines across 7 files, accepted) | 2 | f759d28 |
-| T1.3a-fix | Batch B review M1-M3, m1, n1 (waiver_position, total_rosters, reapStale, unique lease holders) | backend-engineer | B-fix | In progress | 1 | |
-| T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | Not started | 0 | |
-| T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | Not started | 0 | |
-| T1.6 | Health, sync status, sync run API | backend-engineer | C | Not started | 0 | |
+| T1.3a-fix | Batch B review M1-M3, m1, n1 (waiver_position, total_rosters, reapStale, unique lease holders) | backend-engineer | B-fix | Done | 1 | d155036 |
+| T1.3b | DB upserts, snapshots, ETag store, computed_cache | backend-engineer | C | In progress | 1 | |
+| T1.5a | Worker framework, CLI, lease, game windows | sleeper-data-engineer | C | In progress | 1 | |
+| T1.6 | Health, sync status, sync run API | backend-engineer | C | In progress | 1 | |
 | T1.5b | Sleeper sync jobs and 2025 backfill | sleeper-data-engineer | D | Not started | 0 | |
 | T1.7a | Integration and contract harness | qa-engineer | D | Not started | 0 | |
 | T1.8 | Docker and build with SQLite | devops-engineer | D | Not started | 0 | |
