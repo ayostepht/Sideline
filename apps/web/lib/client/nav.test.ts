@@ -9,6 +9,7 @@ import {
   parseWeek,
   resolveWeek,
   searchResultHref,
+  switchLeagueHref,
   withWeekParam,
 } from "./nav";
 
@@ -81,5 +82,21 @@ describe("search", () => {
   it("needs two characters", () => {
     expect(normalizeSearchQuery(" a ")).toBeNull();
     expect(normalizeSearchQuery(" ab ")).toBe("ab");
+  });
+});
+
+describe("switchLeagueHref", () => {
+  it("keeps section and week", () => {
+    expect(switchLeagueHref("/l/A/lineup", "week=5&mode=x", "A", "B")).toBe("/l/B/lineup?week=5");
+  });
+  it("drops invalid week and handles home", () => {
+    expect(switchLeagueHref("/l/A", "week=99", "A", "B")).toBe("/l/B");
+    expect(switchLeagueHref("/l/A/", "", "A", "B")).toBe("/l/B");
+  });
+  it("falls back to league for team detail", () => {
+    expect(switchLeagueHref("/l/A/league/teams/3", "week=2", "A", "B")).toBe("/l/B/league?week=2");
+  });
+  it("falls back to home for foreign paths", () => {
+    expect(switchLeagueHref("/onboarding", "", "A", "B")).toBe("/l/B");
   });
 });

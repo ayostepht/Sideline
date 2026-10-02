@@ -2,10 +2,10 @@
 
 import type { LeagueChoice } from "@sideline/shared";
 import { Check } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { cn } from "../../lib/client/cn";
-import { leagueBase } from "../../lib/client/nav";
+import { switchLeagueHref } from "../../lib/client/nav";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import {
   Sheet,
@@ -26,6 +26,8 @@ function LeagueList({
   onDone: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams().toString();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,7 +46,7 @@ function LeagueList({
       });
       if (!res.ok) throw new Error("switch failed");
       onDone();
-      router.push(leagueBase(id));
+      router.push(switchLeagueHref(pathname, search, leagueId, id));
     } catch {
       setError("Could not switch leagues. Try again.");
     } finally {

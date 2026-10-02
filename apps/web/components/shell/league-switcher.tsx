@@ -21,10 +21,11 @@ interface Props {
 export function LeagueSwitcher({ leagueId, leagueName, leagues, variant, className }: Props) {
   const [armed, setArmed] = useState(false);
   const base = leagueBase(leagueId);
+  const suffix = variant === "popover" ? "desktop" : "mobile";
 
   if (leagues.length <= 1) {
     return (
-      <div className={cn("min-w-0", className)} data-testid="league-name">
+      <div className={cn("min-w-0", className)} data-testid={`league-name-${suffix}`}>
         <p className="truncate text-sm font-semibold">{leagueName}</p>
         {variant === "popover" ? (
           <Link
@@ -41,7 +42,7 @@ export function LeagueSwitcher({ leagueId, leagueName, leagues, variant, classNa
   const trigger = (
     <button
       type="button"
-      data-testid="league-switcher"
+      data-testid={`league-switcher-${suffix}`}
       aria-haspopup="dialog"
       onClick={() => setArmed(true)}
       aria-label={`League: ${leagueName}. Switch league`}

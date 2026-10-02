@@ -62,22 +62,24 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
     };
   }, [query, leagueId, attempt]);
 
+  function handleOpenChange(o: boolean) {
+    onOpenChange(o);
+    if (!o) {
+      setQuery("");
+      setState({ kind: "idle" });
+    }
+  }
+
   function select(r: PlayerSearchResult) {
     const href = searchResultHref(leagueId, r);
-    onOpenChange(false);
+    handleOpenChange(false);
     if (href === null) setFreeAgent(r);
     else router.push(href);
   }
 
   return (
     <>
-      <Dialog
-        open={open}
-        onOpenChange={(o) => {
-          onOpenChange(o);
-          if (!o) setQuery("");
-        }}
-      >
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent
           data-testid="search-dialog"
           className="top-[12vh] max-w-lg translate-y-0 p-0"

@@ -94,3 +94,23 @@ export function normalizeSearchQuery(q: string): string | null {
   const t = q.trim();
   return t.length >= MIN_SEARCH_CHARS ? t.slice(0, 40) : null;
 }
+
+/**
+ * Where a league switch lands: same section and explicit ?week= under the new league.
+ * Team detail pages are league specific, so they fall back to the League section.
+ */
+export function switchLeagueHref(
+  pathname: string,
+  search: string,
+  fromLeagueId: string,
+  toLeagueId: string,
+): string {
+  const from = leagueBase(fromLeagueId);
+  const to = leagueBase(toLeagueId);
+  const path = pathname.replace(/\/+$/, "");
+  if (path !== from && !path.startsWith(`${from}/`)) return to;
+  let rest = path.slice(from.length);
+  if (rest.startsWith("/league/teams")) rest = "/league";
+  const week = parseWeek(new URLSearchParams(search).get("week"));
+  return `${to}${rest}${week === null ? "" : `?week=${week}`}`;
+}

@@ -74,7 +74,7 @@ export function AppShell({ leagueId, leagueName, currentWeek, leagues, children 
         <button
           type="button"
           onClick={openSearch}
-          data-testid="search-trigger"
+          data-testid="search-trigger-desktop"
           className="flex min-h-11 items-center gap-2 rounded-[8px] border border-input bg-background px-3 text-sm text-muted-foreground hover:bg-muted"
         >
           <Search className="size-4" aria-hidden />
@@ -103,7 +103,7 @@ export function AppShell({ leagueId, leagueName, currentWeek, leagues, children 
             type="button"
             onClick={openSearch}
             aria-label="Search players"
-            data-testid="search-button"
+            data-testid="search-trigger-mobile"
             className={`${iconBtn} lg:hidden`}
           >
             <Search className="size-5" aria-hidden />

@@ -1,32 +1,22 @@
 import { redirect } from "next/navigation";
-import { ErrorState } from "../components/empty-state";
+import { DbError } from "../components/db-error";
 import { getDb } from "../lib/server/db";
 import { getIdentity } from "../lib/server/identity";
+import { getLeagueOverview } from "../lib/server/league-views";
 
 export const dynamic = "force-dynamic";
 
-function DbError() {
-  return (
-    <main className="mx-auto max-w-xl p-4">
-      <h1 className="sr-only">Sideline</h1>
-      <ErrorState
-        title="Sideline can't reach its database"
-        detail="Check that the data folder is mounted and the app has run its migrations."
-        retryHref="/"
-      />
-    </main>
-  );
-}
-
 export default function RootPage() {
-  const db = getDb();
-  if (!db.ok) return <DbError />;
-  let activeLeagueId: string | null;
+  let target = "/onboarding";
   try {
-    activeLeagueId = getIdentity(db.handle).activeLeagueId;
+    const db = getDb();
+    if (!db.ok) return <DbError retryHref="/" />;
+    const id = getIdentity(db.handle).activeLeagueId;
+    if (id !== null && id !== "" && getLeagueOverview(db.handle, id, new Date()).ok) {
+      target = `/l/${encodeURIComponent(id)}`;
+    }
   } catch {
-    return <DbError />;
+    return <DbError retryHref="/" />;
   }
-  if (activeLeagueId === null || activeLeagueId === "") redirect("/onboarding");
-  redirect(`/l/${encodeURIComponent(activeLeagueId)}`);
+  redirect(target);
 }
