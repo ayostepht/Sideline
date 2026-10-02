@@ -20,22 +20,13 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 ## 3. In flight
 
-- T2.2b-fix done (18628a4).
-- T2.1c done (17cab8b).
-- T2.3a done (0a45a4a).
-- T2.0b-fix2 done (494e0bd).
-- T2.5a done (94a04f3).
-- Reviews saved: batch B code (10fc521), batch B UX (a5e32da).
-
-- Batch C code review saved (a34f1df): M1 404 redirect loop, M2 layout errors uncaught.
-- T2.3a-fix (frontend-engineer): apps/web/app, components, lib/client. M1, M2, m1, m2, m3.
-- T2.2b-fix2 done (cfb098d).
+- ux-reviewer on the shell (seeded screens only). Save as `docs/reviews/2026-10-02-p2-batchC-ux.md`.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit each in-flight task separately (exact paths).
-2. When T2.3a-fix and T2.5a land: ux-reviewer on the shell (seeded screens only), then Batch D (T2.3b, T2.3c; builds one at a time).
-3. Then Batches D to G.
+1. Save the shell UX review; fix Blocker and Major (frontend) before Batch D.
+2. Batch D: T2.3b (onboarding, Settings v1) and T2.3c (Home, League, team detail, My Team), two frontend instances, `components/` read-only for both, builds one at a time (`pgrep -f "[n]ext build"` wait). Then code review.
+3. Batch E: T2.4 UX review and T2.5b e2e/axe/Lighthouse/perf. Batch F fix round. Batch G gate G2 (human).
 
 ## 5. Standing rules for every brief
 
