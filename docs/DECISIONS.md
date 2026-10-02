@@ -133,11 +133,11 @@ Date: 2026-10-02
 11. **Live API budget.** No Sleeper calls during development. At G1: `pnpm test:contract` (about 20 calls, `/players/nfl` excluded unless `CONTRACT_PLAYERS=1`) and one orchestrator live `pnpm sync --once` into gitignored `./data` (the day's single `/players/nfl` fetch).
 12. **Projection filter sanity.** T1.2b documents the real-row rule separately for stats and projections (checked against fixtures), tests that week 5 projections are non-empty after filtering, and reports dropped-row counts by reason. Bye-week players are handled through the schedule, never silently dropped.
 13. **Red-zone touches.** If nflverse needs play-by-play for them, TREND-2 ships without red-zone touches (nullable column) and play-by-play goes to the P1 backlog.
+14. **`pnpm run sync`, not `pnpm sync`.** pnpm 12 has a built-in `sync` command that shadows the root script, so the CLI is invoked as `pnpm run sync --once [--job=name]`. Root scripts delegate with `pnpm -C <dir> run` because `--filter` turns the stub exit code 2 into 1. PLAN 10.6 amended.
+15. **Package manifests.** Dependency changes in any workspace `package.json` belong to devops-engineer (it owns the lockfile). Package owners may add or change `scripts` entries in their own package's manifest.
 
 **Context:** Phase 1 planning on 2026-10-02, approved by Steph with changes (items 3, 6, 12, 13).
 
 **Alternatives considered:** web calling Sleeper directly with its own limiter (rejected: two limiters can't enforce one budget); a separate seed script mapping fixtures to rows (rejected: duplicates the worker's mapping); 503 on a missing worker heartbeat (deferred to T4.3: no worker runs in the container until then).
-
-14. **`pnpm run sync`, not `pnpm sync`.** pnpm 12 has a built-in `sync` command that shadows the root script, so the CLI is invoked as `pnpm run sync --once [--job=name]`. Root scripts delegate with `pnpm -C <dir> run` because `--filter` turns the stub exit code 2 into 1. PLAN 10.6 amended.
 
 **Consequences:** the worker is the single gate to Sleeper. Health stays green in the Phase 1 to 3 container. The idempotency check measures real changes.
