@@ -2,7 +2,7 @@ import { RateLimiter, createCallCounter } from "@sideline/sleeper";
 import type { NflverseProvider } from "@sideline/providers";
 import type { ScheduleGame } from "@sideline/shared";
 import { describe, expect, it } from "vitest";
-import { createFixtureFetch } from "../cli/fixture-fetch.js";
+import { createFixtureFetch } from "../fixture-fetch.js";
 import { createJobRegistry } from "../registry.js";
 import { runJobs } from "../runner.js";
 import { fakeClock, silent, tempDataDir, tempDb, testConfig } from "../testutil.js";

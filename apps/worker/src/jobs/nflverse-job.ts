@@ -1,9 +1,8 @@
-import { upsertSchedule } from "@sideline/db";
+import { readNflState, upsertSchedule } from "@sideline/db";
 import { createNflverseProvider, type FetchFn, type NflverseProvider } from "@sideline/providers";
 import type { ScheduleGame } from "@sideline/shared";
 import { fallbackKickoffUtc } from "../kickoff.js";
 import type { Job, JobContext, JobResult } from "../types.js";
-import { readState } from "./db-reads.js";
 
 export interface NflverseJobDeps {
   /** Injected in tests and by db:seed:fixtures; defaults to the global fetch. */
@@ -48,7 +47,7 @@ export function nflverseJob(deps: NflverseJobDeps = {}): Job {
           now: () => ctx.now(),
           ...(deps.fetch ? { fetch: deps.fetch } : {}),
         });
-      const season = readState(ctx.db)?.season ?? ctx.now().getUTCFullYear();
+      const season = readNflState(ctx.db)?.season ?? ctx.now().getUTCFullYear();
       let res;
       try {
         res = await provider.getScheduleWithDates(season);

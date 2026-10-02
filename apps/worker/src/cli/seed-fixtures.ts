@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 import pino, { type Logger } from "pino";
 import { createAllJobs } from "../jobs/index.js";
 import { createJobRegistry } from "../registry.js";
-import { createFixtureFetch, FIXTURES_DIR, readManifest } from "./fixture-fetch.js";
+import { createFixtureFetch, FIXTURES_DIR, readManifest } from "../fixture-fetch.js";
 import { runSyncCli } from "./sync.js";
 
 export const SEED_TABLES = [

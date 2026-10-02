@@ -2,7 +2,7 @@ import { dbPathFromDataDir, openDb } from "@sideline/db";
 import { RateLimiter } from "@sideline/sleeper";
 import { describe, expect, it } from "vitest";
 import { tempDataDir } from "../testutil.js";
-import { createFixtureFetch } from "./fixture-fetch.js";
+import { createFixtureFetch } from "../fixture-fetch.js";
 import { runSeed } from "./seed-fixtures.js";
 
 const fast = (): RateLimiter => new RateLimiter({ ratePerSecond: 10_000, maxPerWindow: 1_000_000 });

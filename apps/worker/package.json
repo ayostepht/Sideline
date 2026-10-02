@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "sync": "tsx src/cli/sync.ts",
     "start": "tsx src/main.ts",
+    "start:fixtures": "SIDELINE_FIXTURE_FETCH=1 tsx src/main.ts",
     "db:seed:fixtures": "tsx src/cli/seed-fixtures.ts"
   },
   "dependencies": {

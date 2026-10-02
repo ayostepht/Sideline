@@ -1,5 +1,9 @@
 import {
+  readKickoffsByTeam,
+  readPlayerPositionCounts,
   readPlayersFetchedAt,
+  readStoredProjectionWeeks,
+  readStoredStatsWeeks,
   replaceTrending,
   upsertPlayers,
   upsertPlayerWeekProjections,
@@ -27,13 +31,7 @@ import {
   weekCursor,
   type SleeperJobDeps,
 } from "./common.js";
-import {
-  kickoffsByTeam,
-  positionCounts,
-  scheduleTeamCode,
-  storedProjectionWeeks,
-  storedStatsWeeks,
-} from "./db-reads.js";
+import { scheduleTeamCode } from "./team-code.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** `/players/nfl` is fetched at most once per this window. */
@@ -58,7 +56,7 @@ export function playersJob(deps: SleeperJobDeps): Job {
       // getPlayers always sends etag: false (no If-None-Match, never cached).
       const res = await client.getPlayers(callOpts(ctx));
       const players = res.data.players.map(mapPlayer);
-      warnOnPositionDrop(ctx, positionCounts(ctx.db), players);
+      warnOnPositionDrop(ctx, readPlayerPositionCounts(ctx.db), players);
       // One transaction: a crash cannot leave players written without the once-a-day marker
       // (or the marker without players). No network call happens inside it.
       const out = ctx.db.sqlite
@@ -192,7 +190,7 @@ export function projectionsJob(deps: SleeperJobDeps): Job {
         const written = ctx.db.sqlite
           .transaction(() => {
             const main = upsertPlayerWeekProjections(ctx.db, rows).rowsChanged;
-            const kickoffs = kickoffsByTeam(ctx.db, season, week);
+            const kickoffs = readKickoffsByTeam(ctx.db, season, week);
             const snap = upsertProjectionSnapshots(ctx.db, rows, (playerId) => {
               const team = teams.get(playerId);
               return team ? (kickoffs.get(scheduleTeamCode(team)) ?? null) : null;
@@ -224,8 +222,8 @@ export function backfillJob(deps: SleeperJobDeps): Job {
     name: "backfill_2025",
     async run(ctx) {
       const have = {
-        stats: storedStatsWeeks(ctx.db, BACKFILL_SEASON, "regular"),
-        proj: storedProjectionWeeks(ctx.db, BACKFILL_SEASON, "regular"),
+        stats: readStoredStatsWeeks(ctx.db, BACKFILL_SEASON, "regular"),
+        proj: readStoredProjectionWeeks(ctx.db, BACKFILL_SEASON, "regular"),
       };
       const all = Array.from({ length: MAX_REGULAR_WEEK }, (_, i) => i + 1);
       const statWeeks = all.filter((w) => !have.stats.has(w));

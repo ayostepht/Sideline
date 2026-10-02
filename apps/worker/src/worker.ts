@@ -1,10 +1,18 @@
 import { claimNext, complete, reapStale, writeHeartbeat, type DbHandle } from "@sideline/db";
-import { SyncJobNameSchema, type AppConfig, type SyncJobName } from "@sideline/shared";
+import {
+  ONBOARDING_JOB_NAMES,
+  OnboardingJobNameSchema,
+  SYNC_JOB_NAMES,
+  SyncJobNameSchema,
+  type AppConfig,
+  type SyncJobName,
+} from "@sideline/shared";
+import type { SleeperJobDeps } from "./jobs/common.js";
 import type { RateLimiter } from "@sideline/sleeper";
 import type { Logger } from "pino";
 import { LEASE_RENEW_MS, LEASE_RETRY_MS, type LeaseKeeper } from "./lease.js";
 import type { JobRegistry } from "./registry.js";
-import { runJobs, summarizeFailures, type RunnerDeps } from "./runner.js";
+import { runJobs, runOnboarding, summarizeFailures, type RunnerDeps } from "./runner.js";
 import { buildCadences, dueJobs, type Cadences } from "./schedule.js";
 import { isGameWindow, type GameKickoff } from "./windows.js";
 
@@ -21,6 +29,8 @@ export interface WorkerDeps {
   logger: Logger;
   lease: LeaseKeeper;
   now: () => Date;
+  /** Fetch for onboarding jobs (tests and fixture mode); defaults to the global fetch. */
+  sleeper?: SleeperJobDeps;
   cadences?: Cadences;
   /** Kickoffs near `now`; default reads the `schedule` table (+/- 7 days). */
   loadGames?: (now: Date) => GameKickoff[];
@@ -123,17 +133,34 @@ export class Worker {
       req = claimNext(this.d.db, this.d.now());
     } catch (e) {
       this.d.logger.error({ err: String(e) }, "claim failed");
+      this.failUnknownJobs();
       return;
     }
     if (req === null) return;
     this.busy = true;
     const p = (async () => {
       try {
+        let error: string | null;
+        const onboarding = OnboardingJobNameSchema.safeParse(req.job);
         const parsed = SyncJobNameSchema.safeParse(req.job);
-        const names =
-          req.job === "all" ? this.d.registry.allInOrder() : parsed.success ? [parsed.data] : [];
-        const outcomes = await runJobs(this.runnerDeps(), this.d.registry, names);
-        let error = summarizeFailures(outcomes);
+        if (req.paramsError !== undefined) {
+          error = req.paramsError;
+        } else if (onboarding.success) {
+          error = (
+            await runOnboarding(
+              this.runnerDeps(),
+              this.d.sleeper ?? {},
+              onboarding.data,
+              req.params ?? null,
+            )
+          ).error;
+        } else if (req.job === "all" || parsed.success) {
+          const names = parsed.success ? [parsed.data] : this.d.registry.allInOrder();
+          const outcomes = await runJobs(this.runnerDeps(), this.d.registry, names);
+          error = summarizeFailures(outcomes);
+        } else {
+          error = `unknown job: ${String(req.job)}`;
+        }
         if (error === null && this.d.lease.signal.aborted)
           error = "aborted (lease lost or shutdown)";
         complete(this.d.db, req.id, error === null ? "done" : "failed", error, this.d.now());
@@ -150,6 +177,27 @@ export class Worker {
     })();
     this.current = p;
     await p;
+  }
+
+  /**
+   * claimNext throws on a request whose job is not a known name (the row stays pending and would
+   * block the queue forever). Mark those failed so the queue moves on (review m7).
+   */
+  private failUnknownJobs(): void {
+    const known = [...SYNC_JOB_NAMES, "all", ...ONBOARDING_JOB_NAMES];
+    try {
+      const marks = known.map(() => "?").join(",");
+      const res = this.d.db.sqlite
+        .prepare(
+          `UPDATE sync_requests SET status = 'failed', error = 'unknown job', finished_at = ?
+           WHERE status = 'pending' AND job NOT IN (${marks})`,
+        )
+        .run(this.d.now().toISOString(), ...known);
+      if (res.changes > 0)
+        this.d.logger.warn({ count: res.changes }, "failed requests with unknown job");
+    } catch (e) {
+      this.d.logger.error({ err: String(e) }, "could not fail unknown-job requests");
+    }
   }
 
   /** Runs due scheduled jobs serially. */
