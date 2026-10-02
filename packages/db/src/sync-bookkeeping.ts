@@ -7,6 +7,8 @@ import { and, asc, desc, eq, gte, lt, max, or, sql } from "drizzle-orm";
 import {
   SyncRequestSchema,
   SyncRunSchema,
+  parseParamsForJob,
+  type SyncRequestParams,
   type SyncJobName,
   type SyncRequest,
   type SyncRequestStatus,
@@ -29,7 +31,7 @@ export const SETTING_HEARTBEAT = "worker_heartbeat";
 export const SETTING_LEASE = "sync_lease";
 export const SETTING_PLAYERS_FETCHED_AT = "players_fetched_at";
 
-function getSetting(h: DbHandle, key: string): string | null {
+export function getSetting(h: DbHandle, key: string): string | null {
   const row = h.db
     .select({ value: appSettings.value })
     .from(appSettings)
@@ -38,7 +40,7 @@ function getSetting(h: DbHandle, key: string): string | null {
   return row?.value ?? null;
 }
 
-function setSetting(h: DbHandle, key: string, value: string): void {
+export function setSetting(h: DbHandle, key: string, value: string): void {
   h.db
     .insert(appSettings)
     .values({ key, value })
@@ -172,10 +174,21 @@ export function readHeartbeat(h: DbHandle): Heartbeat | null {
 
 // ---------- sync_requests ----------
 
+function readParams(row: typeof syncRequests.$inferSelect): SyncRequestParams | null {
+  if (row.paramsJson === null) return null;
+  try {
+    return parseParamsForJob(row.job, JSON.parse(row.paramsJson));
+  } catch {
+    return null;
+  }
+}
+
 function toRequest(row: typeof syncRequests.$inferSelect): SyncRequest {
+  const params = readParams(row);
   return SyncRequestSchema.parse({
     id: row.id,
     job: row.job,
+    ...(params === null ? {} : { params }),
     requestedAt: row.requestedAt,
     status: row.status,
     source: row.source,
@@ -261,6 +274,58 @@ export function enqueue(
   staleMs: number = DEFAULT_STALE_MS,
 ): SyncRequest {
   return enqueueRequest(h, job, source, now, staleMs).request;
+}
+
+/**
+ * Queues an onboarding request with params. Deduplicates only against an active request with the
+ * same job AND identical params (a different username is a new request). Params are validated
+ * for the job; invalid params throw.
+ */
+export function enqueueWithParams(
+  h: DbHandle,
+  job: Extract<SyncRequest["job"], "user" | "user_leagues">,
+  params: SyncRequestParams,
+  source: SyncRequest["source"],
+  now: Date,
+  staleMs: number = DEFAULT_STALE_MS,
+): { request: SyncRequest; created: boolean } {
+  const valid = parseParamsForJob(job, params);
+  if (valid === null) throw new Error(`invalid params for job ${job}`);
+  const paramsJson = JSON.stringify(valid);
+  const cutoff = iso(new Date(now.getTime() - staleMs));
+  return h.db.transaction(
+    (tx) => {
+      const existing = tx
+        .select()
+        .from(syncRequests)
+        .where(
+          and(
+            eq(syncRequests.job, job),
+            eq(syncRequests.paramsJson, paramsJson),
+            or(
+              eq(syncRequests.status, "pending"),
+              and(eq(syncRequests.status, "running"), gte(syncRequests.startedAt, cutoff)),
+            ),
+          ),
+        )
+        .orderBy(asc(syncRequests.id))
+        .limit(1)
+        .get();
+      if (existing !== undefined) return { request: toRequest(existing), created: false };
+      const res = tx
+        .insert(syncRequests)
+        .values({ job, paramsJson, requestedAt: iso(now), status: "pending", source })
+        .run();
+      const row = tx
+        .select()
+        .from(syncRequests)
+        .where(eq(syncRequests.id, Number(res.lastInsertRowid)))
+        .get();
+      if (row === undefined) throw new Error("sync_requests insert not readable");
+      return { request: toRequest(row), created: true };
+    },
+    { behavior: "immediate" },
+  );
 }
 
 /** Atomically moves the oldest pending request to running and returns it; null if none. */

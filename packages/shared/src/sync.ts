@@ -17,6 +17,55 @@ export const SYNC_JOB_NAMES = [
 export const SyncJobNameSchema = z.enum(SYNC_JOB_NAMES);
 export type SyncJobName = (typeof SYNC_JOB_NAMES)[number];
 
+/**
+ * Onboarding jobs (ADR-009). Deliberately NOT part of SYNC_JOB_NAMES: they take params, never run
+ * on a schedule, and must not appear in "all" runs or the status list.
+ */
+export const ONBOARDING_JOB_NAMES = ["user", "user_leagues"] as const;
+export const OnboardingJobNameSchema = z.enum(ONBOARDING_JOB_NAMES);
+export type OnboardingJobName = (typeof ONBOARDING_JOB_NAMES)[number];
+
+/** Sleeper usernames: letters, digits, underscore, period. Trimmed, 1 to 40 chars. */
+export const SleeperUsernameSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(40)
+  .regex(/^[A-Za-z0-9_.]+$/, "Usernames use letters, numbers, underscores and periods");
+
+export const UserJobParamsSchema = z.strictObject({ username: SleeperUsernameSchema });
+export type UserJobParams = z.infer<typeof UserJobParamsSchema>;
+export const UserLeaguesJobParamsSchema = z.strictObject({
+  userId: z.string().min(1),
+  season: z.number().int(),
+});
+export type UserLeaguesJobParams = z.infer<typeof UserLeaguesJobParamsSchema>;
+
+/** Params per onboarding job. Scheduled jobs carry none. */
+export const SyncRequestParamsSchema = z.union([UserJobParamsSchema, UserLeaguesJobParamsSchema]);
+export type SyncRequestParams = z.infer<typeof SyncRequestParamsSchema>;
+
+/** Validates params for a given job; null params for jobs that take none. Returns null if invalid. */
+export function parseParamsForJob(job: string, raw: unknown): SyncRequestParams | null {
+  if (job === "user") {
+    const r = UserJobParamsSchema.safeParse(raw);
+    return r.success ? r.data : null;
+  }
+  if (job === "user_leagues") {
+    const r = UserLeaguesJobParamsSchema.safeParse(raw);
+    return r.success ? r.data : null;
+  }
+  return null;
+}
+
+/** Any job name a sync request may carry. */
+export const SyncRequestJobSchema = z.union([
+  SyncJobNameSchema,
+  z.literal("all"),
+  OnboardingJobNameSchema,
+]);
+export type SyncRequestJob = z.infer<typeof SyncRequestJobSchema>;
+
 export const SyncRunStatusSchema = z.enum(["running", "success", "failed", "skipped"]);
 export type SyncRunStatus = z.infer<typeof SyncRunStatusSchema>;
 
@@ -39,7 +88,9 @@ export type SyncRequestStatus = z.infer<typeof SyncRequestStatusSchema>;
 /** A manual sync queued for the worker. Timestamps are ISO 8601; started/finished null until reached. */
 export const SyncRequestSchema = z.strictObject({
   id: z.number().int(),
-  job: z.union([SyncJobNameSchema, z.literal("all")]),
+  job: SyncRequestJobSchema,
+  /** Onboarding jobs only; absent or null otherwise. */
+  params: SyncRequestParamsSchema.nullable().optional(),
   requestedAt: z.string(),
   status: SyncRequestStatusSchema,
   source: z.enum(["api", "cli"]),

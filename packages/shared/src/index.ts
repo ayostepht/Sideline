@@ -22,3 +22,6 @@ export * from "./reason.js";
 export * from "./api/health.js";
 export * from "./api/sync.js";
 export * from "./config.js";
+export * from "./api/freshness.js";
+export * from "./api/onboarding.js";
+export * from "./api/league.js";
