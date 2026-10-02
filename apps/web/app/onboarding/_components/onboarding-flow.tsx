@@ -1,15 +1,22 @@
 "use client";
 
 import type { LeagueChoice, OnboardingStatus } from "@sideline/shared";
+import { useRouter } from "next/navigation";
 import { AlertCircle, Check, Loader2, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EmptyState, ErrorState } from "../../../components/empty-state";
 import { Button } from "../../../components/ui/button";
 import {
+  MAX_CONSECUTIVE_FAILURES,
+  STATUS_POLL_DEADLINE_MS,
   isTerminalPhase,
+  nextAfterSelect,
+  nextFailureCount,
   pollDelay,
+  pollShouldGiveUp,
   stepForPhase,
+  syncSinceMs,
   type OnboardingStep,
 } from "../../../lib/client/onboarding";
 import { cn } from "../../../lib/client/cn";
@@ -43,6 +50,9 @@ function initialView(i: OnboardingInitial): View {
   return i.username !== null ? { kind: "polling" } : { kind: "username" };
 }
 
+const GAVE_UP_MESSAGE =
+  "Sideline couldn't finish setup. Check that the background worker is running, then try again.";
+
 const TITLES: Record<View["kind"], string> = {
   username: "Find your leagues",
   polling: "Looking up your leagues",
@@ -69,6 +79,8 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState(initial.username ?? "");
   const [phaseLabel, setPhaseLabel] = useState("Looking up your Sleeper account");
+  const selectToken = useRef(0);
+  const router = useRouter();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const firstRender = useRef(true);
 
@@ -87,9 +99,14 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
     const ctrl = new AbortController();
     let timer: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
+    let failures = 0;
+    const started = Date.now();
     const tick = async () => {
-      const r = await apiJson<OnboardingStatus>("/api/onboarding/status", { signal: ctrl.signal });
+      const r = await apiJson("/api/onboarding/status", "OnboardingStatusSchema", {
+        signal: ctrl.signal,
+      });
       if (ctrl.signal.aborted) return;
+      failures = nextFailureCount(failures, r.ok);
       if (r.ok) {
         const s = r.data;
         setPhaseLabel(
@@ -101,6 +118,18 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
           setView(viewForStatus(s));
           return;
         }
+      }
+      if (
+        pollShouldGiveUp({
+          startedMs: started,
+          nowMs: Date.now(),
+          deadlineMs: STATUS_POLL_DEADLINE_MS,
+          failures,
+          maxFailures: MAX_CONSECUTIVE_FAILURES,
+        })
+      ) {
+        setView({ kind: "failed", message: GAVE_UP_MESSAGE });
+        return;
       }
       timer = setTimeout(() => void tick(), pollDelay(attempt++));
     };
@@ -115,7 +144,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
     setPending(true);
     setError(null);
     setUsername(name);
-    const r = await apiJson<OnboardingStatus>("/api/onboarding", {
+    const r = await apiJson("/api/onboarding", "OnboardingStatusSchema", {
       method: "POST",
       body: { username: name },
     });
@@ -133,29 +162,42 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
     setView(viewForStatus(r.data));
   }, []);
 
-  const selectLeague = useCallback(async (leagueId: string) => {
-    setPending(true);
-    setError(null);
-    const sinceMs = Date.now() - 2000;
-    const r = await apiJson<{ activeLeagueId: string }>("/api/onboarding/league", {
-      method: "POST",
-      body: { leagueId },
-    });
-    setPending(false);
-    if (!r.ok) {
-      setError(r.status === 400 ? "That league isn't one of yours." : r.message);
-      return;
-    }
-    setView({ kind: "sync", leagueId, sinceMs });
-  }, []);
+  const selectLeague = useCallback(
+    async (leagueId: string) => {
+      const token = ++selectToken.current;
+      setPending(true);
+      setError(null);
+      const r = await apiJson("/api/onboarding/league", "SelectLeagueResponseSchema", {
+        method: "POST",
+        body: { leagueId },
+      });
+      if (token !== selectToken.current) return;
+      setPending(false);
+      if (!r.ok) {
+        setError(r.status === 400 ? "That league isn't one of yours." : r.message);
+        return;
+      }
+      if (nextAfterSelect(r.data.sync) === "home") {
+        router.replace(`/l/${encodeURIComponent(leagueId)}`);
+        return;
+      }
+      setView({ kind: "sync", leagueId, sinceMs: syncSinceMs(r.data.syncSince) });
+    },
+    [router],
+  );
 
   const startOver = () => {
+    selectToken.current++;
+    setPending(false);
     setError(null);
     setView({ kind: "username" });
   };
 
   return (
     <div className="flex flex-col gap-6">
+      <p aria-live="polite" className="sr-only" data-testid="onboarding-live">
+        {view.kind === "polling" ? `${phaseLabel}...` : ""}
+      </p>
       <section aria-labelledby="onboarding-step" data-testid={`onboarding-step-${view.kind}`}>
         <h2
           id="onboarding-step"
@@ -185,7 +227,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
               aria-hidden
             />
             <p
-              aria-live="polite"
+              aria-hidden
               className="text-sm text-muted-foreground"
               data-testid="onboarding-phase-status"
             >
@@ -243,7 +285,7 @@ export function OnboardingFlow({ initial }: { initial: OnboardingInitial }) {
         ) : null}
 
         {view.kind === "sync" ? (
-          <FirstSync leagueId={view.leagueId} sinceMs={view.sinceMs} />
+          <FirstSync leagueId={view.leagueId} sinceMs={view.sinceMs} onRetry={startOver} />
         ) : null}
 
         {view.kind === "done" ? (
@@ -361,7 +403,7 @@ function LeaguePicker({
       >
         {pending ? "Working..." : "Use this league"}
       </Button>
-      <Button type="button" variant="ghost" onClick={onBack}>
+      <Button type="button" variant="ghost" onClick={onBack} disabled={pending}>
         Use a different username
       </Button>
     </form>

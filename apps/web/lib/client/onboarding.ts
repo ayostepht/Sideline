@@ -88,3 +88,60 @@ export function validateUsername(raw: string): string | null {
   if (!/^[A-Za-z0-9_.]+$/.test(v)) return "Use letters, numbers, underscores and periods only";
   return null;
 }
+
+export const STATUS_POLL_DEADLINE_MS = 90_000;
+export const FIRST_SYNC_DEADLINE_MS = 120_000;
+export const SETTINGS_POLL_DEADLINE_MS = 5 * 60_000;
+export const MAX_CONSECUTIVE_FAILURES = 5;
+
+/** Consecutive request failure count after one more result. A success resets it. */
+export function nextFailureCount(previous: number, ok: boolean): number {
+  return ok ? 0 : previous + 1;
+}
+
+/** True when a poll should stop: past the deadline, or too many failures in a row. */
+export function pollShouldGiveUp(opts: {
+  startedMs: number;
+  nowMs: number;
+  deadlineMs: number;
+  failures: number;
+  maxFailures?: number;
+}): boolean {
+  return (
+    opts.nowMs - opts.startedMs >= opts.deadlineMs ||
+    opts.failures >= (opts.maxFailures ?? MAX_CONSECUTIVE_FAILURES)
+  );
+}
+
+/** Where to go after selecting a league. `rate_limited` means no new sync, so data already exists. */
+export function nextAfterSelect(sync: string): "home" | "sync" {
+  return sync === "rate_limited" ? "home" : "sync";
+}
+
+/** First job that failed in the first sync, or null. */
+export function failedFirstSyncJob(
+  states: Record<FirstSyncJob, FirstSyncState>,
+): FirstSyncJob | null {
+  return FIRST_SYNC_JOBS.find((j) => states[j] === "failed") ?? null;
+}
+
+export function normalizeUsername(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+
+/** True for the SQLite error a not yet migrated database throws. */
+export function isMissingTableError(err: unknown): boolean {
+  let e: unknown = err;
+  for (let i = 0; i < 4 && e instanceof Error; i++) {
+    if (/no such table/i.test(e.message)) return true;
+    e = e.cause;
+  }
+  return false;
+}
+
+/** Server `syncSince` (ISO) to epoch ms for comparing with job `finishedAt`. Null when absent or invalid. */
+export function syncSinceMs(syncSince: string | null | undefined): number | null {
+  if (syncSince === null || syncSince === undefined) return null;
+  const t = Date.parse(syncSince);
+  return Number.isNaN(t) ? null : t;
+}

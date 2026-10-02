@@ -1,12 +1,12 @@
 "use client";
 
-import type { SyncJobStatus, SyncRunResponse, SyncStatusResponse } from "@sideline/shared";
+import type { SyncJobStatus, SyncStatusResponse } from "@sideline/shared";
 import { AlertCircle, CheckCircle2, Circle, Loader2, MinusCircle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { DataFreshness } from "../../../../../components/data-freshness";
 import { ErrorState } from "../../../../../components/empty-state";
 import { Button } from "../../../../../components/ui/button";
-import { parseRetryAfter } from "../../../../../lib/client/onboarding";
+import { SETTINGS_POLL_DEADLINE_MS, parseRetryAfter } from "../../../../../lib/client/onboarding";
 import { apiJson } from "../../../../onboarding/_components/api";
 
 const JOB_LABELS: Record<string, string> = {
@@ -65,7 +65,11 @@ export function SyncSection() {
   const [retryIn, setRetryIn] = useState(0);
 
   const load = useCallback(async (signal?: AbortSignal) => {
-    const r = await apiJson<SyncStatusResponse>("/api/sync/status", signal ? { signal } : {});
+    const r = await apiJson(
+      "/api/sync/status",
+      "SyncStatusResponseSchema",
+      signal ? { signal } : {},
+    );
     if (signal?.aborted) return;
     if (r.ok) {
       setData(r.data);
@@ -83,10 +87,33 @@ export function SyncSection() {
     const ctrl = new AbortController();
     void load(ctrl.signal);
     if (!busy) return () => ctrl.abort();
-    const id = setInterval(() => void load(ctrl.signal), 3000);
+    // Poll every 3 s, but not while the tab is hidden, and give up after 5 minutes.
+    const started = Date.now();
+    let id: ReturnType<typeof setInterval> | undefined;
+    const stop = () => {
+      if (id !== undefined) clearInterval(id);
+      id = undefined;
+    };
+    const start = () => {
+      stop();
+      id = setInterval(() => {
+        if (Date.now() - started >= SETTINGS_POLL_DEADLINE_MS) stop();
+        else void load(ctrl.signal);
+      }, 3000);
+    };
+    const onVisibility = () => {
+      if (document.hidden) stop();
+      else if (Date.now() - started < SETTINGS_POLL_DEADLINE_MS) {
+        void load(ctrl.signal);
+        start();
+      }
+    };
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       ctrl.abort();
-      clearInterval(id);
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [load, busy]);
 
@@ -99,7 +126,7 @@ export function SyncSection() {
   async function syncNow() {
     setPending(true);
     setMessage(null);
-    const r = await apiJson<SyncRunResponse>("/api/sync/run", {
+    const r = await apiJson("/api/sync/run", "SyncRunResponseSchema", {
       method: "POST",
       body: { job: "all" },
     });
@@ -129,9 +156,14 @@ export function SyncSection() {
           data-testid="settings-sync-message"
         >
           {retryIn > 0
-            ? `You can sync again in ${retryIn}s.`
+            ? "Sync is rate limited. You can sync again soon."
             : (message ?? (busy ? "Sync in progress." : ""))}
         </p>
+        {retryIn > 0 ? (
+          <span aria-hidden className="text-sm tabular-nums text-muted-foreground">
+            {retryIn}s
+          </span>
+        ) : null}
       </div>
       {loadError && data === null ? (
         <ErrorState

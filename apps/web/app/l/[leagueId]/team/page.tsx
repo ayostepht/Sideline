@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { DbError } from "../../../../components/db-error";
 import { leagueBase, parseWeek } from "../../../../lib/client/nav";
 import { getLeagueOverview, getMyTeam } from "../../../../lib/server/league-views";
@@ -18,6 +19,7 @@ export default async function MyTeamPage({
     overview: getLeagueOverview(h, leagueId, now),
     team: getMyTeam(h, leagueId, now),
   }));
+  if (read.ok && !read.value.overview.ok && read.value.overview.reason === "not_found") notFound();
   if (!read.ok || !read.value.overview.ok)
     return <DbError retryHref={`${leagueBase(leagueId)}/team`} />;
   const week = parseWeek(sp.week) ?? read.value.overview.data.currentWeek;

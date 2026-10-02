@@ -20,6 +20,7 @@ export default async function TeamDetailPage({
     overview: getLeagueOverview(h, leagueId, now),
     team: getTeamDetail(h, leagueId, rosterId, now),
   }));
+  if (read.ok && !read.value.overview.ok && read.value.overview.reason === "not_found") notFound();
   if (!read.ok || !read.value.overview.ok) {
     return <DbError retryHref={`${leagueBase(leagueId)}/league/teams/${rosterId}`} />;
   }

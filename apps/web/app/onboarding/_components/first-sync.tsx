@@ -5,9 +5,14 @@ import { AlertCircle, CheckCircle2, Circle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "../../../components/ui/button";
 import {
+  FIRST_SYNC_DEADLINE_MS,
   FIRST_SYNC_JOBS,
+  failedFirstSyncJob,
   firstSyncProgress,
+  nextFailureCount,
+  pollShouldGiveUp,
   type FirstSyncJob,
   type FirstSyncState,
 } from "../../../lib/client/onboarding";
@@ -24,7 +29,6 @@ const STATE_TEXT: Record<FirstSyncState, string> = {
   failed: "Failed",
   waiting: "Waiting",
 };
-const TIMEOUT_MS = 120_000;
 const POLL_MS = 2000;
 
 function StateIcon({ state }: { state: FirstSyncState }) {
@@ -36,21 +40,38 @@ function StateIcon({ state }: { state: FirstSyncState }) {
 }
 
 /** Polls sync status until the league jobs finish after `sinceMs`, then opens Home. */
-export function FirstSync({ leagueId, sinceMs }: { leagueId: string; sinceMs: number | null }) {
+export function FirstSync({
+  leagueId,
+  sinceMs,
+  onRetry,
+}: {
+  leagueId: string;
+  sinceMs: number | null;
+  onRetry: () => void;
+}) {
   const router = useRouter();
   const homeHref = `/l/${encodeURIComponent(leagueId)}`;
   const [jobs, setJobs] = useState<SyncStatusResponse["jobs"]>([]);
   const [timedOut, setTimedOut] = useState(false);
   const [fetchFailed, setFetchFailed] = useState(false);
+  const [gaveUp, setGaveUp] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const navigated = useRef(false);
+
+  // Live region mounts empty; its text is filled after mount so the first message is announced.
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     const ctrl = new AbortController();
     const started = Date.now();
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let failures = 0;
     const tick = async () => {
-      const r = await apiJson<SyncStatusResponse>("/api/sync/status", { signal: ctrl.signal });
+      const r = await apiJson("/api/sync/status", "SyncStatusResponseSchema", {
+        signal: ctrl.signal,
+      });
       if (ctrl.signal.aborted) return;
+      failures = nextFailureCount(failures, r.ok);
       setFetchFailed(!r.ok);
       if (r.ok) {
         setJobs(r.data.jobs);
@@ -61,9 +82,18 @@ export function FirstSync({ leagueId, sinceMs }: { leagueId: string; sinceMs: nu
           }
           return;
         }
+        if (failedFirstSyncJob(firstSyncProgress(r.data.jobs, sinceMs).states) !== null) return;
       }
-      if (Date.now() - started >= TIMEOUT_MS) {
-        setTimedOut(true);
+      if (
+        pollShouldGiveUp({
+          startedMs: started,
+          nowMs: Date.now(),
+          deadlineMs: FIRST_SYNC_DEADLINE_MS,
+          failures,
+        })
+      ) {
+        if (failures >= 5) setGaveUp(true);
+        else setTimedOut(true);
         return;
       }
       timer = setTimeout(() => void tick(), POLL_MS);
@@ -76,6 +106,7 @@ export function FirstSync({ leagueId, sinceMs }: { leagueId: string; sinceMs: nu
   }, [homeHref, router, sinceMs]);
 
   const { states, allDone } = firstSyncProgress(jobs, sinceMs);
+  const failedJob = failedFirstSyncJob(states);
   return (
     <div className="flex flex-col gap-4" data-testid="onboarding-sync">
       <ul className="flex flex-col gap-1" data-testid="onboarding-sync-jobs">
@@ -97,14 +128,25 @@ export function FirstSync({ leagueId, sinceMs }: { leagueId: string; sinceMs: nu
         className="text-sm text-muted-foreground"
         data-testid="onboarding-phase-status"
       >
-        {allDone
-          ? "All set. Opening your league."
-          : timedOut
-            ? "This is taking longer than usual. The sync keeps running in the background."
-            : fetchFailed
-              ? "Can't check progress right now. Trying again."
-              : "Pulling in your league. This can take a minute the first time."}
+        {!mounted
+          ? ""
+          : allDone
+            ? "All set. Opening your league."
+            : failedJob
+              ? `Sync failed for ${LABELS[failedJob].toLowerCase()}.`
+              : gaveUp
+                ? "Can't check progress. Check that the background worker is running, then try again."
+                : timedOut
+                  ? "This is taking longer than usual. The sync keeps running in the background."
+                  : fetchFailed
+                    ? "Can't check progress right now. Trying again."
+                    : "Pulling in your league. This can take a minute the first time."}
       </p>
+      {failedJob || gaveUp ? (
+        <Button className="self-start" onClick={onRetry} data-testid="onboarding-retry">
+          Try again
+        </Button>
+      ) : null}
       {timedOut ? (
         <Link
           href={homeHref}

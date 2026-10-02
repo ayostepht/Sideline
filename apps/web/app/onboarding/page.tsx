@@ -1,4 +1,5 @@
 import { DbError } from "../../components/db-error";
+import { isMissingTableError } from "../../lib/client/onboarding";
 import { getDb } from "../../lib/server/db";
 import { getSettings } from "../../lib/server/identity";
 import { getLeagueOverview } from "../../lib/server/league-views";
@@ -25,8 +26,9 @@ export default function OnboardingPage() {
       activeLeagueName: overview?.ok ? overview.data.name : null,
       synced: overview?.ok === true,
     };
-  } catch {
+  } catch (err) {
     // A database the worker has not migrated yet is a normal first run: start from step 1.
+    if (!isMissingTableError(err)) return <DbError retryHref="/onboarding" />;
   }
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-4 py-8">

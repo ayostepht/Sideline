@@ -2,7 +2,7 @@
 
 import { useId, useState, type FormEvent } from "react";
 import { Button } from "../../../components/ui/button";
-import { validateUsername } from "../../../lib/client/onboarding";
+import { normalizeUsername, validateUsername } from "../../../lib/client/onboarding";
 
 export interface UsernameFormProps {
   initialValue: string;
@@ -14,6 +14,8 @@ export interface UsernameFormProps {
   testIdPrefix: string;
   label?: string;
   hint?: string;
+  /** When set, submit is disabled while the input equals this username (normalized). */
+  unchangedFrom?: string;
 }
 
 export function UsernameForm({
@@ -25,6 +27,7 @@ export function UsernameForm({
   testIdPrefix,
   label = "Sleeper username",
   hint,
+  unchangedFrom,
 }: UsernameFormProps) {
   const id = useId();
   const [value, setValue] = useState(initialValue);
@@ -81,7 +84,15 @@ export function UsernameForm({
           {shown}
         </p>
       ) : null}
-      <Button type="submit" disabled={pending} data-testid={`${testIdPrefix}-username-submit`}>
+      <Button
+        type="submit"
+        disabled={
+          pending ||
+          (unchangedFrom !== undefined &&
+            normalizeUsername(value) === normalizeUsername(unchangedFrom))
+        }
+        data-testid={`${testIdPrefix}-username-submit`}
+      >
         {pending ? "Working..." : submitLabel}
       </Button>
     </form>

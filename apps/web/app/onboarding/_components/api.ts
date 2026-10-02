@@ -1,3 +1,8 @@
+import type { z } from "zod";
+
+type Schemas = typeof import("./schemas");
+export type SchemaKey = keyof Schemas;
+
 export type ApiOutcome<T> =
   | { ok: true; status: number; data: T; headers: Headers }
   | { ok: false; status: number; message: string; headers: Headers | null };
@@ -14,10 +19,11 @@ function errorMessage(json: unknown, fallback: string): string {
 }
 
 /** Calls a JSON API route. Never throws: network and parse failures come back as `ok: false`. */
-export async function apiJson<T>(
+export async function apiJson<K extends SchemaKey>(
   url: string,
+  schemaKey: K,
   init?: { method?: string; body?: unknown; signal?: AbortSignal },
-): Promise<ApiOutcome<T>> {
+): Promise<ApiOutcome<z.output<Schemas[K]>>> {
   try {
     const res = await fetch(url, {
       method: init?.method ?? "GET",
@@ -41,7 +47,22 @@ export async function apiJson<T>(
         headers: res.headers,
       };
     }
-    return { ok: true, status: res.status, data: json as T, headers: res.headers };
+    const schema: z.ZodType = (await import("./schemas"))[schemaKey];
+    const parsed = schema.safeParse(json);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        status: 502,
+        message: "Got an unexpected reply from the server. Try again.",
+        headers: res.headers,
+      };
+    }
+    return {
+      ok: true,
+      status: res.status,
+      data: parsed.data as z.output<Schemas[K]>,
+      headers: res.headers,
+    };
   } catch {
     return {
       ok: false,

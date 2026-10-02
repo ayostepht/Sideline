@@ -1,6 +1,6 @@
 "use client";
 
-import type { LeagueChoice, OnboardingStatus } from "@sideline/shared";
+import type { LeagueChoice } from "@sideline/shared";
 import { useRouter } from "next/navigation";
 import { useId, useState, type ReactNode } from "react";
 import { Button } from "../../../../../components/ui/button";
@@ -74,7 +74,7 @@ export function SettingsSections({
   async function changeUsername(name: string) {
     setAcctPending(true);
     setAcctError(null);
-    const r = await apiJson<{ onboarding: OnboardingStatus | null }>("/api/settings", {
+    const r = await apiJson("/api/settings", "PatchSettingsResponseSchema", {
       method: "PATCH",
       body: { username: name },
     });
@@ -96,7 +96,7 @@ export function SettingsSections({
     if (target === "") return;
     setSwitching(true);
     setSwitchError(null);
-    const r = await apiJson<unknown>("/api/settings", {
+    const r = await apiJson("/api/settings", "PatchSettingsResponseSchema", {
       method: "PATCH",
       body: { leagueId: target },
     });
@@ -105,7 +105,8 @@ export function SettingsSections({
       setSwitchError(r.message);
       return;
     }
-    router.push(`/l/${encodeURIComponent(target)}/settings`);
+    // Onboarding shows sync progress for the new, not yet synced league.
+    router.push("/onboarding");
   }
 
   return (
@@ -119,6 +120,7 @@ export function SettingsSections({
         </p>
         <UsernameForm
           initialValue={username ?? ""}
+          unchangedFrom={username ?? ""}
           submitLabel="Change"
           pending={acctPending}
           error={acctError}
