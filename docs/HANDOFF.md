@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, after commit 8433f87 (T1.5c). Batch D reviewed (9882a5d); Batch E reviewed (0 Blocker/Major); Batch F (T1.7b) in flight.
+Last updated: 2026-10-02, after commit 08c4d7a (T1.7b). Batches D and E reviewed; Batch F committed; Batch F code review in flight.
 
 ## 1. Resume in five steps
 
@@ -24,7 +24,8 @@ Last updated: 2026-10-02, after commit 8433f87 (T1.5c). Batch D reviewed (9882a5
   - T1.6 plus the T1.6-build devops fix, and T1.6-fix (be35d5f, shared `SYNC_CADENCE_MS`);
   - T1.5a-fix (4b021b2);
   - Batch D: T1.8 (847c7e0), T1.7a (fe43bdd, root scripts 3091394), T1.5b (eeaf97d); review saved (9882a5d, 0 Blocker/Major, ADR-008).
-  - Batch E: T1.5c (8433f87), including Batch D fixes m1, m2, m3, m6, n1.
+  - Batch E: T1.5c (8433f87), including Batch D fixes m1, m2, m3, m6, n1; review saved (dea0b78, 0 Blocker/Major).
+  - Batch F: T1.7b (08c4d7a), 17 new integration tests; `pnpm test:integration` 22 passed in under 1 s.
 
   Commit ids are in the PROGRESS.md task table.
 - **Reviews:** saved in `docs/reviews/2026-10-02-p1-*`. Batch A to D findings are all fixed (Minor items in the PROGRESS backlog).
@@ -34,22 +35,12 @@ Last updated: 2026-10-02, after commit 8433f87 (T1.5c). Batch D reviewed (9882a5
 
 | Task | Agent | Writes to | Done when |
 |---|---|---|---|
-| T1.7b integration suites | qa-engineer | `tests/integration/`, `tests/helpers/`, `tests/msw/`, test configs | Report DONE, then verify with `pnpm test:integration` and `pnpm verify`; commit. Uncommitted files under `tests/` are partial work. |
+| Batch F code review (`git show 08c4d7a`) | code-reviewer | nothing (read-only) | Report returned; save it as `docs/reviews/2026-10-02-p1-batchF-code.md`, then fix Blocker and Major findings before the G1 gate. If lost, re-dispatch the review. |
 
 ## 4. Next steps (in order)
 
-1. **Batch E review**: saved, 0 Blocker/Major, Minors in backlog. Nothing to fix.
-2. **Batch F: T1.7b** (qa-engineer), integration suites:
-   - a full sync from fixtures with per-table counts;
-   - idempotency: the second run has `rows_changed = 0`;
-   - MSW 500, 429 and timeout failures;
-   - a simulated game-window hour: no 60 s window above 300 calls, average at most 60 per minute, `/players/nfl` at most once;
-   - nflverse disabled and nflverse failing;
-   - a POST to the API picked up by the worker;
-   - CLI cases: worker alive, no worker, lease held, and a run longer than the lease expiry.
-
-   Then a code review.
-3. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
+1. **Batch F review fixes**: Blocker and Major findings, dispatched to qa-engineer.
+2. **G1 gate.** The checklist is in the plan (ADR-005 plus PLAN section 9 G1 checks). It includes:
    - `pnpm test:contract` run live once;
    - the orchestrator live smoke: `pnpm run sync --once` into a gitignored `./data`, the day's single `/players/nfl` fetch, then a second run with near-zero changes;
    - `pnpm fixtures:check` and an identifier scan;
