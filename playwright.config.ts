@@ -1,7 +1,9 @@
 import { mkdtempSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { assertSeededDataDir, createSeededDataDir } from "./scripts/lib/seed";
 
 /**
  * Playwright config (PLAN.md 10.2: UI1, UI2, UI5; 10.5: retries are 0).
@@ -15,6 +17,7 @@ import { defineConfig, devices } from "@playwright/test";
  *   is not started when that is the only spec named on the command line.
  */
 const PORT = 3000;
+const ONBOARDING_PORT = 3101;
 const HOST = "127.0.0.1";
 const externalBaseUrl = process.env["E2E_BASE_URL"];
 const baseURL = externalBaseUrl ?? `http://${HOST}:${PORT}`;
@@ -64,16 +67,35 @@ function onlyHelperSpecRequested(): boolean {
   return files.length > 0 && files.every((a) => /(^|\/)helpers\.spec(\.ts)?$/.test(a));
 }
 
-// The web server needs a DATA_DIR (/api/health answers 503 without one). Use a fresh temp dir,
-// never the developer's real data. The main process creates it once and exports it so worker
-// processes that re-import this config see the same value instead of creating more.
-const dataDir = process.env["E2E_DATA_DIR"] ?? mkdtempSync(path.join(tmpdir(), "sideline-e2e-"));
-process.env["E2E_DATA_DIR"] = dataDir;
+const REPO_ROOT = path.dirname(fileURLToPath(import.meta.url));
 
 const startServer =
   externalBaseUrl === undefined &&
   process.env["E2E_SKIP_SERVER"] !== "1" &&
   !onlyHelperSpecRequested();
+// The onboarding server (fresh DATA_DIR plus the fixture worker) is also started next to an
+// external E2E_BASE_URL server (the gate), because specs need it either way. It does not build:
+// a build must already exist (the primary server builds it, or the gate did).
+const startOnboardingServer = process.env["E2E_SKIP_SERVER"] !== "1" && !onlyHelperSpecRequested();
+
+// Seeded data dir (never the developer's ./data). `E2E_DATA_DIR` is validated (marker file,
+// not inside ./data). Otherwise the main process seeds one fixture dir and exports it, so
+// worker processes that re-import this config reuse it instead of seeding again.
+const givenDir = process.env["E2E_DATA_DIR"];
+if (givenDir !== undefined) {
+  assertSeededDataDir(givenDir, REPO_ROOT);
+} else if (startServer) {
+  process.env["E2E_DATA_DIR"] = (await createSeededDataDir(REPO_ROOT)).dataDir;
+}
+const dataDir = process.env["E2E_DATA_DIR"] ?? "";
+
+// Onboarding server: a fresh temp dir where onboarding has NOT happened (the web server and the
+// fixture worker migrate it). Same export-to-env pattern.
+const onboardingDir =
+  process.env["E2E_ONBOARDING_DATA_DIR"] ?? mkdtempSync(path.join(tmpdir(), "sideline-e2e-onb-"));
+process.env["E2E_ONBOARDING_DATA_DIR"] = onboardingDir;
+const onboardingUrl = `http://${HOST}:${ONBOARDING_PORT}`;
+process.env["E2E_ONBOARDING_URL"] = onboardingUrl;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -102,21 +124,56 @@ export default defineConfig({
       use: { ...devices["Pixel 7"] },
     },
   ],
-  ...(startServer
-    ? {
-        webServer: {
-          // Same standalone server the Docker image runs (build, then copy static assets and start).
-          command:
-            "pnpm --filter @sideline/web build && pnpm --filter @sideline/web start:standalone",
-          url: `${baseURL}/api/health`,
-          env: { PORT: String(PORT), HOSTNAME: HOST, DATA_DIR: dataDir },
-          // Never reuse: a stale local server (old build, real DATA_DIR) would silently be tested.
-          // To test a running server on purpose, set E2E_BASE_URL.
-          reuseExistingServer: false,
-          timeout: 180_000,
-          stdout: "pipe",
-          stderr: "pipe",
-        },
-      }
-    : {}),
+  webServer: [
+    ...(startServer
+      ? [
+          {
+            // Same standalone server the Docker image runs (build, then copy static assets and start).
+            command:
+              "pnpm --filter @sideline/web build && pnpm --filter @sideline/web start:standalone",
+            url: `${baseURL}/api/health`,
+            // SIDELINE_GALLERY: the /dev/gallery route 404s in production builds without it.
+            env: {
+              PORT: String(PORT),
+              HOSTNAME: HOST,
+              DATA_DIR: dataDir,
+              SIDELINE_GALLERY: "1",
+            },
+            // Never reuse: a stale local server (old build, real DATA_DIR) would silently be tested.
+            // To test a running server on purpose, set E2E_BASE_URL.
+            reuseExistingServer: false,
+            timeout: 180_000,
+            stdout: "pipe" as const,
+            stderr: "pipe" as const,
+          },
+        ]
+      : []),
+    ...(startOnboardingServer
+      ? [
+          {
+            // Web server plus the fixture-mode worker on one fresh DATA_DIR. The worker starts
+            // once the web server answers (the web server migrates first, so the two never race
+            // on a new database). `trap` stops both when Playwright terminates the process group.
+            command: [
+              "trap 'kill 0' EXIT TERM INT",
+              "pnpm --filter @sideline/web start:standalone &",
+              `until curl -sf ${onboardingUrl}/api/health >/dev/null; do sleep 0.5; done`,
+              "env -u DEFAULT_LEAGUE_ID NODE_ENV=test pnpm --filter @sideline/worker start:fixtures &",
+              "wait",
+            ].join("\n"),
+            url: `${onboardingUrl}/api/health`,
+            env: {
+              PORT: String(ONBOARDING_PORT),
+              HOSTNAME: HOST,
+              DATA_DIR: onboardingDir,
+              SIDELINE_GALLERY: "1",
+            },
+            reuseExistingServer: false,
+            timeout: 180_000,
+            stdout: "pipe" as const,
+            stderr: "pipe" as const,
+          },
+        ]
+      : []),
+  ],
 });

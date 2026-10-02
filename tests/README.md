@@ -32,8 +32,14 @@ Config: `playwright.config.ts`. Projects: `desktop-chromium` (1280x800), `mobile
 - `E2E_BASE_URL=http://host:port` tests an already running server; nothing is started.
 - Without it, the config builds and starts the production standalone server (the one Docker
   ships, `pnpm --filter @sideline/web start:standalone`) on 127.0.0.1:3000
-  (`reuseExistingServer: false`, so a stale server on the port is an error, not silently tested; 180 s timeout) with `DATA_DIR` set to a fresh temp dir (`E2E_DATA_DIR` overrides). `E2E_SKIP_SERVER=1` never
-  starts one.
+  (`reuseExistingServer: false`, so a stale server on the port is an error, not silently tested; 180 s timeout) with `SIDELINE_GALLERY=1` and `DATA_DIR` set to a fixture-seeded temp dir (`createSeededDataDir`, `pnpm db:seed:fixtures`). `E2E_DATA_DIR` overrides but must be seeded (marker file) and outside `./data`, or the config refuses. `E2E_SKIP_SERVER=1` never starts one.
+- Two servers: the seeded one (port 3000, league `1000000000000000001` exists, no worker) and an onboarding
+  server (port 3101, fresh unseeded DATA_DIR, fixture-mode worker alongside, no network). URLs and fixture ids
+  are in `e2e/helpers/servers.ts` (`seededBaseUrl`, `onboardingBaseUrl`, `FIXTURE`). Onboarding state is shared
+  across the run, so specs that change it run serially. The onboarding server does not build; with
+  `E2E_BASE_URL` set a build must already exist.
+- Routes for axe (UI2) and no-hscroll (UI5) live in `e2e/routes.ts` (`existingRoutes`; `phase2PageRoutes` are
+  not tested until T2.5b moves them). Themes: `useTheme(page, theme)` before `goto`, then `expectThemeApplied`.
 - `e2e/helpers.spec.ts` is the helpers' own self-test (uses `page.setContent`, needs no app, so
   the server is not started when it is the only spec named on the command line).
 - Failure artifacts: trace and screenshot are kept on failure (`test-results/`, `playwright-report/`).
@@ -114,3 +120,16 @@ expect(server.mock.unhandled).toEqual([]);
 `withStatus(path, status, times?)` answers with the status for the first `times` calls (default
 all), then falls through to the fixtures, so retry and recovery logic can be tested. Requests to
 any other host fail loudly.
+
+### Lighthouse locally
+
+`pnpm lhci` needs a seeded `E2E_DATA_DIR` (it fails clearly if unset) and a build. `pnpm gate` does
+both. By hand:
+
+```
+pnpm build
+export E2E_DATA_DIR=$(pnpm exec tsx -e 'import("./scripts/lib/seed.ts").then(async (m) => console.log((await m.createSeededDataDir(process.cwd())).dataDir))' | tail -1)
+pnpm lhci
+```
+
+`lighthouserc.json` audits `/` for now; T2.5b switches the URL to `/l/1000000000000000001` (the League page).
