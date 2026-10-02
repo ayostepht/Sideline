@@ -29,7 +29,7 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 
 - Batch C code review saved (a34f1df): M1 404 redirect loop, M2 layout errors uncaught.
 - T2.3a-fix (frontend-engineer): apps/web/app, components, lib/client. M1, M2, m1, m2, m3.
-- T2.2b-fix2 (backend-engineer): apps/web/lib/server. m4, m5, getLeagueChoices tests.
+- T2.2b-fix2 done (cfb098d).
 
 ## 4. Next steps (in order)
 

@@ -83,7 +83,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker; plus UX M2 gallery axe) | qa-engineer | C | In progress | 1 | |
 | T2.0b-fix2 | Route-size check on dynamic routes; screens slugs for query routes | devops-engineer | C | Done (`/` 139,863 B; `/l/*` 158,754 B; gallery 189,202 B) | 1 | 494e0bd |
 | T2.3a-fix | Batch C review M1 (404 loop), M2 (layout errors), m1, m2, m3 | frontend-engineer | C-fix | In progress | 1 | |
-| T2.2b-fix2 | Batch C review m4, m5; getLeagueChoices tests | backend-engineer | C-fix | In progress | 1 | |
+| T2.2b-fix2 | Batch C review m4, m5; getLeagueChoices tests | backend-engineer | C-fix | Done (lib/server and app/api 98.4% lines) | 1 | cfb098d |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |
 | T2.3c | Home v1, League, team detail, My Team | frontend-engineer | D | Not started | 0 | |
 | T2.4 | UX review of gallery and pages | ux-reviewer | E | Not started | 0 | |
@@ -162,7 +162,6 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 
 - T2.1c: not visually verified yet: Sheet handle and safe-area padding, ThemeToggle selected ring, PlayerRow chevron (gallery rows aren't interactive; add one). Recheck in the shell UX review. Dark border on background is 2.06:1 (decorative card edges; input borders are a separate token). Briefs: the `pgrep -f "next build"` wait loop matches its own shell; use `pgrep -x node` plus an args check instead.
 
-- Orchestrator added `getLeagueChoices(h, env)` to apps/web/lib/server/identity.ts (read-only league list for the switcher); backend-engineer owes a unit test.
 
 - T2.3a: `scripts/gate/routes-size.ts` fails on dynamic routes (manifests use `%5BleagueId%5D`, disk has `[leagueId]`); devops fix needed before any gate run. Multi-league switch path untested (fixtures have one league for the user's season in the seed); T2.5b covers it. Concurrent `next build` runs by parallel agents clobber `.next`; sequence builds in future batches.
 
