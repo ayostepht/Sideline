@@ -1,8 +1,8 @@
 {
-  "startedAt": "2026-10-02T14:51:59.389Z",
-  "finishedAt": "2026-10-02T14:53:33.666Z",
-  "gitCommit": "0d0c0c375e4742274bc9fc67889457dfe210a998",
-  "gitBranch": "phase/1-data",
+  "startedAt": "2026-10-02T20:31:44.473Z",
+  "finishedAt": "2026-10-02T20:36:48.948Z",
+  "gitCommit": "c006091e6182362945a938498c3f2f005f21b913",
+  "gitBranch": "phase/2-shell",
   "dirty": true,
   "partial": false,
   "baselines": {
@@ -13,7 +13,7 @@
       "id": "U1",
       "name": "Typecheck, lint, format, unit tests (pnpm verify)",
       "status": "PASS",
-      "durationMs": 20455,
+      "durationMs": 26799,
       "logFile": ".gate/logs/U1.log",
       "metrics": {
         "eslintWarnings": 0,
@@ -25,25 +25,25 @@
       "id": "U2a",
       "name": "Unit tests with coverage thresholds",
       "status": "PASS",
-      "durationMs": 2489,
+      "durationMs": 7526,
       "logFile": ".gate/logs/U2a.log",
       "metrics": {
         "coverage": {
           "apps/web": {
-            "linesPct": 97,
-            "branchesPct": 84.48
+            "linesPct": 98.53,
+            "branchesPct": 92.35
           },
           "apps/worker": {
-            "linesPct": 89.92,
-            "branchesPct": 82.45
+            "linesPct": 90.01,
+            "branchesPct": 80.7
           },
           "packages/core": {
             "linesPct": 100,
             "branchesPct": null
           },
           "packages/db": {
-            "linesPct": 95.08,
-            "branchesPct": 89
+            "linesPct": 95.88,
+            "branchesPct": 90.21
           },
           "packages/providers": {
             "linesPct": 97.53,
@@ -51,7 +51,7 @@
           },
           "packages/shared": {
             "linesPct": 100,
-            "branchesPct": 97.06
+            "branchesPct": 97.5
           },
           "packages/sleeper": {
             "linesPct": 100,
@@ -64,20 +64,31 @@
       "id": "U2b",
       "name": "Integration tests",
       "status": "PASS",
-      "durationMs": 1069,
+      "durationMs": 5636,
       "logFile": ".gate/logs/U2b.log"
     },
     {
       "id": "U3a",
       "name": "Production build and route JS budget",
       "status": "PASS",
-      "durationMs": 8338,
+      "durationMs": 9567,
       "logFile": ".gate/logs/U3a.log",
       "metrics": {
         "routeJsGzipBytes": {
-          "/": 131641,
-          "/_global-error": 131641,
-          "/_not-found": 131641
+          "/": 153337,
+          "/_global-error": 153337,
+          "/_not-found": 153337,
+          "/dev/gallery": 193357,
+          "/l/[leagueId]": 163074,
+          "/l/[leagueId]/league": 163074,
+          "/l/[leagueId]/league/teams/[rosterId]": 163177,
+          "/l/[leagueId]/lineup": 163266,
+          "/l/[leagueId]/matchup": 163266,
+          "/l/[leagueId]/players": 163266,
+          "/l/[leagueId]/settings": 169028,
+          "/l/[leagueId]/team": 163177,
+          "/l/[leagueId]/waivers": 163266,
+          "/onboarding": 159145
         },
         "budgetBytes": 204800
       }
@@ -86,10 +97,10 @@
       "id": "U4",
       "name": "Static scan: skips, any, lint disables, TODOs",
       "status": "PASS",
-      "durationMs": 25,
+      "durationMs": 36,
       "logFile": ".gate/logs/U4.log",
       "metrics": {
-        "filesScanned": 198,
+        "filesScanned": 349,
         "findings": 0,
         "byRule": {}
       }
@@ -98,10 +109,10 @@
       "id": "UI1",
       "name": "E2E suite on all Playwright projects (includes UI5)",
       "status": "PASS",
-      "durationMs": 5413,
+      "durationMs": 49056,
       "logFile": ".gate/logs/UI1.log",
       "metrics": {
-        "expected": 33,
+        "expected": 288,
         "unexpected": 0,
         "flaky": 0,
         "skipped": 0,
@@ -112,12 +123,12 @@
         ],
         "tags": {
           "UI2": {
-            "passed": 12,
+            "passed": 102,
             "failed": 0,
             "skipped": 0
           },
           "UI5": {
-            "passed": 12,
+            "passed": 57,
             "failed": 0,
             "skipped": 0
           }
@@ -128,10 +139,10 @@
       "id": "UI2",
       "name": "axe accessibility, light and dark",
       "status": "PASS",
-      "durationMs": 3193,
+      "durationMs": 20828,
       "logFile": ".gate/logs/UI2.log",
       "metrics": {
-        "expected": 12,
+        "expected": 102,
         "unexpected": 0,
         "flaky": 0,
         "skipped": 0,
@@ -142,7 +153,7 @@
         ],
         "tags": {
           "UI2": {
-            "passed": 12,
+            "passed": 102,
             "failed": 0,
             "skipped": 0
           },
@@ -155,15 +166,28 @@
       }
     },
     {
+      "id": "UI4",
+      "name": "Screenshots at 390/768/1280, light and dark, from the seeded fixture DB",
+      "status": "PASS",
+      "durationMs": 53877,
+      "logFile": ".gate/logs/UI4.log"
+    },
+    {
       "id": "UI3",
       "name": "Lighthouse mobile budgets",
       "status": "PASS",
-      "durationMs": 31697,
+      "durationMs": 62468,
       "logFile": ".gate/logs/UI3.log",
       "metrics": {
         "scores": {
-          "http://127.0.0.1:3000/": {
-            "performance": 100,
+          "http://127.0.0.1:3000/l/1000000000000000001": {
+            "performance": 96,
+            "accessibility": 100,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "http://127.0.0.1:3000/l/1000000000000000001/league": {
+            "performance": 96,
             "accessibility": 100,
             "best-practices": 96,
             "seo": 100
@@ -174,19 +198,19 @@
           "accessibility": 0.95,
           "best-practices": 0.95
         },
-        "chromePath": "/Users/stephtanner/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
+        "chromePath": "~/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing"
       }
     },
     {
       "id": "U3b",
       "name": "Docker image builds, starts, serves /api/health",
       "status": "PASS",
-      "durationMs": 18987,
+      "durationMs": 30343,
       "logFile": ".gate/logs/U3b.log",
       "metrics": {
         "image": "sideline-gate:native",
-        "imageSizeBytes": 105160797,
-        "imageSizeMb": 100.3,
+        "imageSizeBytes": 105690633,
+        "imageSizeMb": 100.8,
         "architecture": "arm64",
         "startupSeconds": 0.7
       }
@@ -195,19 +219,19 @@
       "id": "U3c",
       "name": "Docker image for linux/amd64 builds, starts, serves /api/health",
       "status": "PASS",
-      "durationMs": 2575,
+      "durationMs": 38296,
       "logFile": ".gate/logs/U3c.log",
       "metrics": {
         "image": "sideline-gate:amd64",
-        "imageSizeBytes": 105049808,
-        "imageSizeMb": 100.2,
+        "imageSizeBytes": 105587781,
+        "imageSizeMb": 100.7,
         "architecture": "amd64",
-        "startupSeconds": 1.1
+        "startupSeconds": 1.5
       }
     }
   ],
   "summary": {
-    "pass": 10,
+    "pass": 11,
     "fail": 0,
     "skipped": 0
   }
