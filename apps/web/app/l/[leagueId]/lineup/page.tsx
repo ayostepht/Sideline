@@ -5,7 +5,7 @@ export default function Page() {
   return (
     <StubPage
       title="Lineup"
-      emptyTitle="Lineup arrives with the optimizer"
+      emptyTitle="Lineup advice is coming soon"
       message="Your best lineup and the swaps to make will show up here."
       icon={ClipboardList}
     />

@@ -2,10 +2,8 @@
 
 import type { LeagueChoice } from "@sideline/shared";
 import { ChevronsUpDown } from "lucide-react";
-import Link from "next/link";
 import { lazy, Suspense, useState } from "react";
 import { cn } from "../../lib/client/cn";
-import { leagueBase } from "../../lib/client/nav";
 
 const LeagueMenu = lazy(() => import("./league-menu"));
 
@@ -20,21 +18,19 @@ interface Props {
 
 export function LeagueSwitcher({ leagueId, leagueName, leagues, variant, className }: Props) {
   const [armed, setArmed] = useState(false);
-  const base = leagueBase(leagueId);
   const suffix = variant === "popover" ? "desktop" : "mobile";
 
   if (leagues.length <= 1) {
     return (
       <div className={cn("min-w-0", className)} data-testid={`league-name-${suffix}`}>
-        <p className="truncate text-sm font-semibold">{leagueName}</p>
-        {variant === "popover" ? (
-          <Link
-            href={`${base}/settings`}
-            className="inline-flex min-h-11 items-center text-xs text-primary underline underline-offset-4"
-          >
-            Change in Settings
-          </Link>
-        ) : null}
+        <p
+          className={cn(
+            "truncate text-sm",
+            variant === "popover" ? "px-3 font-semibold" : "px-2 font-medium text-muted-foreground",
+          )}
+        >
+          {leagueName}
+        </p>
       </div>
     );
   }

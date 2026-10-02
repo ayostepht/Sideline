@@ -101,7 +101,7 @@ function TabInner({
   return (
     <>
       {active ? (
-        <span aria-hidden className="absolute inset-x-4 top-0 h-[3px] rounded-b-full bg-primary" />
+        <span aria-hidden className="absolute inset-x-5 top-0 h-[3px] rounded-b-full bg-primary" />
       ) : null}
       <span
         className={cn(
@@ -142,18 +142,20 @@ export function BottomTabs({ leagueId }: Props) {
     <nav
       aria-label="Primary"
       data-testid="nav-bottom-tabs"
-      className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      {primaryItems().map((item) => (
-        <Tab key={item.key} item={item} leagueId={leagueId} week={week} pathname={pathname} />
-      ))}
-      {armed ? (
-        <Suspense fallback={moreTrigger}>
-          <MoreSheet leagueId={leagueId} week={week} pathname={pathname} trigger={moreTrigger} />
-        </Suspense>
-      ) : (
-        moreTrigger
-      )}
+      <div className="mx-auto flex w-full max-w-md px-2">
+        {primaryItems().map((item) => (
+          <Tab key={item.key} item={item} leagueId={leagueId} week={week} pathname={pathname} />
+        ))}
+        {armed ? (
+          <Suspense fallback={moreTrigger}>
+            <MoreSheet leagueId={leagueId} week={week} pathname={pathname} trigger={moreTrigger} />
+          </Suspense>
+        ) : (
+          moreTrigger
+        )}
+      </div>
     </nav>
   );
 }

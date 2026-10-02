@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LeagueSwitcher } from "./league-switcher";
+import { activeNavKey, NAV_ITEMS } from "../../lib/client/nav";
 import { BottomTabs, SidebarNav } from "./nav-links";
 import { WeekSelector } from "./week-selector";
 
@@ -23,8 +24,16 @@ interface Props {
 const iconBtn =
   "inline-flex size-11 shrink-0 items-center justify-center rounded-[8px] text-foreground hover:bg-muted";
 
+function pageTitle(pathname: string, leagueId: string): string {
+  const base = `/l/${encodeURIComponent(leagueId)}/league/teams/`;
+  if (pathname.startsWith(base)) return "Team";
+  const key = activeNavKey(pathname, leagueId);
+  return NAV_ITEMS.find((i) => i.key === key)?.label ?? "";
+}
+
 export function AppShell({ leagueId, leagueName, currentWeek, leagues, children }: Props) {
   const pathname = usePathname();
+  const title = pageTitle(pathname, leagueId);
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -64,7 +73,7 @@ export function AppShell({ leagueId, leagueName, currentWeek, leagues, children 
         Skip to content
       </a>
 
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col gap-4 border-r bg-card p-3 lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col gap-4 border-r bg-background p-3 lg:flex">
         <LeagueSwitcher
           leagueId={leagueId}
           leagueName={leagueName}
@@ -90,34 +99,44 @@ export function AppShell({ leagueId, leagueName, currentWeek, leagues, children 
       </aside>
 
       <div className="lg:pl-60">
-        <header className="sticky top-0 z-30 flex min-h-14 items-center gap-1 border-b bg-background/95 px-2 pt-[env(safe-area-inset-top)] backdrop-blur lg:justify-end lg:px-6">
-          <div className="min-w-0 flex-1 lg:hidden">
-            <LeagueSwitcher
-              leagueId={leagueId}
-              leagueName={leagueName}
-              leagues={leagues}
-              variant="sheet"
-            />
+        <header className="sticky top-0 z-30 border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur">
+          <div className="mx-auto flex min-h-14 w-full max-w-5xl items-center gap-1 px-2 md:px-8">
+            <div className="min-w-0 flex-1 lg:hidden">
+              <LeagueSwitcher
+                leagueId={leagueId}
+                leagueName={leagueName}
+                leagues={leagues}
+                variant="sheet"
+              />
+            </div>
+            {/* Decorative label; each page renders its own h1. */}
+            <p
+              aria-hidden
+              data-testid="header-title"
+              className="hidden min-w-0 flex-1 truncate text-sm font-medium text-muted-foreground lg:block"
+            >
+              {title}
+            </p>
+            <button
+              type="button"
+              onClick={openSearch}
+              aria-label="Search players"
+              data-testid="search-trigger-mobile"
+              className={`${iconBtn} lg:hidden`}
+            >
+              <Search className="size-5" aria-hidden />
+            </button>
+            <Suspense fallback={<div className="h-11 w-40" aria-hidden />}>
+              <WeekSelector currentWeek={currentWeek} />
+            </Suspense>
           </div>
-          <button
-            type="button"
-            onClick={openSearch}
-            aria-label="Search players"
-            data-testid="search-trigger-mobile"
-            className={`${iconBtn} lg:hidden`}
-          >
-            <Search className="size-5" aria-hidden />
-          </button>
-          <Suspense fallback={<div className="h-11 w-40" aria-hidden />}>
-            <WeekSelector currentWeek={currentWeek} />
-          </Suspense>
         </header>
 
         <main
           id="main-content"
           ref={mainRef}
           tabIndex={-1}
-          className="mx-auto w-full max-w-5xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-4 outline-none lg:px-8 lg:pb-10 lg:pt-6"
+          className="mx-auto w-full max-w-5xl px-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-4 outline-none md:px-8 lg:px-8 lg:pb-10 lg:pt-6"
         >
           {children}
         </main>
