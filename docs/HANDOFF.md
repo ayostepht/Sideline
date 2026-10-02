@@ -18,13 +18,14 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - **Baseline:** `pnpm verify` 505 unit tests; integration 22; e2e 33; coverage 94.7% lines.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17).
 
-## 3. In flight
+## 3. In flight (Batch E)
 
-- T2.2f (sleeper-data-engineer): apps/worker/src/cli/seed-fixtures.ts. Seeded DB gets the fixture user, league choices and active league so screens and Lighthouse show a signed-in Home.
+- T2.4 (ux-reviewer): all Phase 2 routes, seeded screens only. Save as `docs/reviews/2026-10-02-p2-T2.4-ux.md`.
+- T2.5b (qa-engineer): e2e/**, tests/**, playwright.config.ts, lighthouserc.json. Onboarding e2e, navigation, pages, search, settings, axe on all routes, Lighthouse, perf integration test, requirements trace. Waits for the screens run before building.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit T2.2f. Then Batch E: T2.4 ux-reviewer (all routes) and T2.5b qa (suites); T2.5b must not build or run e2e while the ux-reviewer's screens run is active (`pgrep -f "[s]creens.ts"`). Then Batch F fixes, then G2.
+1. Save T2.4; verify and commit T2.5b. Batch F (T2.6): fix Blocker and Major from T2.4 and app bugs from T2.5b (frontend; backend split out). Then G2 gate: full `pnpm gate --amd64`, code review of `git diff main...phase/2-shell`, final UX check, live onboarding by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan` plus a non-localhost Origin request), archive 390 and 1280 screenshots from the seeded dir to docs/gates/G2/screens/ after eyeballing each, then stop for Steph.
 2. Batch E: T2.4 UX review (all routes; capture Syncing, not-found, More sheet, search states) and T2.5b (e2e onboarding on the fixture server, navigation, pages into `existingRoutes` for axe and no-hscroll, Lighthouse on `/l/1000000000000000001` and League, data function perf on the fixture DB, review items in PROGRESS backlog).
 3. Batch F fix round, then G2 gate: live onboarding run by the orchestrator (about 22 calls), LAN check (`pnpm dev:lan`, non-localhost origin), screenshots archived from the seeded dir only, then stop for Steph.
 
