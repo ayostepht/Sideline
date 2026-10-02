@@ -78,7 +78,7 @@ Plan: ADR-005. Approved changes: single caller enforced (CLI enqueues to a live 
 | T2.2b | Server data functions and route handlers | backend-engineer | B2 | Done (lib/server 98.2%, app/api 100% lines; p95 under 5 ms on a synthetic DB) | 1 | cfd1d59 |
 | T2.2c | Worker onboarding jobs, active league, fixture fetch mode | sleeper-data-engineer | B2 | Done (worker 90% lines; deviation: onboarding writes no sync_runs row, the sync_requests row is the record) | 1 | 74ebc74 |
 | T2.2b-fix | Batch B review M1 (league switch sync), m1, m2, m3, m5 | backend-engineer | B-fix | Done (targeted checks; 639 tests at agent run) | 1 | 18628a4 |
-| T2.1c | Gallery UX review fixes M1, m1 to m6, n1, n2 plus code m7 | frontend-engineer | B-fix | In progress | 1 | |
+| T2.1c | Gallery UX review fixes M1, m1 to m6, n1, n2 plus code m7 | frontend-engineer | B-fix | Done (gallery 185,352 B) | 1 | 17cab8b |
 | T2.3a | Layout shell, switcher, week selector, search, placeholders | frontend-engineer | C | Not started | 0 | |
 | T2.5a | QA harness (seeded e2e and Lighthouse, fixture worker; plus UX M2 gallery axe) | qa-engineer | C | In progress | 1 | |
 | T2.3b | Onboarding and Settings v1 | frontend-engineer | D | Not started | 0 | |
@@ -156,6 +156,8 @@ Plan: ADR-009. Approved with answers: Settings v1 in Phase 2; G2 reviewed locall
 - Batch B UX review (docs/reviews/2026-10-02-p2-batchB-ux.md): m7 gallery jump list (backlog). Devops: `pnpm screens` drops the query string from the output folder, so `?open=` captures overwrite each other; include the query in the slug.
 
 - T2.2b-fix: `requestSyncForLeagueChange` uses raw SQL because db `enqueue` dedupes against running rows; add a `@sideline/db` `enqueueFresh` helper with m4. Unknown-user mapping matches the worker text "No Sleeper user with that username" (keep them in sync, or share a constant).
+
+- T2.1c: not visually verified yet: Sheet handle and safe-area padding, ThemeToggle selected ring, PlayerRow chevron (gallery rows aren't interactive; add one). Recheck in the shell UX review. Dark border on background is 2.06:1 (decorative card edges; input borders are a separate token). Briefs: the `pgrep -f "next build"` wait loop matches its own shell; use `pgrep -x node` plus an args check instead.
 
 ## Questions for Steph
 
