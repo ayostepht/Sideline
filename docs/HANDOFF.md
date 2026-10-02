@@ -23,7 +23,7 @@ Last updated: 2026-10-02, Phase 2 plan approved (ADR-009), Batch 0 committed on 
 - T2.2a-fix done (a4682f6).
 - T2.2b (backend-engineer): apps/web/lib/server, apps/web/app/api.
 - T2.2c (sleeper-data-engineer): apps/worker.
-- T2.1b (frontend-engineer): apps/web/components, app/dev, globals.css, lib/client. Plus m10.
+- T2.1b done (c42b101).
 - T2.0b-fix done (e20055a).
 
 ## 4. Next steps (in order)
