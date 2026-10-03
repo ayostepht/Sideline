@@ -2,7 +2,6 @@
 
 import type { PlayersListResponse } from "@sideline/shared";
 import { ChevronLeft, ChevronRight, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { EmptyState, ErrorState } from "../../../../../components/empty-state";
 import { PlayerRowSkeleton, TableSkeleton } from "../../../../../components/skeletons";
@@ -59,8 +58,10 @@ export interface PlayersExplorerProps {
  * T4.6b (PLAN 6.4): client-owned search, position filter, and pagination for the players list.
  * Reuses `search-dialog.tsx`'s debounced-fetch-plus-zod-parse pattern against the real
  * `GET /api/l/[leagueId]/players` route: the server component renders the first page, every
- * filter or page change after that refetches here and syncs the URL via `router.replace` so the
- * view stays deep-linkable and shareable without a full page reload.
+ * filter or page change after that refetches here and syncs the URL via `window.history.replaceState`
+ * (not `next/navigation`'s router, which would re-render the page's Server Component and re-run
+ * `getPlayersList` a second time on every interaction, see Waivers' `WaiverBoard` for the same
+ * pattern) so the view stays deep-linkable and shareable without a full page reload.
  */
 export function PlayersExplorer({
   leagueId,
@@ -69,7 +70,6 @@ export function PlayersExplorer({
   initialQuery,
   initialPage,
 }: PlayersExplorerProps) {
-  const router = useRouter();
   const searchId = useId();
   const [position, setPosition] = useState<PositionFilter | undefined>(initialPosition);
   const [queryInput, setQueryInput] = useState(initialQuery ?? "");
@@ -99,7 +99,7 @@ export function PlayersExplorer({
           }
           setData(outcome.data);
           setStatus("idle");
-          router.replace(buildPlayersHref(leagueId, { page, position, q }), { scroll: false });
+          window.history.replaceState(null, "", buildPlayersHref(leagueId, { page, position, q }));
         })
         .catch(() => {
           if (!ctrl.signal.aborted) setStatus("error");
