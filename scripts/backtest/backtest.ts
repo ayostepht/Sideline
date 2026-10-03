@@ -159,7 +159,8 @@ function addToBucket<K1, K2, V>(map: Map<K1, Map<K2, V[]>>, key1: K1, key2: K2, 
   arr.push(value);
 }
 
-/** Builds a `season -> week -> playerId -> stats` index from flat rows. */
+/** Builds a `week -> playerId -> stats` index from flat rows (no source ambiguity: used only
+ * for projections, which this codebase only ever fetches from Sleeper). */
 function indexByWeekAndPlayer(
   rows: readonly { week: number; playerId: string; stats: Record<string, number> }[],
 ): Map<number, Map<string, Record<string, number>>> {
@@ -171,6 +172,49 @@ function indexByWeekAndPlayer(
       out.set(r.week, byPlayer);
     }
     byPlayer.set(r.playerId, r.stats);
+  }
+  return out;
+}
+
+/** Preference order when more than one stats source exists for the same (week, playerId),
+ * matching `apps/worker/src/recompute-hooks/league-points.ts`'s and `defense-vs-position.ts`'s
+ * convention. `player_week_stats`'s primary key includes `source` precisely because both
+ * "sleeper" and "nflverse" can write a row for the same player-week. */
+const SOURCE_PRIORITY: Readonly<Record<string, number>> = { sleeper: 0 };
+
+/** Builds a `week -> playerId -> stats` index from stats rows, deterministically preferring the
+ * highest-priority source when more than one row exists for the same (week, playerId). */
+function indexStatsByWeekAndPlayer(
+  rows: readonly {
+    week: number;
+    playerId: string;
+    stats: Record<string, number>;
+    source: string;
+  }[],
+): Map<number, Map<string, Record<string, number>>> {
+  const out = new Map<number, Map<string, Record<string, number>>>();
+  const sourceByWeek = new Map<number, Map<string, string>>();
+  for (const r of rows) {
+    let byPlayer = out.get(r.week);
+    let sourceByPlayer = sourceByWeek.get(r.week);
+    if (byPlayer === undefined || sourceByPlayer === undefined) {
+      byPlayer = new Map();
+      sourceByPlayer = new Map();
+      out.set(r.week, byPlayer);
+      sourceByWeek.set(r.week, sourceByPlayer);
+    }
+    const existingSource = sourceByPlayer.get(r.playerId);
+    if (existingSource === undefined) {
+      byPlayer.set(r.playerId, r.stats);
+      sourceByPlayer.set(r.playerId, r.source);
+      continue;
+    }
+    const existingPriority = SOURCE_PRIORITY[existingSource] ?? Number.POSITIVE_INFINITY;
+    const candidatePriority = SOURCE_PRIORITY[r.source] ?? Number.POSITIVE_INFINITY;
+    if (candidatePriority < existingPriority) {
+      byPlayer.set(r.playerId, r.stats);
+      sourceByPlayer.set(r.playerId, r.source);
+    }
   }
   return out;
 }
@@ -298,7 +342,7 @@ function collectEntries(
   const seasons = [...new Set(weeksEligible.map((w) => w.season))];
 
   for (const season of seasons) {
-    const statsByWeek = indexByWeekAndPlayer(readPlayerWeekStats(h, season, "regular"));
+    const statsByWeek = indexStatsByWeekAndPlayer(readPlayerWeekStats(h, season, "regular"));
     const projByWeek = indexByWeekAndPlayer(readPlayerWeekProjections(h, season, "regular"));
     const scheduleByWeek = indexScheduleByWeek(readSchedule(h, season));
 

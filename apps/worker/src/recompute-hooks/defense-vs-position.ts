@@ -25,6 +25,9 @@ import type { RecomputeHook } from "../recompute.js";
 
 const SEASON_TYPE = "regular";
 
+/** Preference order when more than one stats source exists for the same (week, playerId). */
+const SOURCE_PRIORITY: Readonly<Record<string, number>> = { sleeper: 0 };
+
 interface PlayerInfo {
   team: string;
   position: string;
@@ -90,13 +93,28 @@ export function createDefenseVsPositionRecomputeHook(deps: { logger: Logger }): 
       }
 
       const statsByWeek = new Map<number, Map<string, Record<string, number>>>();
+      const statsSourceByWeek = new Map<number, Map<string, string>>();
       for (const row of readPlayerWeekStats(db, league.season, SEASON_TYPE)) {
         let byPlayer = statsByWeek.get(row.week);
-        if (byPlayer === undefined) {
+        let sourceByPlayer = statsSourceByWeek.get(row.week);
+        if (byPlayer === undefined || sourceByPlayer === undefined) {
           byPlayer = new Map();
+          sourceByPlayer = new Map();
           statsByWeek.set(row.week, byPlayer);
+          statsSourceByWeek.set(row.week, sourceByPlayer);
         }
-        byPlayer.set(row.playerId, row.stats);
+        const existingSource = sourceByPlayer.get(row.playerId);
+        if (existingSource === undefined) {
+          byPlayer.set(row.playerId, row.stats);
+          sourceByPlayer.set(row.playerId, row.source);
+          continue;
+        }
+        const existingPriority = SOURCE_PRIORITY[existingSource] ?? Number.POSITIVE_INFINITY;
+        const candidatePriority = SOURCE_PRIORITY[row.source] ?? Number.POSITIVE_INFINITY;
+        if (candidatePriority < existingPriority) {
+          byPlayer.set(row.playerId, row.stats);
+          sourceByPlayer.set(row.playerId, row.source);
+        }
       }
 
       const weeks = [...new Set([...scheduleByWeek.keys(), ...statsByWeek.keys()])]
