@@ -25,7 +25,7 @@ Batch split and dependency rationale: ADR-015.
 | T4.1 | Trends and usage metrics (TREND-1 to 5) | analytics-engineer | G3 | A | Done | 1 | ad3b10a |
 | T4.2a | Waiver candidate pool, prefilter, Lineup Impact (WAIVER-1, 2) | analytics-engineer | G3 | A | Done | 1 | b94c236 |
 | T4.3 | Production Docker image beta (HOST-1 to 6 partial) | devops-engineer | G3 | A | Done | 1 | 7711881 |
-| T4.2b | Waiver Score composite, two views (WAIVER-3, 4) | analytics-engineer | T4.2a | B | Not started | 0 | |
+| T4.2b | Waiver Score composite, two views (WAIVER-3, 4) | analytics-engineer | T4.2a | B | Done | 1 | 63b415a |
 | T4.4 | Waiver priority advisor (WAIVER-6a to 6d) | analytics-engineer | T4.2a | B | Not started | 0 | |
 | T4.8a | Reason contract amendment (Lineup "why" detail, Steph's G3 ask) | backend-engineer | none | B | Not started | 0 | |
 | T4.5 | Data functions and APIs: waivers, players list, player detail | backend-engineer | T4.1, T4.2a, T4.2b, T4.4 | C | Not started | 0 | |
