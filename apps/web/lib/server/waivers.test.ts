@@ -1,7 +1,7 @@
 import { schema, type DbHandle } from "@sideline/db";
 import { WaiverResponseSchema, type WaiverResponse } from "@sideline/shared";
 import { afterEach, describe, expect, it } from "vitest";
-import { getWaivers, type Lookup } from "./waivers";
+import { getWaivers, percentiles, substituteNulls, type Lookup } from "./waivers";
 import { SEED_NOW, seedLeague } from "./test-seed";
 import { useTempDb, type TempDb } from "./test-utils";
 
@@ -40,6 +40,22 @@ function setWaiverPosition(
   h.sqlite
     .prepare(`UPDATE rosters SET waiver_position = ? WHERE league_id = ? AND roster_id = ?`)
     .run(position, leagueId, rosterId);
+}
+
+function setTaxi(h: DbHandle, leagueId: string, rosterId: number, ids: string[]): void {
+  h.sqlite
+    .prepare(`UPDATE rosters SET taxi_json = ? WHERE league_id = ? AND roster_id = ?`)
+    .run(JSON.stringify(ids), leagueId, rosterId);
+}
+
+function setReserve(h: DbHandle, leagueId: string, rosterId: number, ids: string[]): void {
+  h.sqlite
+    .prepare(`UPDATE rosters SET reserve_json = ? WHERE league_id = ? AND roster_id = ?`)
+    .run(JSON.stringify(ids), leagueId, rosterId);
+}
+
+function setWaiverMode(h: DbHandle, leagueId: string, mode: string): void {
+  h.sqlite.prepare(`UPDATE leagues SET waiver_mode = ? WHERE league_id = ?`).run(mode, leagueId);
 }
 
 /** Inserts a flat `projPts` for `playerId` across every week in `weeks`. */
@@ -205,5 +221,104 @@ describe("getWaivers", () => {
     const second = ok(getWaivers(h, "L1", { rosterId: 1, positions: ["RB"] }, SEED_NOW));
     expect(computedCacheRowCount(h)).toBe(1);
     expect(second.candidatePoolSize).toBe(first.candidatePoolSize);
+    // m1 fix: the in-memory position filter must actually apply post-cache-hit, not just leave the
+    // cache row count unchanged.
+    expect(second.forMyTeam.length).toBeGreaterThan(0);
+    expect(second.forMyTeam.every((c) => c.position === "RB")).toBe(true);
+    expect(second.bestAvailable.length).toBeGreaterThan(0);
+    expect(second.bestAvailable.every((c) => c.position === "RB")).toBe(true);
+  });
+
+  it("M1 fix: a taxi-squad player is eligible for the auto-drop suggestion, an actual IR player is not", () => {
+    const h = setup({
+      rosterCount: 2,
+      rosterSize: 5,
+      playerCount: 13,
+      rosterPositions: ["QB", "RB", "WR", "TE"],
+    });
+    // My team (roster 1): p1 RB, p2 WR, p3 TE, p4 QB (starters per seedLeague's position cycle),
+    // p5 RB (5th roster player, not a starter).
+    insertProj(h, "L1", 2026, "p1", WEEKS_5_TO_18, 8);
+    insertProj(h, "L1", 2026, "p2", WEEKS_5_TO_18, 10);
+    // p3 would be a high-value TE if it could play - it's on the taxi squad instead, so its
+    // weekly/ROS values get zeroed (can't play), but (M1 fix) it stays eligible for auto-drop.
+    insertProj(h, "L1", 2026, "p3", WEEKS_5_TO_18, 20);
+    insertProj(h, "L1", 2026, "p4", WEEKS_5_TO_18, 10);
+    // p5 is on actual IR: also zeroed, and (unlike taxi) still correctly excluded from auto-drop.
+    insertProj(h, "L1", 2026, "p5", WEEKS_5_TO_18, 1);
+    setTaxi(h, "L1", 1, ["p3"]);
+    setReserve(h, "L1", 1, ["p5"]);
+
+    // Free agent candidate: p11 (playerCount 13 with rosterCount 2 x rosterSize 5 rosters p1-p10).
+    setStatus(h, ["p11"], "Active");
+    insertProj(h, "L1", 2026, "p11", WEEKS_5_TO_7, 20);
+
+    const data = ok(getWaivers(h, "L1", { rosterId: 1 }, SEED_NOW));
+    const candidate = data.forMyTeam.find((c) => c.playerId === "p11");
+    expect(candidate).toBeDefined();
+    // The zeroed-out taxi player (p3, rosValue 0) is the actual lowest-ROS-value non-IR player, so
+    // it's the suggested drop - not p1 (the lowest among starters alone, which is what the pre-fix
+    // bug would have produced by wrongly excluding p3 as "isIR").
+    expect(candidate?.suggestedDropPlayerId).toBe("p3");
+  });
+
+  it("M2 fix: a FAAB league reports priorityAdvisor.applicable === false with a FAAB_NOT_SUPPORTED reason", () => {
+    const h = setup({
+      rosterCount: 2,
+      rosterSize: 4,
+      playerCount: 10,
+      rosterPositions: ["QB", "RB", "WR", "TE"],
+    });
+    setWaiverMode(h, "L1", "faab");
+    setStatus(h, ["p9", "p10"], "Active");
+    insertProj(h, "L1", 2026, "p9", WEEKS_5_TO_7, 20);
+    insertProj(h, "L1", 2026, "p10", WEEKS_5_TO_18, 12);
+
+    const data = ok(getWaivers(h, "L1", { rosterId: 1 }, SEED_NOW));
+    expect(WaiverResponseSchema.safeParse(data).success).toBe(true);
+    expect(data.priorityAdvisor.applicable).toBe(false);
+    expect(data.priorityAdvisor.candidates).toEqual([]);
+    expect(data.priorityAdvisor.reasons.some((r) => r.code === "FAAB_NOT_SUPPORTED")).toBe(true);
+  });
+});
+
+describe("percentiles (WAIVER-3)", () => {
+  it("returns [] for an empty input", () => {
+    expect(percentiles([])).toEqual([]);
+  });
+
+  it("gives a single candidate percentile 100 (trivially the best of one)", () => {
+    expect(percentiles([42])).toEqual([100]);
+  });
+
+  it("gives an all-equal set of more than one candidate percentile 50 for every entry, not 100", () => {
+    expect(percentiles([5, 5, 5])).toEqual([50, 50, 50]);
+  });
+
+  it("ranks distinct values by fractional rank, ties averaging their span", () => {
+    // [1, 1, 5, 10]: the two tied-lowest share percentile (0+1)/2/3*100 = 16.666...
+    const result = percentiles([1, 1, 5, 10]);
+    expect(result[0]).toBeCloseTo((50 / 3) * 1, 6);
+    expect(result[1]).toBeCloseTo((50 / 3) * 1, 6);
+    expect(result[2]).toBeCloseTo((2 / 3) * 100, 6);
+    expect(result[3]).toBe(100);
+  });
+});
+
+describe("substituteNulls (WAIVER-3)", () => {
+  it("substitutes the mean of known values for null entries", () => {
+    expect(substituteNulls([10, null, 20])).toEqual([10, 15, 20]);
+  });
+
+  it("M3 fix: when every value is null, substitutes 0 for all, giving percentile 50 for n>1 (not 100)", () => {
+    const substituted = substituteNulls([null, null, null]);
+    expect(substituted).toEqual([0, 0, 0]);
+    expect(percentiles(substituted)).toEqual([50, 50, 50]);
+  });
+
+  it("the single-candidate all-null edge case gives percentile 100, per percentiles' n===1 rule", () => {
+    const substituted = substituteNulls([null]);
+    expect(substituted).toEqual([0]);
+    expect(percentiles(substituted)).toEqual([100]);
   });
 });

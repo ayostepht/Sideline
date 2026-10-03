@@ -109,8 +109,12 @@ export type WaiverPriorityCandidate = z.infer<typeof WaiverPriorityCandidateSche
 /**
  * WAIVER-6: rolling-priority waiver advisor. `applicable` is false for FAAB leagues (WAIVER-5,
  * moved to P2, ADR-003): the rest of the object is still well-formed but empty in that case, with
- * a `FAAB_NOT_SUPPORTED` reason explaining why. `nextClearAt` is ISO 8601, null only when not
- * applicable.
+ * a `FAAB_NOT_SUPPORTED` reason explaining why. `nextClearAt` is ISO 8601, computed unconditionally
+ * regardless of `applicable` (`computeNextWaiverClear` in `@sideline/core` always returns a best
+ * estimate, falling back to "assume daily processing" with a `WAIVER_DAY_UNKNOWN_ASSUMED_DAILY`
+ * reason when the league hasn't configured a waiver day) - nullable here only for schema
+ * forward-compatibility with a future producer that might not be able to compute it, not because
+ * today's data function ever emits null.
  */
 export const WaiverPriorityAdvisorSchema = z.strictObject({
   applicable: z.boolean(),

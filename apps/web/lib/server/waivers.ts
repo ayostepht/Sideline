@@ -146,7 +146,9 @@ function mustGet<K, V>(map: ReadonlyMap<K, V>, key: K): V {
  * best of one, since there is nothing to compare against. Order of `values` is preserved: the
  * result's `i`-th entry is `values[i]`'s percentile.
  */
-function percentiles(values: readonly number[]): number[] {
+// Exported for testing only (T4.5b-FIX M3): no other module should import this directly, it is an
+// internal helper of `computeWaivers`.
+export function percentiles(values: readonly number[]): number[] {
   const n = values.length;
   if (n === 0) return [];
   if (n === 1) return [100];
@@ -166,11 +168,17 @@ function percentiles(values: readonly number[]): number[] {
 /**
  * Substitutes `null` entries (no data for that candidate, e.g. no nflverse schedule match) with the
  * mean of the known values before percentile ranking, so a missing signal lands near the middle of
- * the pack rather than at either extreme. When every value is null, substitutes 0 (percentiles then
- * tie at 100 for everyone, per {@link percentiles}' single-cluster behavior - a documented, inert
- * fallback for the all-missing-data edge case).
+ * the pack rather than at either extreme. When every value is null, substitutes 0 for every
+ * candidate: per {@link percentiles}' tied-rank averaging, an all-equal array of `n > 1` values
+ * percentile-ranks every entry at 50 (the midpoint of the one tied cluster spanning the whole
+ * array), not 100 - 100 only occurs in the degenerate `n === 1` case (a single candidate is
+ * trivially the best, and only, one of itself). Either way this is a documented, inert fallback for
+ * the all-missing-data edge case: it contributes a flat, non-discriminating value to every
+ * candidate's Waiver Score for that component.
  */
-function substituteNulls(values: readonly (number | null)[]): number[] {
+// Exported for testing only (T4.5b-FIX M3): no other module should import this directly, it is an
+// internal helper of `computeWaivers`.
+export function substituteNulls(values: readonly (number | null)[]): number[] {
   const known = values.filter((v): v is number => v !== null);
   const fallback = known.length > 0 ? mean(known) : 0;
   return values.map((v) => v ?? fallback);
@@ -523,12 +531,19 @@ function toPlayer(row: FullPlayerRow): Player {
 }
 
 /**
- * Builds one roster's player pool for `computeLineupImpact`/`computeCompetingClaims`. Taxi players
- * are treated identically to IR (documented choice, T4.5b): neither can take the field, so both get
- * `isIR: true` (never auto-selected as the suggested drop) and a zeroed `weeklyValues`/ROS
- * projection (matching `computeLineupImpact`'s "caller pre-zeros unavailable players" convention).
- * A future UI drop override (`dropPlayerId`) lets a user explicitly choose a taxi player to drop;
- * this task does not need it.
+ * Builds one roster's player pool for `computeLineupImpact`/`computeCompetingClaims`. Taxi and
+ * actual reserve/IR players both get a zeroed `weeklyValues`/ROS projection (`cannotPlay`, matching
+ * `computeLineupImpact`'s "caller pre-zeros unavailable players" convention): neither can take the
+ * field this week. But the two are **not** the same for auto-drop-suggestion eligibility (M1 fix,
+ * T4.5b-FIX): `isIR` (the flag `pickLowestRosValue` filters on, in `lineup-impact.ts`) is set from
+ * reserve membership ONLY. WAIVER-2's spec text is "the lowest-ROS-value non-IR player" - taxi is
+ * not IR, and a taxi player is typically a roster's actual lowest-value stash, exactly the player a
+ * user would want the auto-suggestion to offer to drop for a waiver claim. Leaving taxi players
+ * eligible doesn't force them to always be picked: their zeroed `rosInput` still naturally drives
+ * their ROS value to (near) zero, so they'll usually still be the pick when that's the right call,
+ * but a true reserve/IR player stays permanently excluded as before. A future UI drop override
+ * (`dropPlayerId`) lets a user explicitly choose any roster player to drop; this task does not need
+ * it.
  */
 function buildRosterPlayers(
   row: WaiverRosterRow,
@@ -539,18 +554,24 @@ function buildRosterPlayers(
   lineupImpactWeeks: readonly number[],
 ): LineupImpactRosterPlayer[] {
   const ids = parseList(row.playersJson).filter((id) => id !== "0");
-  const reserveOrTaxi = new Set([...parseList(row.reserveJson), ...parseList(row.taxiJson)]);
+  const reserve = new Set(parseList(row.reserveJson));
+  const taxi = new Set(parseList(row.taxiJson));
   const out: LineupImpactRosterPlayer[] = [];
   for (const id of ids) {
     const p = playersById.get(id);
     const fantasyPositions = p?.fantasyPositions ?? [];
-    const isIR = reserveOrTaxi.has(id);
+    const isIR = reserve.has(id);
+    const cannotPlay = isIR || taxi.has(id);
     const byWeek = points.get(id);
     const weeklyValues: Record<number, number> = {};
-    for (const w of lineupImpactWeeks) weeklyValues[w] = isIR ? 0 : (byWeek?.get(w)?.proj ?? 0);
+    for (const w of lineupImpactWeeks)
+      weeklyValues[w] = cannotPlay ? 0 : (byWeek?.get(w)?.proj ?? 0);
     const rosWeeks: RestOfSeasonWeek[] = [];
     for (let w = week; w <= seasonWeeks; w += 1) {
-      rosWeeks.push({ week: w, projectedPoints: isIR ? null : (byWeek?.get(w)?.proj ?? null) });
+      rosWeeks.push({
+        week: w,
+        projectedPoints: cannotPlay ? null : (byWeek?.get(w)?.proj ?? null),
+      });
     }
     const history = historyEntries(byWeek, week);
     const seasonPpg = history.length > 0 ? mean(history.map((e) => e.actualPts)) : null;
