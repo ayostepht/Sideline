@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 3 Batches A and B done, dispatching Batch C.
+Last updated: 2026-10-02, Phase 3 Batches A, B, C done; code review (Level 2) run and both findings fixed; dispatching Batch D.
 
 ## 1. Resume in five steps
 
@@ -26,15 +26,12 @@ Last updated: 2026-10-02, Phase 3 Batches A and B done, dispatching Batch C.
 
 ## 4. Next steps (in order)
 
-1. Batches A and B done, each task verified independently (`pnpm verify` green) before committing:
-   - T3.1 scoring engine (4a73f30), T3.2a db upsert helpers (22d3630) — Batch A.
-   - T3.2c db read helpers for stats/projections/leagues (91a2b78), T3.3a projections part 1 (104f08d), T3.4a Hungarian optimizer + eligibility (ed071b4) — Batch B.
-   - `packages/core` now depends on `@sideline/shared` (ADR-013 item 6, a logged one-off exception to the devops-owns-dependencies rule). `defense_vs_position` materialization moved from T3.2 to a new T3.5b (ADR-013 items 8-10); T3.2 narrowed to `league_player_week_points` only.
-   - Baseline after Batch B: `pnpm verify` 822 unit tests, 0 lint warnings.
-2. Dispatch Batch C next: T3.2b (sleeper-data-engineer, worker recompute hook materializing `league_player_week_points`, depends on T3.1 + T3.2a + T3.2c), T3.3b (analytics-engineer, PROJ-2 variance/shrinkage + PROJ-3 floor/ceiling, depends on T3.3a), T3.4b (analytics-engineer, optimizer part 2: locks, availability, modes, reasons/issues output, LINEUP-7 perf, depends on T3.4a) — all three in parallel (disjoint paths: `apps/worker`, `packages/core/src/projections/`, `packages/core/src/optimizer/`).
-3. Then Batch D: T3.5a (matchup core + backtest) and T3.6 (qa golden/property tests) in parallel. See ADR-013 item 10 for the full batch order through H.
-4. The Phase 3 design follow-ups from the PROGRESS backlog ("Carried from Phase 2": scoreboard hero, lime on content, Home "You" badge, roster stat slot) are folded into T3.8b.
-5. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
+1. Batches A, B, C done, each task verified independently (`pnpm verify` green) before committing: T3.1 (4a73f30), T3.2a (22d3630), T3.2c (91a2b78), T3.3a (104f08d), T3.4a (ed071b4), T3.2b (749388e, plus a NUL-byte fix 346297d), T3.3b (e26905e), T3.4b (160810e).
+2. Level 2 code review run on the full Batches A-C diff (`docs/reviews/2026-10-02-p3-batchABC-code.md`): one Blocker (optimizer could silently recommend an unavailable player instead of leaving the slot empty) fixed in 23bcad0; the NUL-byte Major above. Both re-verified. Baseline: `pnpm verify` 862 unit tests, 0 lint warnings.
+3. `packages/core` now depends on `@sideline/shared` (ADR-013 item 6). `defense_vs_position` materialization moved from T3.2 to a new T3.5b (ADR-013 items 8-10); T3.2 narrowed to `league_player_week_points` only.
+4. Dispatch Batch D next: T3.5a (analytics-engineer, matchup core MATCH-1/2/4 + MATCH-3 backtest harness, depends on T3.2b + T3.3b) and T3.6 (qa-engineer, golden optimizer scenarios + property tests LINEUP-8, depends on T3.4b) in parallel. See ADR-013 item 10 for the full batch order through H.
+5. The Phase 3 design follow-ups from the PROGRESS backlog ("Carried from Phase 2": scoreboard hero, lime on content, Home "You" badge, roster stat slot) are folded into T3.8b.
+6. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
 
 ## 5. Briefs
 

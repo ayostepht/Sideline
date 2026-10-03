@@ -91,7 +91,7 @@ Remove an item when it is done; the archive keeps history.
 
 ### Phase 3: scoring, projections, optimizer
 
-- Batch A-C code review (`docs/reviews/2026-10-02-p3-batchABC-code.md`, ADR-013 item 12): one Blocker (optimizer could silently recommend an unavailable player) and one Major (embedded NUL byte in `league-points.ts`), both fixed before Batch D. Minor/informational items left open: `solve.ts`'s `TIEBREAK_EPSILON` undocumented at unrealistic (~1e15) value magnitudes; `scripts/validate-scoring/validate.ts` reads one player-week at a time rather than batch-reading (fine for a manual gate script, not a pattern for hot-path code); `rescoreProjection`'s `stats` parameter has no nominal type separating a projection row from a real stats row (no live bug, one correctly-scoped caller today).
+- Batch A-C code review (`docs/reviews/2026-10-02-p3-batchABC-code.md`, ADR-013 item 12): one Blocker (optimizer could silently recommend an unavailable player, fixed commit 23bcad0) and one Major (embedded NUL byte in `league-points.ts`, fixed commit 346297d), both fixed and re-verified (`pnpm verify` 862 tests) before Batch D. Minor/informational items left open: `solve.ts`'s `TIEBREAK_EPSILON` undocumented at unrealistic (~1e15) value magnitudes; `scripts/validate-scoring/validate.ts` reads one player-week at a time rather than batch-reading (fine for a manual gate script, not a pattern for hot-path code); `rescoreProjection`'s `stats` parameter has no nominal type separating a projection row from a real stats row (no live bug, one correctly-scoped caller today).
 
 ### Later phases
 
