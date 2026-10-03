@@ -15,3 +15,13 @@ export function formatImpact(impact: number | undefined): ImpactText {
     ? { sign: "up", text: `+${abs} pts`, spoken: `adds ${abs} points` }
     : { sign: "down", text: `-${abs} pts`, spoken: `costs ${abs} points` };
 }
+
+/**
+ * Short plain-language text for a `Reason.projectedPoints` value, e.g. "18.4 proj pts". Returns
+ * `undefined` when there is nothing to show (missing or non-finite), mirroring `formatImpact`'s
+ * one-decimal rounding convention so the two numbers read consistently next to each other.
+ */
+export function formatProjectedPoints(points: number | undefined): string | undefined {
+  if (points === undefined || !Number.isFinite(points)) return undefined;
+  return `${points.toFixed(1)} proj pts`;
+}

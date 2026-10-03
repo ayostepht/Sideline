@@ -1,10 +1,11 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { Reason } from "@sideline/shared";
 import { cn } from "../lib/client/cn";
-import { formatImpact } from "./reason-format";
+import { formatImpact, formatProjectedPoints } from "./reason-format";
 
 export function ReasonChip({ reason }: { reason: Reason }) {
   const imp = formatImpact(reason.impact);
+  const proj = formatProjectedPoints(reason.projectedPoints);
   const Icon = imp.sign === "up" ? ArrowUp : imp.sign === "down" ? ArrowDown : null;
   return (
     <li
@@ -22,6 +23,9 @@ export function ReasonChip({ reason }: { reason: Reason }) {
       </span>
       {reason.value !== undefined ? (
         <span className="shrink-0 font-medium tabular-nums text-foreground">{reason.value}</span>
+      ) : null}
+      {proj !== undefined ? (
+        <span className="shrink-0 tabular-nums text-muted-foreground">{proj}</span>
       ) : null}
       {imp.sign !== "none" ? (
         <>

@@ -4,7 +4,7 @@ import type { Reason } from "@sideline/shared";
 import { ArrowDown, ArrowUp, HelpCircle } from "lucide-react";
 import { useId, useState, type ReactNode } from "react";
 import { cn } from "../lib/client/cn";
-import { formatImpact } from "./reason-format";
+import { formatImpact, formatProjectedPoints } from "./reason-format";
 import { Button } from "./ui/button";
 import {
   Sheet,
@@ -36,6 +36,7 @@ export function WhyBody({ summary, reasons }: WhyBodyProps) {
         <ul className="flex flex-col divide-y" aria-label="Reasons">
           {reasons.map((r, i) => {
             const imp = formatImpact(r.impact);
+            const proj = formatProjectedPoints(r.projectedPoints);
             return (
               <li
                 key={`${i}-${r.code}`}
@@ -44,6 +45,9 @@ export function WhyBody({ summary, reasons }: WhyBodyProps) {
                 <span className="min-w-0 break-words">{r.label}</span>
                 <span className="flex shrink-0 items-center gap-2 text-right tabular-nums">
                   {r.value !== undefined ? <span className="font-medium">{r.value}</span> : null}
+                  {proj !== undefined ? (
+                    <span className="text-muted-foreground">{proj}</span>
+                  ) : null}
                   {imp.sign !== "none" ? (
                     <span
                       className={cn(
