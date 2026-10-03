@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-03. Phase 3 Batches A through I all done (T3.1 through T3.9). Batch H (Lineup page, Home card, design backlog) Level 2 reviewed (code + UX), all Major findings fixed. Batch I (T3.9, e2e lineup flow) landed and independently verified (`93edfc0`). `pnpm verify`: 97 files, 954 tests, 0 lint warnings; e2e `lineup.spec.ts` + `pages.spec.ts` 20/20 passed. Clean point to `/clear`. Next: Phase 3 is feature-complete, pending the G3 human checkpoint (live checks, then gate report).
+Last updated: 2026-10-03 (later session). Phase 3 feature work (T3.1-T3.9) was already done. This session ran the G3 pre-gate live-data checks: found and fixed two sync-job data-completeness gaps (G3-FIX-1 `51a1a31`: statsJob only ever refetched the last 2 weeks, so 2026 wk1-2 stats were missing after a local DB reset; G3-FIX-2 `5fda4f6`: `backfill_2025` never synced the 2025 nflverse schedule, so the backtest had no resolvable opponent for any 2025 player-week). After both fixes and a worker restart: SCORE-2 **100.00% match** (457 player-weeks, real league, weeks 1-3); real MATCH-3 backtest **5323 player-weeks, decision raw_only, 0.14% improvement** (`docs/backtests/2026-10-03.md`, ADR-014 resolution logged, no default-config change needed). `pnpm verify`: 97 files, 963 tests, 0 lint warnings. Three gate-level reviews dispatched in background and NOT YET RETURNED: qa-engineer (`pnpm gate` + phase-specific checks), code-reviewer (full `git diff main...HEAD`, U5), ux-reviewer (final screens, UI4, archiving to `docs/gates/G3/screens/`). Not a clean `/clear` point yet — wait for those three results first.
 
 ## 1. Resume in five steps
 
@@ -24,13 +24,14 @@ Last updated: 2026-10-03. Phase 3 Batches A through I all done (T3.1 through T3.
 
 ## 3. In flight
 
-- Nothing. Clean point to `/clear`.
+- Three background subagents dispatched 2026-10-03, not yet returned: `qa-engineer` (G3-GATE-QA: full `pnpm gate` + phase-specific checks), `code-reviewer` (G3-GATE-CODE: full `git diff main...HEAD`, U5), `ux-reviewer` (G3-GATE-UX: final screens, UI4, screenshots to `docs/gates/G3/screens/`). If resuming cold, check whether these completed; if the session that launched them is gone, just re-dispatch using the same three briefs (reconstructable from this file's history / git log commit messages, or re-derive from PLAN.md section 10.4).
+- The local dev worker (`pnpm dev:worker`) was restarted twice this session to pick up G3-FIX-1 and G3-FIX-2; if it's not running, restart it before any further live sync/backfill commands (`pnpm run sync --once --job=<name>`).
 
 ## 4. Next steps (in order)
 
-1. **Phase 3 feature work is done. Next is the G3 gate** (PLAN.md section 9/10, human checkpoint). Before writing the gate report: SCORE-2 at least 99% match on Steph's real league (live run of `pnpm validate:scoring` or equivalent against her actual league, not the fixture), LINEUP-7 performance benchmark (under 50ms for any roster of 30 or fewer players — check if T3.4b already captured this in its report; if not, re-run), confirm T3.5c's backtest report and alpha/beta decision are logged against real historical data (not just the fixture smoke test already done).
-2. Run the full universal + UI + phase-specific gate checklist (PLAN.md section 10), write `docs/gates/G3.md`, tag `gate-G3` once Steph approves.
-3. **G3 is a human checkpoint**: present the gate summary to Steph (how to view this week's recommended lineup and reasons on her real league) and wait for her reply before starting Phase 4.
+1. Collect the three background gate reviews above. Fix any Blocker/Major finding through the normal subagent cycle, then re-run whatever check it affects.
+2. Write `docs/gates/G3.md` from CLAUDE.md's Gate Report template, using: the live SCORE-2/backtest results already logged in `docs/PROGRESS.md`'s Phase 3 table and ADR-014's resolution, plus the three reviews' metrics.
+3. **G3 is a human checkpoint**: present the gate summary to Steph (how to view this week's recommended lineup and reasons on her real league) and wait for her reply before starting Phase 4 or tagging `gate-G3`.
 4. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
 
 ## 5. Briefs

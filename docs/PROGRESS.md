@@ -7,7 +7,7 @@
 | 0 Bootstrap and API spike | G0 | `phase/0-bootstrap` (merged) | Done, G0 PASS 2026-10-01 |
 | 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
 | 2 App shell and league views | G2 (human) | `phase/2-shell` (merged) | Done, G2 PASS 2026-10-02 (Steph approved) |
-| 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` | Next: plan batches (not started) |
+| 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` | Feature-complete; gate checks running (2026-10-03) |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | | Not started |
 | 5 Matchups and league intelligence | G5 | | Not started |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
@@ -39,8 +39,10 @@ Split per ADR-013. Batches run in order A to G; tasks in the same batch run in p
 | T3.8a | Lineup page | frontend-engineer | T3.7 | H | Done | 1 | 78d8f34 |
 | T3.8b | Home "This week" lineup issues card; carried Phase 2 design backlog (scoreboard hero, lime accent, You badge, roster stat slot) | frontend-engineer | T3.7 | H | Done | 1 | dbf69f0 |
 | T3.9 | E2E lineup flow (mode toggle, swaps, Open in Sleeper, opponent view) | qa-engineer | T3.8a, T3.8b | I | Done | 1 | 93edfc0 |
+| G3-FIX-1 | statsJob self-heals missed current-season weeks (found live: SCORE-2 blocked at 38% by missing 2026 wk1-2) | sleeper-data-engineer | T3.2b | gate | Done | 1 | 51a1a31 |
+| G3-FIX-2 | backfill_2025 also syncs the 2025 nflverse schedule (found live: MATCH-3 backtest silently dropped every 2025 player-week) | sleeper-data-engineer | T3.5b | gate | Done | 1 | 5fda4f6 |
 
-**G3 phase checks:** SCORE-2 at least 99% match on Steph's real league; golden and property tests pass; LINEUP-7 benchmark passes; backtest report exists and the alpha/beta decision is logged. Human checkpoint: Steph compares this week's recommended lineup and reasons to her own judgment.
+**G3 phase checks:** SCORE-2 **100.00% match, 457 player-weeks, weeks 1-3** on Steph's real league (live run 2026-10-03, after G3-FIX-1); golden and property tests pass (`pnpm verify`); LINEUP-7 benchmark passes (`packages/core/src/optimizer/recommend.perf.test.ts`, well under the 50ms/30-player budget); backtest report exists and the alpha/beta decision is logged (`docs/backtests/2026-10-03.md`, live run after G3-FIX-2: **5323 player-weeks, decision raw_only, 0.14% MAE improvement**, below the 1% bar; ADR-014 resolution). Human checkpoint: Steph compares this week's recommended lineup and reasons to her own judgment. Gate-level reviews (qa `pnpm gate`, code-reviewer full-phase-diff, ux-reviewer final screens) dispatched 2026-10-03, in flight.
 
 ## Earlier phases
 
