@@ -99,7 +99,7 @@ describe("optimizer golden scenarios (T3.6)", () => {
     });
     expect(resultA.optimalAssignment).toEqual([{ slotType: "RB", playerId: "RB_healthy" }]);
     expect(resultA.playerReasons["RB_bye"]).toEqual([
-      { code: "UNAVAILABLE", label: "On bye this week", impact: -20 },
+      { code: "UNAVAILABLE", label: "On bye this week", impact: -20, projectedPoints: 20 },
     ]);
 
     // Sub-case B: the only candidate is on bye. Per the B1 fix, the solver never prefers a
@@ -118,7 +118,7 @@ describe("optimizer golden scenarios (T3.6)", () => {
     expect(resultB.optimalAssignment).toEqual([{ slotType: "RB", playerId: null }]);
     expect(resultB.issues).toContainEqual({
       code: "EMPTY_SLOT",
-      label: "No eligible player available for RB",
+      label: "No one on your roster can fill RB",
       value: "RB",
     });
   });
@@ -281,7 +281,7 @@ describe("optimizer golden scenarios (T3.6)", () => {
     expect(result.optimalAssignment).toEqual([{ slotType: "DEF", playerId: null }]);
     expect(result.issues).toContainEqual({
       code: "EMPTY_SLOT",
-      label: "No eligible player available for DEF",
+      label: "No one on your roster can fill DEF",
       value: "DEF",
     });
   });
@@ -296,7 +296,7 @@ describe("optimizer golden scenarios (T3.6)", () => {
     expect(warnings).toEqual([
       {
         code: "UNKNOWN_SLOT_TYPE",
-        label: 'Unknown roster slot type "SUPERFLEX_X" cannot be filled',
+        label: `"SUPERFLEX_X" is a roster slot we don't recognize`,
         value: "SUPERFLEX_X",
       },
     ]);

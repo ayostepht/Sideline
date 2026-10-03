@@ -5,9 +5,14 @@ import {
   PlayerSearchResultSchema,
   LineupRequestSchema,
   LineupResponseSchema,
+  PlayerDetailResponseSchema,
+  PlayersListRequestSchema,
+  PlayersListResponseSchema,
   SelectLeagueRequestSchema,
   SleeperUsernameSchema,
   AppSettingsSchema,
+  WaiverRequestSchema,
+  WaiverResponseSchema,
 } from "@sideline/shared";
 import { z } from "zod";
 import { errorResult, type ApiResult } from "./http";
@@ -15,7 +20,9 @@ import { getSettings } from "./identity";
 import { searchPlayers } from "./league-views";
 import { getLineup } from "./lineup";
 import { getOnboardingStatus, selectLeague, startOnboarding } from "./onboarding";
+import { getPlayerDetail, getPlayersList } from "./players";
 import { withMigratedDb } from "./sync";
+import { getWaivers } from "./waivers";
 
 type Env = Record<string, string | undefined>;
 
@@ -190,5 +197,86 @@ export function handlePatchSettings(
         syncSince: r.syncSince,
       },
     };
+  });
+}
+
+/** T4.5b: GET /api/l/[leagueId]/waivers (candidate views, Waiver Score, priority advisor). */
+export function handleWaivers(
+  leagueId: string,
+  params: URLSearchParams,
+  now: Date = new Date(),
+): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(404, "not_found", "League not found.");
+  const raw: Record<string, string> = {};
+  const week = params.get("week");
+  const roster = params.get("roster");
+  const positions = params.get("positions");
+  if (week !== null) raw["week"] = week;
+  if (roster !== null) raw["roster"] = roster;
+  if (positions !== null) raw["positions"] = positions;
+  const parsed = WaiverRequestSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return withMigratedDb((h) => {
+    const r = getWaivers(
+      h,
+      idOk.data,
+      {
+        ...(parsed.data.week !== undefined ? { week: parsed.data.week } : {}),
+        ...(parsed.data.roster !== undefined ? { rosterId: parsed.data.roster } : {}),
+        ...(parsed.data.positions !== undefined ? { positions: parsed.data.positions } : {}),
+      },
+      now,
+    );
+    if (!r.ok) {
+      if (r.reason === "no_team") {
+        return errorResult(404, "no_team", "No roster found for the stored Sleeper user.");
+      }
+      return errorResult(404, "not_found", "League, week, or roster not found.");
+    }
+    return { status: 200, body: WaiverResponseSchema.parse(r.data) };
+  });
+}
+
+/** T4.5c: GET /api/l/[leagueId]/players (paginated, filterable players list). */
+export function handlePlayersList(
+  leagueId: string,
+  params: URLSearchParams,
+  now: Date = new Date(),
+): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(404, "not_found", "League not found.");
+  const raw: Record<string, string> = {};
+  const page = params.get("page");
+  const pageSize = params.get("pageSize");
+  const position = params.get("position");
+  const q = params.get("q");
+  if (page !== null) raw["page"] = page;
+  if (pageSize !== null) raw["pageSize"] = pageSize;
+  if (position !== null) raw["position"] = position;
+  if (q !== null) raw["q"] = q;
+  const parsed = PlayersListRequestSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return withMigratedDb((h) => {
+    const r = getPlayersList(h, idOk.data, parsed.data, now);
+    if (!r.ok) return errorResult(404, "not_found", "League not found.");
+    return { status: 200, body: PlayersListResponseSchema.parse(r.data) };
+  });
+}
+
+/** T4.5c: GET /api/l/[leagueId]/players/[playerId] (player detail). */
+export function handlePlayerDetail(
+  leagueId: string,
+  playerId: string,
+  now: Date = new Date(),
+): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(404, "not_found", "League not found.");
+  const playerIdOk = z.string().min(1).max(64).safeParse(playerId);
+  if (!playerIdOk.success) return errorResult(404, "not_found", "Player not found.");
+  return withMigratedDb((h) => {
+    const r = getPlayerDetail(h, idOk.data, playerIdOk.data, now);
+    if (!r.ok) return errorResult(404, "not_found", "League or player not found.");
+    return { status: 200, body: PlayerDetailResponseSchema.parse(r.data) };
   });
 }

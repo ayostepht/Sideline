@@ -10,6 +10,9 @@ services:
       TZ: ${TZ:-UTC}
       APP_PASSWORD: ${APP_PASSWORD:-}
       SESSION_SECRET: ${SESSION_SECRET:-}
+      # Owner of files under /data. Unraid usually uses 99/100; match your host user otherwise.
+      PUID: ${PUID:-99}
+      PGID: ${PGID:-100}
     volumes:
       - sideline-data:/data
 

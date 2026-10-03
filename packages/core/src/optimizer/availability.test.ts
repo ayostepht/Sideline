@@ -6,7 +6,7 @@ describe("applyAvailability (LINEUP-4)", () => {
     const result = applyAvailability({ status: null, isBye: true, rawValue: 12 });
     expect(result.value).toBe(0);
     expect(result.reasons).toEqual([
-      { code: "UNAVAILABLE", label: "On bye this week", impact: -12 },
+      { code: "UNAVAILABLE", label: "On bye this week", impact: -12, projectedPoints: 12 },
     ]);
   });
 
@@ -36,9 +36,10 @@ describe("applyAvailability (LINEUP-4)", () => {
     expect(result.reasons).toEqual([
       {
         code: "DOUBTFUL_DISCOUNT",
-        label: "Doubtful: value discounted",
+        label: "Doubtful, so we lowered their projection",
         value: AVAILABILITY_MULTIPLIERS.doubtful,
         impact: 20 * AVAILABILITY_MULTIPLIERS.doubtful - 20,
+        projectedPoints: 20,
       },
     ]);
   });
@@ -49,9 +50,10 @@ describe("applyAvailability (LINEUP-4)", () => {
     expect(result.reasons).toEqual([
       {
         code: "QUESTIONABLE_DISCOUNT",
-        label: "Questionable: value discounted",
+        label: "Questionable, so we lowered their projection slightly",
         value: AVAILABILITY_MULTIPLIERS.questionable,
         impact: 20 * AVAILABILITY_MULTIPLIERS.questionable - 20,
+        projectedPoints: 20,
       },
     ]);
   });

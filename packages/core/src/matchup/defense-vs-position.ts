@@ -69,7 +69,7 @@ export function computeDefenseVsPosition(input: DefenseVsPositionInput): Defense
   if (n < k) {
     reasons.push({
       code: "DVP_SHRUNK_LIMITED_HISTORY",
-      label: "Limited game history, blended toward the league average",
+      label: "Not many games yet, so we blended toward the league average",
       value: n,
     });
   }

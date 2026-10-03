@@ -28,6 +28,17 @@ function requestedProjects(): Set<string> {
 const requested = requestedProjects();
 
 /**
+ * `*.perf.test.ts` files assert real wall-clock budgets, which V8 coverage instrumentation
+ * inflates by 10x+ for call-heavy tests (found at the G4 gate: WAIVER-2's 450-solve perf test
+ * went from ~266ms uninstrumented to 2000-3800ms instrumented, failing its own margin and the
+ * real spec budget, even though production is unaffected). Coverage-threshold runs don't need
+ * them anyway: the functions they exercise are already covered by sibling non-perf tests.
+ * Excluded only from `--coverage` runs; `pnpm verify`/`test:unit` (no `--coverage`) still run
+ * them with their real, meaningful budget assertions.
+ */
+const coverageRequested = process.argv.includes("--coverage");
+
+/**
  * Root Vitest config. Each workspace package is a project; unit tests are co-located
  * `*.test.ts` files next to the code they cover.
  *
@@ -44,7 +55,12 @@ export default defineConfig({
           // Keep the project root at the repo root (do not set `root: dir`): coverage globs are
           // repo-relative, and a package-level root made `--coverage --project X` print Unknown%.
           include: [`${dir}/**/*.test.{ts,tsx}`],
-          exclude: ["**/node_modules/**", "**/dist/**", "**/.next/**"],
+          exclude: [
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/.next/**",
+            ...(coverageRequested ? ["**/*.perf.test.ts"] : []),
+          ],
         },
       })),
       // Self-tests for the test harness itself (MSW fixture handlers). Part of `test:unit`.

@@ -55,7 +55,7 @@ export function weeklyStandardDeviation(
   if (n < k) {
     reasons.push({
       code: "VARIANCE_SHRUNK_LIMITED_HISTORY",
-      label: "Limited weekly history, blended toward the position average",
+      label: "Not many games yet, so we blended toward the position average",
       value: n,
     });
   }

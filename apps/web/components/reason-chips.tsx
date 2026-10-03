@@ -1,27 +1,30 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { Reason } from "@sideline/shared";
 import { cn } from "../lib/client/cn";
-import { formatImpact } from "./reason-format";
+import { formatImpact, formatProjectedPoints, formatReasonValue } from "./reason-format";
 
 export function ReasonChip({ reason }: { reason: Reason }) {
   const imp = formatImpact(reason.impact);
+  const proj = formatProjectedPoints(reason.projectedPoints);
+  const value = formatReasonValue(reason.value);
   const Icon = imp.sign === "up" ? ArrowUp : imp.sign === "down" ? ArrowDown : null;
   return (
     <li
       className={cn(
-        "inline-flex max-w-full min-w-0 items-center gap-1 rounded-control border bg-muted px-2 py-1.5 text-[13px] leading-4 sm:py-1 sm:text-xs",
+        "inline-flex max-w-full min-w-0 items-start gap-1 rounded-control border bg-muted px-2 py-1.5 text-[13px] leading-4 sm:py-1 sm:text-xs",
         imp.sign === "up" && "text-positive",
         imp.sign === "down" && "text-negative",
         imp.sign === "none" && "text-foreground",
       )}
       data-testid="reason-chip"
     >
-      {Icon ? <Icon className="size-3 shrink-0" aria-hidden /> : null}
-      <span className="min-w-0 truncate text-foreground" title={reason.label}>
-        {reason.label}
-      </span>
-      {reason.value !== undefined ? (
-        <span className="shrink-0 font-medium tabular-nums text-foreground">{reason.value}</span>
+      {Icon ? <Icon className="size-3 shrink-0 translate-y-0.5" aria-hidden /> : null}
+      <span className="min-w-0 break-words text-foreground">{reason.label}</span>
+      {value !== undefined ? (
+        <span className="shrink-0 font-medium tabular-nums text-foreground">{value}</span>
+      ) : null}
+      {proj !== undefined ? (
+        <span className="shrink-0 tabular-nums text-muted-foreground">{proj}</span>
       ) : null}
       {imp.sign !== "none" ? (
         <>

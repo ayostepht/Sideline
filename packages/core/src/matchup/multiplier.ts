@@ -36,7 +36,7 @@ export function matchupMultiplier(input: MatchupMultiplierInput): MatchupMultipl
   if (avgPos === 0) {
     reasons.push({
       code: "MATCHUP_AVG_POS_UNAVAILABLE",
-      label: "Position average unavailable, matchup term skipped",
+      label: "No position average available, so we skipped the matchup adjustment",
       value: avgPos,
     });
   } else {
@@ -53,7 +53,7 @@ export function matchupMultiplier(input: MatchupMultiplierInput): MatchupMultipl
   if (clamped !== m) {
     reasons.push({
       code: "MATCHUP_MULTIPLIER_CLAMPED",
-      label: "Matchup adjustment capped to keep projections reasonable",
+      label: "Matchup adjustment capped to keep the projection realistic",
       value: m,
     });
   }

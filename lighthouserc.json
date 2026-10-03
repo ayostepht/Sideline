@@ -3,7 +3,10 @@
     "collect": {
       "url": [
         "http://127.0.0.1:3000/l/1000000000000000001",
-        "http://127.0.0.1:3000/l/1000000000000000001/league"
+        "http://127.0.0.1:3000/l/1000000000000000001/league",
+        "http://127.0.0.1:3000/l/1000000000000000001/lineup",
+        "http://127.0.0.1:3000/l/1000000000000000001/waivers",
+        "http://127.0.0.1:3000/l/1000000000000000001/players"
       ],
       "numberOfRuns": 3,
       "startServerCommand": "DATA_DIR=${E2E_DATA_DIR:?seed first (see tests/README.md) or run via pnpm gate} SIDELINE_GALLERY=1 pnpm --filter @sideline/web start:standalone",

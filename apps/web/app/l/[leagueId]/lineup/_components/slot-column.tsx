@@ -2,7 +2,6 @@ import type { LineupMode, LineupPlayer, LineupSlotAssignment } from "@sideline/s
 import { Lock, Plus } from "lucide-react";
 import { MatchupGrade } from "../../../../../components/matchup-grade";
 import { PlayerRow } from "../../../../../components/player-row";
-import { ReasonChips } from "../../../../../components/reason-chips";
 import { Badge } from "../../../../../components/ui/badge";
 import { WhySheet } from "../../../../../components/why-sheet";
 import { formatValue, MODE_STAT_LABEL, playerById } from "./format";
@@ -87,16 +86,10 @@ export function SlotColumn({
               />
               {showReasons ? (
                 <div className="px-2 pb-2">
-                  <ReasonChips
+                  <WhySheet
+                    title={player.name}
+                    summary={{ label: MODE_STAT_LABEL[mode], value: formatValue(player.value) }}
                     reasons={player.reasons}
-                    max={2}
-                    trailing={
-                      <WhySheet
-                        title={player.name}
-                        summary={{ label: MODE_STAT_LABEL[mode], value: formatValue(player.value) }}
-                        reasons={player.reasons}
-                      />
-                    }
                   />
                 </div>
               ) : null}

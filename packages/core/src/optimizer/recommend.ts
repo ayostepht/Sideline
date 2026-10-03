@@ -107,10 +107,10 @@ export function recommendLineup(input: RecommendLineupInput): RecommendLineupRes
         player.kickoffApproximate
           ? {
               code: "LOCKED",
-              label: "Locked: game has started (estimated kickoff time)",
+              label: "Game has already started (kickoff time is estimated)",
               value: "approximate",
             }
-          : { code: "LOCKED", label: "Locked: game has started" },
+          : { code: "LOCKED", label: "Game has already started" },
       );
     }
     processedById.set(player.playerId, { adjustedValue: availability.value, reasons, locked });
@@ -224,7 +224,7 @@ export function recommendLineup(input: RecommendLineupInput): RecommendLineupRes
     if (assignment.playerId === null) {
       issues.push({
         code: "EMPTY_SLOT",
-        label: `No eligible player available for ${assignment.slotType}`,
+        label: `No one on your roster can fill ${assignment.slotType}`,
         value: assignment.slotType,
       });
     }
@@ -237,7 +237,7 @@ export function recommendLineup(input: RecommendLineupInput): RecommendLineupRes
     if (isUnavailable) {
       issues.push({
         code: "INACTIVE_STARTER",
-        label: `Currently started player ${playerId} is unavailable`,
+        label: "Your current starter isn't available this week",
         value: playerId,
       });
     }
