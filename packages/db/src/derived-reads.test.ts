@@ -578,7 +578,7 @@ describe("readRosteredPlayerIds", () => {
     upsertRosters(
       h,
       [
-        roster(1, { players: ["p1"], starters: ["p1", "0"] }),
+        roster(1, { players: ["p1", "0"], reserve: ["0"], taxi: [] }),
         roster(1, { leagueId: "L2", players: ["p9"] }),
       ],
       "2025-09-01T00:00:00Z",
