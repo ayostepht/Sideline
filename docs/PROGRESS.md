@@ -28,11 +28,13 @@ Batch split and dependency rationale: ADR-015.
 | T4.2b | Waiver Score composite, two views (WAIVER-3, 4) | analytics-engineer | T4.2a | B | Done | 1 | 63b415a |
 | T4.4 | Waiver priority advisor (WAIVER-6a to 6d) | analytics-engineer | T4.2a | B | Done | 1 | a6ba38c |
 | T4.8a | Reason contract amendment (Lineup "why" detail, Steph's G3 ask) | backend-engineer | none | B | Done | 1 | 6384643 |
-| T4.5 | Data functions and APIs: waivers, players list, player detail | backend-engineer | T4.1, T4.2a, T4.2b, T4.4 | C | Not started | 0 | |
+| T4.5a | `packages/db` read helpers: usage, trending, positional ranking, rostered-id set | backend-engineer | T4.1, T4.2a | C | Not started | 0 | |
 | T4.8b | Populate Reason field, rewrite reason-code copy to plain language | analytics-engineer | T4.8a | C | Not started | 0 | |
-| T4.6 | Waivers page, Players explorer, Home waiver/riser cards | frontend-engineer | T4.4, T4.5 | D | Not started | 0 | |
-| T4.8c | Render richer reason detail in `slot-column.tsx` | frontend-engineer | T4.8b | D | Not started | 0 | |
-| T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6 | E | Not started | 0 | |
+| T4.5b | Waivers data function, API route, response DTOs | backend-engineer | T4.5a, T4.2b, T4.4 | D | Not started | 0 | |
+| T4.5c | Players list and detail data functions, API routes, response DTOs | backend-engineer | T4.5a, T4.1 | D | Not started | 0 | |
+| T4.6 | Waivers page, Players explorer, Home waiver/riser cards | frontend-engineer | T4.4, T4.5b, T4.5c | E | Not started | 0 | |
+| T4.8c | Render richer reason detail in `slot-column.tsx` | frontend-engineer | T4.8b | E | Not started | 0 | |
+| T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6 | F | Not started | 0 | |
 
 ## Earlier phases
 
