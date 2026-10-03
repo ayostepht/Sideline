@@ -24,8 +24,8 @@ Split per ADR-013. Batches run in order A to G; tasks in the same batch run in p
 |---|---|---|---|---|---|---|---|
 | T3.1 | Scoring engine (SCORE-1, SCORE-3) and validation harness (SCORE-2) with report | analytics-engineer | G2 | A | Done | 1 | 4a73f30 |
 | T3.2a | `packages/db` upsert helpers for `league_player_week_points`, `defense_vs_position` | backend-engineer | G2 | A | Done | 1 | 22d3630 |
-| T3.2c | `packages/db` read helpers: `player_week_stats`, `player_week_projections`, `leagues` content | backend-engineer | G2 | B | Not started | 0 | |
-| T3.3a | Projections part 1: PROJ-1 base rescore, PROJ-4 rest-of-season | analytics-engineer | T3.1 | B | Not started | 0 | |
+| T3.2c | `packages/db` read helpers: `player_week_stats`, `player_week_projections`, `leagues` content | backend-engineer | G2 | B | Done | 1 | 91a2b78 |
+| T3.3a | Projections part 1: PROJ-1 base rescore, PROJ-4 rest-of-season | analytics-engineer | T3.1 | B | Done | 1 | 104f08d |
 | T3.4a | Optimizer part 1: Hungarian solver, slot and eligibility resolution (LINEUP-1, 2, 9) | analytics-engineer | T3.1 | B | Not started | 0 | |
 | T3.2b | Worker recompute hook materializing `league_player_week_points` after sync | sleeper-data-engineer | T3.1, T3.2a, T3.2c | C | Not started | 0 | |
 | T3.3b | Projections part 2: PROJ-2 variance and shrinkage, PROJ-3 floor and ceiling | analytics-engineer | T3.3a | C | Not started | 0 | |
