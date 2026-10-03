@@ -32,8 +32,8 @@ Batch split and dependency rationale: ADR-015.
 | T4.8b | Populate Reason field, rewrite reason-code copy to plain language | analytics-engineer | T4.8a | C | Done | 1 | f97a16e |
 | T4.5b | Waivers data function, API route, response DTOs | backend-engineer | T4.5a, T4.2b, T4.4 | D | Done | 2 | ee08fc4, 68eb1b5 |
 | T4.5c | Players list and detail data functions, API routes, response DTOs | backend-engineer | T4.5a, T4.1 | D | Done | 1 | f75d318 |
-| T4.6a | Waivers page | frontend-engineer | T4.4, T4.5b | E | Not started | 0 | |
-| T4.6b | Players explorer and player detail | frontend-engineer | T4.5c | E | Not started | 0 | |
+| T4.6a | Waivers page | frontend-engineer | T4.4, T4.5b | E | Done | 1 | 64af436 |
+| T4.6b | Players explorer and player detail | frontend-engineer | T4.5c | E | Done | 1 | 1e9a764 |
 | T4.8c | Render `projectedPoints` in the Lineup "why" UI | frontend-engineer | T4.8b | E | Done | 1 | 1415d02 |
 | T4.6c | Home waiver-targets and risers cards | frontend-engineer | T4.6a, T4.6b | F | Not started | 0 | |
 | T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6a, T4.6b, T4.6c | G | Not started | 0 | |
@@ -78,6 +78,14 @@ Remove an item when it is done; the archive keeps history.
 - T1.4a m6/m8: nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, write-then-swap.
 - Injectable `sleep` in `makeClient` (sturdier backoff tests; the 503 retry test takes about 4 s). apps/worker has no `test` script (devops).
 
+### Carried from Phase 4 Batch E (frontend-reported backend gaps)
+
+- No per-week matchup grades for waiver candidates (`WaiverCandidateSchema` only has one schedule percentile folded into a Waiver Score reason); T4.6a shows one aggregate grade instead of three. Backend-engineer follow-up if per-week grades are wanted on Waivers.
+- Players list has no "rostered by / free agent" field (unlike the search endpoint's `PlayerSearchResult.owner`) and no ROS value at list scope (by T4.5c's own documented design, deferred to keep the list fast); player detail has no forward schedule/opponent data, so T4.6b shows "not available yet" for "next 4 opponents" instead of fabricating it.
+- Several `packages/core` waiver reasons carry unrounded floats as `Reason.value` (e.g. `93.243243243243...`), rendered verbatim since `WhyBody`/`ReasonChips` don't format `value` (only `impact`/`projectedPoints` are formatted). Likely a `packages/core` source-side rounding fix or a `reason-format.ts` formatting addition.
+- `WAIVER_SCORE_*` reasons' `impact` is a 0-100-scale weighted-score contribution, not fantasy points, but `formatImpact` renders it identically to real point impacts elsewhere ("+40.0 pts") -- could misread as a fantasy-points claim in the Waiver Score breakdown sheet. Candidate T4.8-family follow-up (reason-format.ts and/or a per-reason-code formatting hint).
+- `data-testid="waivers-row"` is shared by both the card and table DOM nodes (only one visible per breakpoint via CSS), unlike `players-row`/`players-table-row`'s distinct ids -- a future e2e test (T4.7) must scope within `waivers-table`/`waivers-cards` or assert `toBeVisible()`, not just count matches.
+
 ### Carried from Phase 4 Batch A
 
 - T4.2b must add `export * from "./waiver/index.js"` to `packages/core/src/index.ts` (T4.2a left its own barrel unwired, mirroring `projections/index.ts`'s existing pattern, out of its scope).
@@ -107,7 +115,7 @@ Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
 
 - ~~**Lineup "why" needs more detail (Steph, G3 approval 2026-10-03).**~~ Done: T4.8a (6384643) added the contract, T4.8b (f97a16e) rewrote every reason's copy to plain language and populated it on the three availability-discount reasons, T4.8c (1415d02) renders it in `ReasonChips`/`WhySheet`. Worth a quick look at the G4 human checkpoint.
 - **Lighthouse (`lighthouserc.json`) only measures Home and League; Lineup (T3.8) was never added.** Add it before Phase 4 adds Waivers/Players too (devops/qa).
-- **Lineup route JS is 178,735 B, over the 170,000 B soft target** (under the 200,000 B hard budget). Watch before Phase 4 adds more client code to that route (frontend-engineer).
+- **Lineup route JS is 178,874 B, over the 170,000 B soft target** (under the 204,800 B hard budget). Phase 4 added two more routes in the same position: Waivers 191,328 B, Players detail 193,981 B, Players list 178,346 B (all measured with a clean `pnpm --filter @sideline/web build` + `scripts/gate/routes-size.ts` on 2026-10-03, all under the hard budget but over the soft target). Worth revisiting the soft target's realism for feature-dense routes at the next gate (T4.6a's own suggestion) rather than stripping functionality.
 - `scheduleAlreadyStored` (`apps/worker/src/jobs/data-jobs.ts`) uses a raw SQL query instead of a typed `packages/db` helper, inconsistent with its siblings `readStoredStatsWeeks`/`readStoredProjectionWeeks`.
 - Three UX Minors (deferred by Steph): Lineup's summary banner says "projected" even in Safe/Upside mode; its rounded total can disagree with its own swap rows (e.g. a signed "-0.0 pts") with no zero-delta floor like Home's `hasSwaps` guard; "this is your team" uses two different badge variants on the same Home page (`variant="accent"` vs `variant="you"`) -- standardize on `variant="you"`.
 - `packages/db`'s `computed_cache` keys only on data-input timestamps, never algorithm version, so a running instance could keep serving a pre-fix cached lineup until the next relevant sync. Related: the lineup cache (`getLineup`, T3.7) doesn't invalidate on an nflverse-only sync (ADR-013 item 19) -- zero impact today since alpha/beta is confirmed 0 by the real G3 backtest; revisit together if a future backtest ever ships non-zero alpha/beta.
