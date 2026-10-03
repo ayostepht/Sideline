@@ -79,8 +79,10 @@ interface Processed {
  * LINEUP-6: builds the full lineup recommendation. See the module doc and PLAN 5.4 for the
  * algorithm; summarized: (a) discount each eligible player's value for availability and resolve
  * their lock status; (b) a slot whose current starter is locked is pinned to that starter and
- * removed from the solver; (c) a locked player who is not a current starter is excluded from the
- * solver entirely (cannot be moved into a lineup); (d) solve the remaining slots/players exactly;
+ * removed from the solver; (c) every locked player (starting or benched) is excluded from the
+ * solver entirely - their fate is already fully determined by (b), and leaving a locked current
+ * starter in the pool would let the solver also assign them into a second, non-locked slot,
+ * duplicating them in the output; (d) solve the remaining slots/players exactly;
  * (e)-(i) assemble the echo of today's lineup, the swap list, the point delta, per-player reasons,
  * and the issues list (unknown slot types, empty slots, inactive current starters).
  */
@@ -120,12 +122,6 @@ export function recommendLineup(input: RecommendLineupInput): RecommendLineupRes
 
   // Step b: a slot is locked iff its current starter exists and is locked.
   const lockedSlotIndexes = new Set<number>();
-  const startingPlayerIds = new Set<string>();
-  for (const currentPlayerId of currentPlayerIdBySlot) {
-    if (currentPlayerId !== null) {
-      startingPlayerIds.add(currentPlayerId);
-    }
-  }
   currentPlayerIdBySlot.forEach((currentPlayerId, i) => {
     if (currentPlayerId === null) return;
     const processed = processedById.get(currentPlayerId);
@@ -134,10 +130,14 @@ export function recommendLineup(input: RecommendLineupInput): RecommendLineupRes
     }
   });
 
-  // Step c: a locked player who is not currently starting anywhere cannot be moved in.
+  // Step c: every locked player's fate is already fully determined - pinned to their current
+  // slot via `lockedSlotIndexes` above if they are a current starter, otherwise simply
+  // unavailable - so every locked player (starting or benched) is excluded from the solver pool.
+  // Without this, a locked current starter could also be assigned by the solver into a second,
+  // non-locked slot they're eligible for, duplicating them in the output (LINEUP-8).
   const lockedAndBenchedIds = new Set<string>();
   for (const [playerId, processed] of processedById) {
-    if (processed.locked && !startingPlayerIds.has(playerId)) {
+    if (processed.locked) {
       lockedAndBenchedIds.add(playerId);
     }
   }

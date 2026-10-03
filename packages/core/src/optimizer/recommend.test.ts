@@ -249,6 +249,80 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
     expect(result.issues).toEqual(slotWarnings);
   });
 
+  it("does not double-book a locked current starter into a second eligible slot (bug fix)", () => {
+    // Bug report reproduction: two QB slots, one player QB1 who is a locked current starter in
+    // slot 1, slot 0 has no other eligible candidate. QB1's fate is fully determined by slot 1
+    // (LINEUP-3); they must not also be assignable into slot 0 by the solver. Before the fix,
+    // `lockedAndBenchedIds` only excluded locked players who were NOT a current starter, so QB1
+    // stayed in `solverPlayers` and got assigned to slot 0 too, duplicating them in the output.
+    // Expected: slot 1 stays pinned to QB1, slot 0 resolves to null with an EMPTY_SLOT issue.
+    const slots = [slot("QB", ["QB"]), slot("QB", ["QB"])];
+    const players = [
+      player({
+        playerId: "QB1",
+        fantasyPositions: ["QB"],
+        rawValue: 20,
+        kickoffUtc: AFTER_KICKOFF,
+      }),
+    ];
+    const result = recommendLineup({
+      slots,
+      slotWarnings: [],
+      players,
+      currentAssignment: [null, "QB1"],
+      now: NOW,
+    });
+
+    expect(result.optimalAssignment).toEqual([
+      { slotType: "QB", playerId: null },
+      { slotType: "QB", playerId: "QB1" },
+    ]);
+    // The core invariant the property test checks: no player id appears in more than one slot.
+    const assignedIds = result.optimalAssignment
+      .map((a) => a.playerId)
+      .filter((id): id is string => id !== null);
+    expect(new Set(assignedIds).size).toBe(assignedIds.length);
+    expect(result.issues).toContainEqual({
+      code: "EMPTY_SLOT",
+      label: "No eligible player available for QB",
+      value: "QB",
+    });
+  });
+
+  it("still solves normally for other slots when a locked starter is excluded from the pool", () => {
+    // Same setup as above, but with a second, non-locked, eligible player of lower value than
+    // the locked starter. The locked slot must stay pinned to QB1 (unaffected by the solver run),
+    // and the other slot must now resolve to QB2, proving locked players are excluded from the
+    // solver pool while everyone else still solves normally.
+    const slots = [slot("QB", ["QB"]), slot("QB", ["QB"])];
+    const players = [
+      player({
+        playerId: "QB1",
+        fantasyPositions: ["QB"],
+        rawValue: 20,
+        kickoffUtc: AFTER_KICKOFF,
+      }),
+      player({
+        playerId: "QB2",
+        fantasyPositions: ["QB"],
+        rawValue: 5,
+        kickoffUtc: BEFORE_KICKOFF,
+      }),
+    ];
+    const result = recommendLineup({
+      slots,
+      slotWarnings: [],
+      players,
+      currentAssignment: [null, "QB1"],
+      now: NOW,
+    });
+
+    expect(result.optimalAssignment).toEqual([
+      { slotType: "QB", playerId: "QB2" },
+      { slotType: "QB", playerId: "QB1" },
+    ]);
+  });
+
   it("echoes the current assignment normalized and parallel to slots", () => {
     const slots = [slot("RB", ["RB"]), slot("WR", ["WR"])];
     const players = [player({ playerId: "RB1", fantasyPositions: ["RB"], rawValue: 5 })];
