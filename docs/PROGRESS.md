@@ -34,7 +34,7 @@ Split per ADR-013. Batches run in order A to G; tasks in the same batch run in p
 | T3.6 | Golden optimizer scenarios (12+) and property tests (1000+ runs, LINEUP-8) | qa-engineer | T3.4b | D | Done | 1 (+2 fix rounds) | d2550d4, fixes 6137927 |
 | T3.2e | `packages/db` read helpers: `players` (team/position), `schedule`, `league_player_week_points` content | backend-engineer | G2 | E | Done | 1 | edc3057 |
 | T3.5c | MATCH-3 backtest harness: grid-search alpha/beta, update T3.5a's constant if it clears the 1% MAE bar, report | analytics-engineer | T3.5a | E | Done | 1 | e022826 |
-| T3.5b | Worker recompute hook materializing `defense_vs_position` (calls T3.5a) | sleeper-data-engineer | T3.5a, T3.2a, T3.2e | F | Not started | 0 | |
+| T3.5b | Worker recompute hook materializing `defense_vs_position` (calls T3.5a) | sleeper-data-engineer | T3.5a, T3.2a, T3.2e | F | Done | 1 | c3ba684 |
 | T3.7 | Lineup data function and API with caching | backend-engineer | T3.4b, T3.5b | G | Not started | 0 | |
 | T3.8a | Lineup page | frontend-engineer | T3.7 | H | Not started | 0 | |
 | T3.8b | Home "This week" lineup issues card; carried Phase 2 design backlog (scoreboard hero, lime accent, You badge, roster stat slot) | frontend-engineer | T3.7 | H | Not started | 0 | |
