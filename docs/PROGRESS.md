@@ -8,7 +8,7 @@
 | 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
 | 2 App shell and league views | G2 (human) | `phase/2-shell` (merged) | Done, G2 PASS 2026-10-02 (Steph approved) |
 | 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
-| 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` | All tasks done (T4.1-T4.8c, T4.7), ready for G4 gate |
+| 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` | Done, G4 PASS 2026-10-03 (human checkpoint optional, awaiting Steph's reply, not blocking Phase 5) |
 | 5 Matchups and league intelligence | G5 | | Not started |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
 
@@ -55,7 +55,9 @@ Steph ran the implementation locally (`pnpm dev:lan`, real synced league data) a
 | Issue | Fix | Commit |
 |---|---|---|
 | WAIVER-6d `computeNextWaiverClear` approximated America/New_York with a fixed UTC-5 offset, wrong by exactly 1 hour during EDT (mid-March to early November, most of the NFL season). Found live by the orchestrator checking against Steph's real league settings (`waiver_day_of_week=2`, `waiver_clear_days=2`): 2026-10-03 (EDT) computed a clear time that displayed as 4:00 AM ET against a "3:00 ET" label. | Resolves the real DST-aware offset per-instant with the same `Intl.DateTimeFormat` technique `packages/providers/src/schedule.ts` already uses for kickoff times, reimplemented locally in `packages/core` (no new cross-package dependency). `etUtcOffsetHours` is now `@deprecated` and ignored. Includes a 2-line orchestrator fix to a golden test that hardcoded the same wrong offset for a January/EST case. | `624771b` [T4.9] |
-| No script existed to run the G4 phase check "beta image runs against live data for 30 minutes with healthy sync runs". | devops-engineer building `pnpm gate:soak [--minutes=N]`, reusable for Phase 6's 60-minute soak too. In flight as of this writing. | [T4.10] |
+| No script existed to run the G4 phase check "beta image runs against live data for 30 minutes with healthy sync runs". | `pnpm gate:soak [--minutes=N]`, reusable for Phase 6's 60-minute soak too. Real 30-minute run: 15/15 sync runs succeeded, zero failures, zero stuck rows. | `f6a8093` [T4.10] |
+| `pnpm gate`'s coverage-instrumented run (U2a) failed deterministically: V8 coverage instrumentation inflated WAIVER-2's 450-Hungarian-solve perf test from ~266ms (real) to 2000-3800ms, blowing its own margin and the real spec budget. Test-tooling artifact, not a production regression (7.5x real margin). | Excluded `*.perf.test.ts` from `--coverage` runs only; `pnpm verify`/`test:unit` still run them for real. Confirmed no coverage-threshold regression. | `974f380` |
+| `e2e/pages.spec.ts`'s STATE-2/STATE-3 still asserted Waivers and Players render as stub placeholders, stale since T4.6a/T4.6b shipped real pages. | Scoped the stub-page assertion to Matchup, the only section still a stub. Found and fixed by qa-engineer's own gate run. | `974f380` |
 
 ## Earlier phases
 
