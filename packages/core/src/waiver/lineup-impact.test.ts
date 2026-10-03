@@ -239,6 +239,114 @@ describe("computeLineupImpact (WAIVER-2)", () => {
     expect(result.impact).toBeCloseTo(10, 9);
   });
 
+  it("never auto-drops the only DEF-eligible player when the league requires a starting DEF, even when that DEF is the lowest-ROS-value player (bug fix)", () => {
+    // League requires a starting DEF. Roster has exactly one DEF-eligible player (lowest ROS
+    // value on the roster, 5) and a clearly safe, non-critical low-value bench WR (ROS 8) who
+    // isn't the only one filling any required slot (there's another WR too).
+    const roster = [
+      rosterPlayer("QB1", ["QB"], { 1: 20 }, 150),
+      rosterPlayer("RB1", ["RB"], { 1: 15 }, 100),
+      rosterPlayer("WR1", ["WR"], { 1: 12 }, 90),
+      rosterPlayer("WR2", ["WR"], { 1: 1 }, 8), // safe to drop: not the only WR
+      rosterPlayer("DEF1", ["DEF"], { 1: 4 }, 5), // lowest ROS overall, but the ONLY DEF
+    ];
+    const candidate: LineupImpactCandidate = {
+      playerId: "CAND",
+      fantasyPositions: ["RB"],
+      weeklyValues: { 1: 1 },
+    };
+    const result = computeLineupImpact({
+      rosterPositions: ["QB", "RB", "WR", "DEF", "BN"],
+      roster,
+      candidate,
+      weeks: [1],
+    });
+
+    expect(result.droppedPlayerId).toBe("WR2");
+    expect(result.droppedPlayerId).not.toBe("DEF1");
+  });
+
+  it("allows auto-dropping a DEF when a second DEF-eligible player remains to fill the required slot", () => {
+    const roster = [
+      rosterPlayer("QB1", ["QB"], { 1: 20 }, 150),
+      rosterPlayer("RB1", ["RB"], { 1: 15 }, 100),
+      rosterPlayer("WR1", ["WR"], { 1: 12 }, 90),
+      rosterPlayer("DEF1", ["DEF"], { 1: 4 }, 5), // tied lowest ROS, but a safe drop now
+      rosterPlayer("DEF2", ["DEF"], { 1: 4 }, 5), // the other DEF remains to fill the slot
+    ];
+    const candidate: LineupImpactCandidate = {
+      playerId: "CAND",
+      fantasyPositions: ["RB"],
+      weeklyValues: { 1: 1 },
+    };
+    const result = computeLineupImpact({
+      rosterPositions: ["QB", "RB", "WR", "DEF", "BN"],
+      roster,
+      candidate,
+      weeks: [1],
+    });
+
+    // Both DEFs are equally safe (one remains either way); tie-break is ascending playerId.
+    expect(result.droppedPlayerId).toBe("DEF1");
+  });
+
+  it("falls back to the plain lowest-ROS-value pick when the roster is already short-staffed before any drop", () => {
+    // League requires 2 WR but this roster only has 1 active WR-eligible player: already
+    // infeasible before any drop. The fix must not incorrectly report NO_LEGAL_DROP here; it
+    // should fall back to today's unrestricted lowest-ROS-value behavior.
+    const roster = [
+      rosterPlayer("QB1", ["QB"], { 1: 20 }, 150),
+      rosterPlayer("RB1", ["RB"], { 1: 15 }, 100),
+      rosterPlayer("WR1", ["WR"], { 1: 12 }, 90),
+      rosterPlayer("TE1", ["TE"], { 1: 3 }, 10), // lowest ROS value
+    ];
+    const candidate: LineupImpactCandidate = {
+      playerId: "CAND",
+      fantasyPositions: ["RB"],
+      weeklyValues: { 1: 1 },
+    };
+    const result = computeLineupImpact({
+      rosterPositions: ["QB", "RB", "WR", "WR", "BN"], // 2 WR slots required, only 1 WR rostered
+      roster,
+      candidate,
+      weeks: [1],
+    });
+
+    expect(result.droppedPlayerId).toBe("TE1");
+    expect(result.reasons.some((r) => r.code === "NO_LEGAL_DROP")).toBe(false);
+  });
+
+  it("accounts for shared flex eligibility (not a naive per-position headcount) when checking slot feasibility", () => {
+    // Slots: RB, WR, FLEX(RB/WR/TE). Roster: RB1, WR1, WR2, TE1 (TE1 lowest ROS). A naive
+    // "exact position headcount" check might reason "TE1 is the only TE, and FLEX could need a
+    // TE, so TE1 looks load-bearing" and wrongly block dropping it. In fact TE1 is perfectly safe
+    // to drop: WR2 (not needed by the single direct WR slot once WR1 covers it) can fill FLEX
+    // instead, since FLEX also accepts WR. Only the real bipartite solve sees that redundancy.
+    const roster = [
+      rosterPlayer("RB1", ["RB"], { 1: 15 }, 100),
+      rosterPlayer("WR1", ["WR"], { 1: 12 }, 90),
+      rosterPlayer("WR2", ["WR"], { 1: 5 }, 20),
+      rosterPlayer("TE1", ["TE"], { 1: 3 }, 10), // lowest ROS; safe via WR2's shared flex eligibility
+    ];
+    const candidate: LineupImpactCandidate = {
+      playerId: "CAND",
+      fantasyPositions: ["TE"],
+      weeklyValues: { 1: 1 },
+    };
+    const result = computeLineupImpact({
+      rosterPositions: ["RB", "WR", "FLEX", "BN"],
+      roster,
+      candidate,
+      weeks: [1],
+    });
+
+    // Full roster: RB1->RB, WR1->WR, FLEX->WR2 or TE1 (feasible either way). Dropping TE1 leaves
+    // RB1->RB, WR1->WR, FLEX->WR2: still feasible, so TE1 (the true lowest-ROS player) is
+    // correctly allowed as the auto-drop; an over-conservative naive headcount would have
+    // excluded it and picked WR2 instead.
+    expect(result.droppedPlayerId).toBe("TE1");
+  });
+
   it("passes through unknown-slot-type warnings from resolveSlots", () => {
     const candidate: LineupImpactCandidate = {
       playerId: "CAND",

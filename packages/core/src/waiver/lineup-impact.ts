@@ -16,6 +16,15 @@
  * league's `Roster.reserve` array - this module only reads the boolean it is handed). The caller
  * may override with `dropPlayerId`.
  *
+ * The auto-selection never suggests dropping a player whose removal would leave some required
+ * starting slot (per `resolveSlots(rosterPositions).slots`) with no eligible player left among the
+ * rest of the non-IR roster - e.g. a roster's only DEF-eligible player in a league that starts a
+ * DEF, even when that DEF happens to be the lowest-ROS-value player on the roster. This is a
+ * feasibility check via {@link solveOptimalAssignment} (see `canFillAllSlots`/`pickAutoDrop`
+ * below), not a per-position headcount, so it correctly accounts for shared flex eligibility. When
+ * the full non-IR roster cannot itself fill every required slot (a pre-existing gap, not one this
+ * drop would cause), the restriction is skipped and the plain lowest-ROS-value pick is used.
+ *
  * ## Degenerate "no legal drop" case
  * Two situations produce no drop rather than a crash, both reported via a `Reason`:
  * - No `dropPlayerId` is given and every roster player is IR (or the roster is empty): there is no
@@ -40,7 +49,7 @@
  * zeroed value is harmless to include in the pool.
  */
 import type { Reason } from "@sideline/shared";
-import { resolveSlots } from "../optimizer/eligibility.js";
+import { resolveSlots, type SlotSpec } from "../optimizer/eligibility.js";
 import { solveOptimalAssignment, type AssignmentPlayer } from "../optimizer/solve.js";
 import {
   restOfSeasonProjection,
@@ -122,7 +131,7 @@ function at<T>(arr: readonly T[], index: number): T {
 function pickLowestRosValue(
   candidates: readonly LineupImpactRosterPlayer[],
 ): LineupImpactRosterPlayer {
-  // `candidates` is checked non-empty by the only call site before calling this.
+  // `candidates` is checked non-empty by both call sites before calling this.
   let lowest = at(candidates, 0);
   let lowestValue = restOfSeasonProjection(lowest.rosInput).points;
   for (let i = 1; i < candidates.length; i++) {
@@ -141,6 +150,74 @@ function toAssignmentPlayer(player: {
   fantasyPositions: readonly string[];
 }): AssignmentPlayer {
   return { playerId: player.playerId, fantasyPositions: player.fantasyPositions };
+}
+
+/**
+ * Feasibility-only constant used in {@link canFillAllSlots}: every candidate gets the same
+ * strictly positive value so the Hungarian solver's eligibility-driven assignment is exercised
+ * with no preference between players, only "is there a legal full assignment at all".
+ */
+const FEASIBILITY_CHECK_VALUE = 1;
+
+/**
+ * True iff every slot in `slots` can be filled by a distinct eligible player drawn from `players`
+ * (a feasible complete lineup exists with this exact player pool). Reuses
+ * {@link solveOptimalAssignment} as a pure feasibility check: every candidate is given the same
+ * constant positive value (so the solver has no reason to leave a fillable slot empty in favor of
+ * a "better" player elsewhere - see `solve.ts`'s tiebreak doc, a positive value always beats
+ * leaving a slot empty), so the result fills every fillable slot iff a feasible assignment exists.
+ */
+function canFillAllSlots(
+  players: readonly { playerId: string; fantasyPositions: readonly string[] }[],
+  slots: readonly SlotSpec[],
+): boolean {
+  if (slots.length === 0) {
+    return true;
+  }
+  const values: Record<string, number> = {};
+  for (const player of players) {
+    values[player.playerId] = FEASIBILITY_CHECK_VALUE;
+  }
+  const { assignments } = solveOptimalAssignment({
+    slots,
+    players: players.map(toAssignmentPlayer),
+    values,
+  });
+  return assignments.every((assignment) => assignment.playerId !== null);
+}
+
+/**
+ * WAIVER-2 bug fix: picks the auto-selected drop from `nonIR`, never choosing a player whose
+ * removal would leave some required starting slot (per `slots`) unfillable by the rest of the
+ * non-IR roster - e.g. a roster's only DEF-eligible player in a league that starts a DEF, where
+ * that DEF also happens to be the roster's lowest-ROS-value player.
+ *
+ * Only restricts the pool when the full non-IR roster is itself feasible (every slot can be
+ * filled today). When the roster is already short-staffed at some slot before any drop (a
+ * pre-existing gap this drop isn't causing - PLAN 5.6 requirement 3), every candidate would fail
+ * the "safe" filter, which is wrong; in that case this falls back to the plain unrestricted
+ * lowest-ROS-value pick (the pre-fix behavior).
+ */
+function pickAutoDrop(
+  nonIR: readonly LineupImpactRosterPlayer[],
+  slots: readonly SlotSpec[],
+): { player: LineupImpactRosterPlayer; constrained: boolean } {
+  if (!canFillAllSlots(nonIR, slots)) {
+    // Already infeasible with everyone rostered: no drop could be "unsafe" relative to this
+    // pre-existing gap, so fall back to the original unrestricted selection.
+    return { player: pickLowestRosValue(nonIR), constrained: false };
+  }
+
+  const safeCandidates = nonIR.filter((candidate) => {
+    const remaining = nonIR.filter((player) => player.playerId !== candidate.playerId);
+    return canFillAllSlots(remaining, slots);
+  });
+
+  // The full roster is feasible, so dropping no one is always "safe" in that degenerate sense;
+  // `safeCandidates` can only be empty if `nonIR` itself has exactly 0 players, but that case is
+  // handled by the caller before `pickAutoDrop` is invoked.
+  const pool = safeCandidates.length > 0 ? safeCandidates : nonIR;
+  return { player: pickLowestRosValue(pool), constrained: pool.length < nonIR.length };
 }
 
 /** WAIVER-2: computes Lineup Impact for one candidate across `input.weeks`. */
@@ -175,7 +252,7 @@ export function computeLineupImpact(input: LineupImpactInput): LineupImpactResul
         label: "No one on your roster can be dropped, so we're evaluating this as a straight add",
       });
     } else {
-      droppedPlayerId = pickLowestRosValue(nonIR).playerId;
+      droppedPlayerId = pickAutoDrop(nonIR, slots).player.playerId;
       reasons.push({
         code: "SUGGESTED_DROP",
         label: "We suggest dropping your lowest-value player for the rest of the season",
