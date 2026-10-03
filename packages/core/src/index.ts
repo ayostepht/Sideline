@@ -11,3 +11,7 @@ export * from "./optimizer/solve.js";
 export * from "./optimizer/locks.js";
 export * from "./optimizer/availability.js";
 export * from "./optimizer/recommend.js";
+export * from "./matchup/defense-vs-position.js";
+export * from "./matchup/multiplier.js";
+export * from "./matchup/grade.js";
+export * from "./matchup/config.js";
