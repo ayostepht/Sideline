@@ -15,6 +15,9 @@ import { pathToFileURL } from "node:url";
 import pino, { type Logger } from "pino";
 import { createAllJobs } from "../jobs/index.js";
 import { runOnboardingJob } from "../jobs/onboarding.js";
+import { createDefenseVsPositionRecomputeHook } from "../recompute-hooks/defense-vs-position.js";
+import { createLeaguePointsRecomputeHook } from "../recompute-hooks/league-points.js";
+import { recomputeHooks } from "../recompute.js";
 import { createJobRegistry } from "../registry.js";
 import { createFixtureFetch, FIXTURES_DIR, readManifest } from "../fixture-fetch.js";
 import { runSyncCli } from "./sync.js";
@@ -103,17 +106,33 @@ export async function runSeed(deps: SeedDeps): Promise<number> {
   // The recording time is the clock: it matches the stored state and precedes the week's kickoffs.
   const now = (): Date => new Date(manifest.recordedAt);
   try {
-    const code = await runSyncCli(["--once", "--job=all"], {
-      config,
-      registry: createJobRegistry(
-        createAllJobs({ sleeper: { fetch: fixtureFetch }, nflverse: { fetch: fixtureFetch } }),
-      ),
-      limiter: deps.limiter ?? new RateLimiter(),
-      logger: deps.logger ?? pino({ level: "silent" }),
-      now,
-      sleep: () => Promise.resolve(),
-      out: deps.out,
-    });
+    // This CLI runs its own job pipeline rather than exec-ing cli/sync.ts as a process (that
+    // file's own bootstrap guard, which registers the same hook, never runs here), so register
+    // and unregister around this one run instead of relying on a process-level singleton that
+    // could otherwise accumulate duplicate hooks across repeated calls within one process (tests).
+    const unregisterLeaguePoints = recomputeHooks.register(
+      createLeaguePointsRecomputeHook({ logger: deps.logger ?? pino({ level: "silent" }) }),
+    );
+    const unregisterDefenseVsPosition = recomputeHooks.register(
+      createDefenseVsPositionRecomputeHook({ logger: deps.logger ?? pino({ level: "silent" }) }),
+    );
+    let code: number;
+    try {
+      code = await runSyncCli(["--once", "--job=all"], {
+        config,
+        registry: createJobRegistry(
+          createAllJobs({ sleeper: { fetch: fixtureFetch }, nflverse: { fetch: fixtureFetch } }),
+        ),
+        limiter: deps.limiter ?? new RateLimiter(),
+        logger: deps.logger ?? pino({ level: "silent" }),
+        now,
+        sleep: () => Promise.resolve(),
+        out: deps.out,
+      });
+    } finally {
+      unregisterLeaguePoints();
+      unregisterDefenseVsPosition();
+    }
     if (deps.noIdentity !== true) await seedIdentity(deps, config, manifest, fixtureFetch, now);
     const db = openDb(dbPathFromDataDir(config.dataDir));
     try {

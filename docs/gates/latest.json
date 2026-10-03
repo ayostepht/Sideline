@@ -1,9 +1,9 @@
 {
-  "startedAt": "2026-10-02T22:46:32.190Z",
-  "finishedAt": "2026-10-02T22:51:58.003Z",
-  "gitCommit": "0c1b4a346b77a3b8ebacf16d8a42608d18e83375",
-  "gitBranch": "phase/2-shell",
-  "dirty": false,
+  "startedAt": "2026-10-03T13:33:00.588Z",
+  "finishedAt": "2026-10-03T13:39:11.909Z",
+  "gitCommit": "769e87bfecdd4dc9e46e0ea9013e2f6687a935ad",
+  "gitBranch": "phase/3-scoring",
+  "dirty": true,
   "partial": false,
   "baselines": {
     "eslintWarnings": 0
@@ -13,7 +13,7 @@
       "id": "U1",
       "name": "Typecheck, lint, format, unit tests (pnpm verify)",
       "status": "PASS",
-      "durationMs": 27718,
+      "durationMs": 53665,
       "logFile": ".gate/logs/U1.log",
       "metrics": {
         "eslintWarnings": 0,
@@ -25,29 +25,29 @@
       "id": "U2a",
       "name": "Unit tests with coverage thresholds",
       "status": "PASS",
-      "durationMs": 5492,
+      "durationMs": 8046,
       "logFile": ".gate/logs/U2a.log",
       "metrics": {
         "coverage": {
           "apps/web": {
-            "linesPct": 98.53,
-            "branchesPct": 92.35
+            "linesPct": 94.56,
+            "branchesPct": 85.43
           },
           "apps/worker": {
-            "linesPct": 90.05,
-            "branchesPct": 81.29
+            "linesPct": 90.57,
+            "branchesPct": 82.36
           },
           "packages/core": {
-            "linesPct": 100,
-            "branchesPct": null
+            "linesPct": 98.58,
+            "branchesPct": 92.55
           },
           "packages/db": {
-            "linesPct": 95.88,
-            "branchesPct": 90.21
+            "linesPct": 96.13,
+            "branchesPct": 89.8
           },
           "packages/providers": {
             "linesPct": 97.53,
-            "branchesPct": 80.36
+            "branchesPct": 80.8
           },
           "packages/shared": {
             "linesPct": 100,
@@ -64,31 +64,31 @@
       "id": "U2b",
       "name": "Integration tests",
       "status": "PASS",
-      "durationMs": 5666,
+      "durationMs": 6158,
       "logFile": ".gate/logs/U2b.log"
     },
     {
       "id": "U3a",
       "name": "Production build and route JS budget",
       "status": "PASS",
-      "durationMs": 9702,
+      "durationMs": 9725,
       "logFile": ".gate/logs/U3a.log",
       "metrics": {
         "routeJsGzipBytes": {
-          "/": 153285,
-          "/_global-error": 153285,
-          "/_not-found": 153285,
-          "/dev/gallery": 193866,
-          "/l/[leagueId]": 163228,
-          "/l/[leagueId]/league": 163228,
-          "/l/[leagueId]/league/teams/[rosterId]": 163476,
-          "/l/[leagueId]/lineup": 163420,
-          "/l/[leagueId]/matchup": 163420,
-          "/l/[leagueId]/players": 163420,
-          "/l/[leagueId]/settings": 169200,
-          "/l/[leagueId]/team": 163327,
-          "/l/[leagueId]/waivers": 163420,
-          "/onboarding": 159086
+          "/": 153280,
+          "/_global-error": 153280,
+          "/_not-found": 153280,
+          "/dev/gallery": 193887,
+          "/l/[leagueId]": 163229,
+          "/l/[leagueId]/league": 163229,
+          "/l/[leagueId]/league/teams/[rosterId]": 163477,
+          "/l/[leagueId]/lineup": 178735,
+          "/l/[leagueId]/matchup": 163416,
+          "/l/[leagueId]/players": 163416,
+          "/l/[leagueId]/settings": 169201,
+          "/l/[leagueId]/team": 163328,
+          "/l/[leagueId]/waivers": 163416,
+          "/onboarding": 159081
         },
         "budgetBytes": 204800
       }
@@ -97,10 +97,10 @@
       "id": "U4",
       "name": "Static scan: skips, any, lint disables, TODOs",
       "status": "PASS",
-      "durationMs": 40,
+      "durationMs": 45,
       "logFile": ".gate/logs/U4.log",
       "metrics": {
-        "filesScanned": 353,
+        "filesScanned": 416,
         "findings": 0,
         "byRule": {}
       }
@@ -109,10 +109,10 @@
       "id": "UI1",
       "name": "E2E suite on all Playwright projects (includes UI5)",
       "status": "PASS",
-      "durationMs": 52687,
+      "durationMs": 54784,
       "logFile": ".gate/logs/UI1.log",
       "metrics": {
-        "expected": 294,
+        "expected": 312,
         "unexpected": 0,
         "flaky": 0,
         "skipped": 0,
@@ -142,10 +142,10 @@
       "id": "UI2",
       "name": "axe accessibility, light and dark",
       "status": "PASS",
-      "durationMs": 46978,
+      "durationMs": 49268,
       "logFile": ".gate/logs/UI2.log",
       "metrics": {
-        "expected": 290,
+        "expected": 308,
         "unexpected": 0,
         "flaky": 0,
         "skipped": 0,
@@ -175,14 +175,14 @@
       "id": "UI4",
       "name": "Screenshots at 390/768/1280, light and dark, from the seeded fixture DB",
       "status": "PASS",
-      "durationMs": 54016,
+      "durationMs": 54662,
       "logFile": ".gate/logs/UI4.log"
     },
     {
       "id": "UI3",
       "name": "Lighthouse mobile budgets",
       "status": "PASS",
-      "durationMs": 62568,
+      "durationMs": 62837,
       "logFile": ".gate/logs/UI3.log",
       "metrics": {
         "scores": {
@@ -211,28 +211,28 @@
       "id": "U3b",
       "name": "Docker image builds, starts, serves /api/health",
       "status": "PASS",
-      "durationMs": 23478,
+      "durationMs": 22211,
       "logFile": ".gate/logs/U3b.log",
       "metrics": {
         "image": "sideline-gate:native",
-        "imageSizeBytes": 105770374,
+        "imageSizeBytes": 105795088,
         "imageSizeMb": 100.9,
         "architecture": "arm64",
-        "startupSeconds": 0.8
+        "startupSeconds": 0.7
       }
     },
     {
       "id": "U3c",
       "name": "Docker image for linux/amd64 builds, starts, serves /api/health",
       "status": "PASS",
-      "durationMs": 37427,
+      "durationMs": 49772,
       "logFile": ".gate/logs/U3c.log",
       "metrics": {
         "image": "sideline-gate:amd64",
-        "imageSizeBytes": 105669239,
+        "imageSizeBytes": 105693981,
         "imageSizeMb": 100.8,
         "architecture": "amd64",
-        "startupSeconds": 1.8
+        "startupSeconds": 1.6
       }
     }
   ],

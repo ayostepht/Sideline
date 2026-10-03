@@ -1,12 +1,11 @@
-import type { StandingsRow, TeamPlayerRow } from "@sideline/shared";
+import type { LineupPlayer, Reason, StandingsRow, TeamPlayerRow } from "@sideline/shared";
 import { describe, expect, it } from "vitest";
 import {
-  countStarterIssues,
   displayName,
   formatPoints,
   formatRecord,
   groupPlayers,
-  issuesText,
+  lineupIssueLabel,
   selectStandingsSnippet,
 } from "./format";
 
@@ -58,26 +57,6 @@ describe("format", () => {
     expect(selectStandingsSnippet([])).toEqual([]);
   });
 
-  it("counts starters who are out, IR or on bye", () => {
-    const ps = [
-      player({ injuryStatus: "Out" }),
-      player({ injuryStatus: "IR" }),
-      player({ byeWeek: 5 }),
-      player({ injuryStatus: "Questionable" }),
-      player({ injuryStatus: "Out", slot: "bench", starterSlot: null }),
-      player({ byeWeek: 5, injuryStatus: "Out" }),
-    ];
-    expect(countStarterIssues(ps, 5)).toBe(4);
-    expect(countStarterIssues(ps, null)).toBe(3);
-    expect(countStarterIssues([], 5)).toBe(0);
-  });
-
-  it("words the issues text", () => {
-    expect(issuesText(0)).toBe("No lineup issues this week");
-    expect(issuesText(1)).toBe("1 starter needs attention");
-    expect(issuesText(3)).toBe("3 starters need attention");
-  });
-
   it("groups players and names unknowns", () => {
     const g = groupPlayers([
       player({}),
@@ -87,5 +66,67 @@ describe("format", () => {
     expect([g.starters.length, g.bench.length, g.ir.length, g.taxi.length]).toEqual([1, 0, 1, 1]);
     expect(displayName({ name: "", playerId: "99" })).toBe("Player 99");
     expect(displayName({ name: "Ann", playerId: "99" })).toBe("Ann");
+  });
+
+  it("builds plain-language lineup issue copy", () => {
+    const lineupPlayer = (over: Partial<LineupPlayer>): LineupPlayer => ({
+      playerId: "42",
+      name: "Jo Doe",
+      position: "RB",
+      nflTeam: "KC",
+      status: null,
+      injuryStatus: null,
+      byeWeek: null,
+      value: 0,
+      matchupGrade: null,
+      matchupLabel: null,
+      locked: false,
+      kickoffApproximate: false,
+      reasons: [],
+      ...over,
+    });
+    const byeReason: Reason = { code: "UNAVAILABLE", label: "On bye this week", impact: -10 };
+    const players: LineupPlayer[] = [lineupPlayer({ reasons: [byeReason] })];
+
+    expect(
+      lineupIssueLabel(
+        {
+          code: "INACTIVE_STARTER",
+          label: "Currently started player 42 is unavailable",
+          value: "42",
+        },
+        players,
+      ),
+    ).toBe("Jo Doe: On bye this week");
+
+    expect(
+      lineupIssueLabel(
+        {
+          code: "INACTIVE_STARTER",
+          label: "Currently started player 99 is unavailable",
+          value: "99",
+        },
+        players,
+      ),
+    ).toBe("Currently started player 99 is unavailable");
+
+    expect(
+      lineupIssueLabel(
+        { code: "EMPTY_SLOT", label: "No eligible player available for RB", value: "RB" },
+        players,
+      ),
+    ).toBe("No eligible player available for RB");
+
+    const noReasonPlayers: LineupPlayer[] = [lineupPlayer({})];
+    expect(
+      lineupIssueLabel(
+        {
+          code: "INACTIVE_STARTER",
+          label: "Currently started player 42 is unavailable",
+          value: "42",
+        },
+        noReasonPlayers,
+      ),
+    ).toBe("Jo Doe is unavailable");
   });
 });

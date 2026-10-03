@@ -20,7 +20,16 @@ const manifest = JSON.parse(
 export const RECORDED_AT = manifest.recordedAt;
 export const LEAGUE_ID = manifest.leagueId;
 
-/** Tables and exact counts produced by a full fixture sync (db:seed:fixtures). */
+/**
+ * Tables and exact counts produced by a full fixture sync (db:seed:fixtures).
+ *
+ * player_week_stats: 1815, not 639. G3-FIX-1 (51a1a31) made statsJob self-heal every
+ * missing earlier week on a fresh sync, not just the last two. The fixture stats cover
+ * weeks 1-4 (578 + 616 + 648 + 0 players; week 4 is partial per ADR-000 item 9), so a
+ * from-empty sync now fetches all four weeks instead of only weeks 3-4 (~648 rows, the
+ * old 639 after row-level filtering). Confirmed live: SCORE-2 went from a silent 38%
+ * (missing wk1-2) to 100% match after this fix (docs/HANDOFF.md, 2026-10-03).
+ */
 export const EXPECTED_COUNTS = {
   players: 1021,
   leagues: 1,
@@ -28,7 +37,7 @@ export const EXPECTED_COUNTS = {
   rosters: 10,
   matchups: 140,
   transactions: 27,
-  player_week_stats: 639,
+  player_week_stats: 1815,
   player_week_projections: 925,
   player_week_projection_snapshots: 893,
   trending: 100,

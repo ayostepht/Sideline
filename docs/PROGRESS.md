@@ -7,8 +7,8 @@
 | 0 Bootstrap and API spike | G0 | `phase/0-bootstrap` (merged) | Done, G0 PASS 2026-10-01 |
 | 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
 | 2 App shell and league views | G2 (human) | `phase/2-shell` (merged) | Done, G2 PASS 2026-10-02 (Steph approved) |
-| 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` | Next: plan batches (not started) |
-| 4 Waivers, players, Docker beta | G4 (human, optional) | | Not started |
+| 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
+| 4 Waivers, players, Docker beta | G4 (human, optional) | | Next: plan batches (not started) |
 | 5 Matchups and league intelligence | G5 | | Not started |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
 
@@ -18,7 +18,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 
 ## Earlier phases
 
-Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`. Standing rules for briefs are in `docs/brief-rules.md`.
+Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`. Standing rules for briefs are in `docs/brief-rules.md`.
 
 ## Backlog (open items only)
 
@@ -65,8 +65,21 @@ Remove an item when it is done; the archive keeps history.
 - Fixtures 5.6 MB of a 6 MB target: re-record with trimming, not growth.
 - pnpm peer-dependency warning on install not investigated; @types/better-sqlite3 9.6.0 may lag v13.
 
+### Carried from Phase 3
+
+Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
+
+- **Lineup "why" needs more detail (Steph, G3 approval 2026-10-03).** See "Later phases" below.
+- **Lighthouse (`lighthouserc.json`) only measures Home and League; Lineup (T3.8) was never added.** Add it before Phase 4 adds Waivers/Players too (devops/qa).
+- **Lineup route JS is 178,735 B, over the 170,000 B soft target** (under the 200,000 B hard budget). Watch before Phase 4 adds more client code to that route (frontend-engineer).
+- `scheduleAlreadyStored` (`apps/worker/src/jobs/data-jobs.ts`) uses a raw SQL query instead of a typed `packages/db` helper, inconsistent with its siblings `readStoredStatsWeeks`/`readStoredProjectionWeeks`.
+- Three UX Minors (deferred by Steph): Lineup's summary banner says "projected" even in Safe/Upside mode; its rounded total can disagree with its own swap rows (e.g. a signed "-0.0 pts") with no zero-delta floor like Home's `hasSwaps` guard; "this is your team" uses two different badge variants on the same Home page (`variant="accent"` vs `variant="you"`) -- standardize on `variant="you"`.
+- `packages/db`'s `computed_cache` keys only on data-input timestamps, never algorithm version, so a running instance could keep serving a pre-fix cached lineup until the next relevant sync. Related: the lineup cache (`getLineup`, T3.7) doesn't invalidate on an nflverse-only sync (ADR-013 item 19) -- zero impact today since alpha/beta is confirmed 0 by the real G3 backtest; revisit together if a future backtest ever ships non-zero alpha/beta.
+- Low-priority, pre-existing, not blocking: `matchupMultiplier`'s own clamp/avg-unavailable reasons aren't surfaced in the player DTO; a `schedule` coverage gap for a team/week silently reads as "not locked"; a player missing from `players` or a zero-eligible-player roster are handled defensively but untested; `applyAvailability` runs twice with identical inputs; `matchupGrade` has no `totalTeams === 0` guard; `defense_vs_position`'s worker hook recomputes every week from scratch (O(W^2), negligible at NFL scale); `solve.ts`'s `TIEBREAK_EPSILON` undocumented at unrealistic magnitudes; `validate.ts` reads one player-week at a time (fine for a manual script); `rescoreProjection`'s `stats` parameter has no nominal type separating a projection row from a real stats row.
+
 ### Later phases
 
+- **Lineup "why" needs more detail (Steph, G3 approval 2026-10-03): show each player's actual projected stat line/points number, and rewrite reason text in plain, human-readable language instead of terse labels.** Explicitly deferred by Steph to a future phase, not blocking G3. Touches the `Reason` payload (`packages/shared/src/reason.ts`, `{code, label, value, impact}`) and its rendering in `apps/web/app/l/[leagueId]/lineup/_components/slot-column.tsx`; likely needs both a shape change (surface the projected points number alongside the existing code/label) and a copy pass on every reason code's label (analytics-engineer for the payload, frontend-engineer for rendering and copy). Candidate for Phase 4 or a dedicated polish task.
 - T3.5 and T4.1 own the real `gradeFromScore` and `trendFromDelta` thresholds (placeholders now). No testing-library/jsdom: components have mapping tests only.
 - T4.3: supervisor starts the worker, runs migrations, PUID/PGID 99/100; worker container inherits NODE_ENV=production; trim better-sqlite3 prebuilds and sharp; revisit health (stale heartbeat fails the healthcheck).
 - T4.x auth refuses to start with an empty SESSION_SECRET or APP_PASSWORD.
@@ -75,4 +88,4 @@ Remove an item when it is done; the archive keeps history.
 
 ## Questions for Steph
 
-- None open. (G2 answered 2026-10-02: ADR-011, ADR-012, final approval.)
+- None open. (G2 answered 2026-10-02: ADR-011, ADR-012, final approval. G3 answered 2026-10-03: lineup recommendation and look/feel approved; wants more detail in the "why" -- projected stats plus plainer language -- deferred to a future phase, logged above; three Minor UX findings deferred; approved merge to `main` and tag `gate-G3`.)

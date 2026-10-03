@@ -49,7 +49,7 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  transpilePackages: ["@sideline/shared", "@sideline/db"],
+  transpilePackages: ["@sideline/shared", "@sideline/db", "@sideline/core"],
 };
 
 export default nextConfig;

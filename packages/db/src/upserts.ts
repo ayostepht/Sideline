@@ -536,6 +536,68 @@ export function upsertNflState(h: DbHandle, state: NflState, fetchedAt: string):
   ]);
 }
 
+/** Derived: league-scored points per player-week (PLAN 4.3/4.5, SCORE-1/SCORE-3). */
+export interface UpsertLeaguePlayerWeekPointsRow {
+  leagueId: string;
+  season: number;
+  week: number;
+  playerId: string;
+  actualPts: number | null;
+  projPts: number | null;
+}
+
+const LEAGUE_PLAYER_WEEK_POINTS: TableSpec = {
+  table: "league_player_week_points",
+  columns: ["league_id", "season", "week", "player_id", "actual_pts", "proj_pts"],
+  keys: ["league_id", "season", "week", "player_id"],
+};
+
+export function upsertLeaguePlayerWeekPoints(
+  h: DbHandle,
+  rows: readonly UpsertLeaguePlayerWeekPointsRow[],
+): UpsertResult {
+  return runUpsert(h, LEAGUE_PLAYER_WEEK_POINTS, rows, (r) => [
+    r.leagueId,
+    r.season,
+    r.week,
+    r.playerId,
+    r.actualPts,
+    r.projPts,
+  ]);
+}
+
+/** Derived: per-league points allowed by team and position, trailing through a week (MATCH-1). */
+export interface UpsertDefenseVsPositionRow {
+  leagueId: string;
+  season: number;
+  throughWeek: number;
+  team: string;
+  position: string;
+  ptsAllowedPg: number;
+  games: number;
+}
+
+const DEFENSE_VS_POSITION: TableSpec = {
+  table: "defense_vs_position",
+  columns: ["league_id", "season", "through_week", "team", "position", "pts_allowed_pg", "games"],
+  keys: ["league_id", "season", "through_week", "team", "position"],
+};
+
+export function upsertDefenseVsPosition(
+  h: DbHandle,
+  rows: readonly UpsertDefenseVsPositionRow[],
+): UpsertResult {
+  return runUpsert(h, DEFENSE_VS_POSITION, rows, (r) => [
+    r.leagueId,
+    r.season,
+    r.throughWeek,
+    r.team,
+    r.position,
+    r.ptsAllowedPg,
+    r.games,
+  ]);
+}
+
 /**
  * Replaces the whole set of trending rows of one type atomically. Counts rows deleted (absent from
  * the new set) plus rows inserted or whose count changed; an identical set counts 0.

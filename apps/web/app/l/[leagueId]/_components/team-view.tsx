@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DataFreshness } from "../../../../components/data-freshness";
 import { EmptyState } from "../../../../components/empty-state";
 import { PlayerRow } from "../../../../components/player-row";
+import { ScoreboardHero } from "../../../../components/scoreboard-hero";
 import { StaleBanner } from "../../../../components/stale-banner";
 import { Badge } from "../../../../components/ui/badge";
 import { displayName, formatPoints, formatRecord, groupPlayers, isOnBye } from "./format";
@@ -37,6 +38,7 @@ export function TeamView({
   highlight,
   heading,
   backHref,
+  totalRosters,
 }: {
   team: TeamDetail;
   week: number | null;
@@ -46,6 +48,8 @@ export function TeamView({
   heading: string;
   /** When set, shows a back link above the heading. */
   backHref?: string;
+  /** League size, for the Rank stat's "of N". Omitted when the caller has not fetched it. */
+  totalRosters?: number;
 }) {
   const { roster } = team;
   const g = groupPlayers(team.players);
@@ -72,6 +76,14 @@ export function TeamView({
           highlighted={on}
           highlightLabel="Search result"
           className="md:max-w-none"
+          // Reserves the stat column's width for weekly points once TeamPlayerRow carries them
+          // (backend follow-up, see RISKS in the T3.8b task report); kept invisible rather than
+          // fabricated so a future data addition does not shift this row's layout.
+          stat={
+            <span aria-hidden="true" className="invisible">
+              00.0
+            </span>
+          }
         />
       </div>
     );
@@ -101,13 +113,31 @@ export function TeamView({
             </Badge>
           ) : null}
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {roster.managerName ? `${roster.managerName} · ` : ""}
-          <span className="font-bold tabular-nums">
-            {formatRecord(roster)} · {formatPoints(roster.pointsFor)} PF
-          </span>
-        </p>
-        <DataFreshness freshness={team.freshness} now={now} className="mt-1" />
+        {roster.managerName ? (
+          <p className="mt-1 text-sm text-muted-foreground">{roster.managerName}</p>
+        ) : null}
+        <ScoreboardHero
+          className="mt-2"
+          stats={[
+            { label: "Record", value: formatRecord(roster) },
+            { label: "PF", value: formatPoints(roster.pointsFor) },
+            {
+              label: "Rank",
+              value:
+                totalRosters === undefined ? (
+                  `Rank ${roster.rank}`
+                ) : (
+                  <>
+                    {`Rank ${roster.rank}`}{" "}
+                    <span className="text-sm font-normal text-muted-foreground">
+                      of {totalRosters}
+                    </span>
+                  </>
+                ),
+            },
+          ]}
+        />
+        <DataFreshness freshness={team.freshness} now={now} className="mt-2" />
       </div>
       <StaleBanner freshness={team.freshness} now={now} />
       {week === null ? (

@@ -61,6 +61,14 @@ export default defineConfig({
           include: ["scripts/**/*.test.ts"],
         },
       },
+      // T3.6: golden and property tests for the lineup optimizer, black-box against
+      // packages/core's public exports. Pure in-memory, no I/O; part of `test:unit`.
+      {
+        test: {
+          name: "optimizer-suites",
+          include: ["tests/golden/**/*.test.ts", "tests/property/**/*.test.ts"],
+        },
+      },
       ...(requested.has("integration")
         ? [
             {

@@ -1,15 +1,17 @@
 import { readFileSync } from "node:fs";
 import { upsertSchedule, type DbHandle } from "@sideline/db";
-import { SYNC_JOB_NAMES, type SyncJobName } from "@sideline/shared";
+import type { NflverseProvider } from "@sideline/providers";
+import { SYNC_JOB_NAMES, type ScheduleGame, type SyncJobName } from "@sideline/shared";
 import { createCallCounter, RateLimiter } from "@sideline/sleeper";
 import pino from "pino";
 import { describe, expect, it } from "vitest";
 import { fakeClock, silent, tempDb, testConfig, tempDataDir } from "../testutil.js";
 import type { Job, JobContext } from "../types.js";
-import { BACKFILL_SEASON, POSITION_DROP_THRESHOLD } from "./data-jobs.js";
+import { BACKFILL_SEASON, POSITION_DROP_THRESHOLD, statsWeeksToFetch } from "./data-jobs.js";
 import { createSleeperJobs, registeredJobs } from "./index.js";
 import { SIDELINE_VERSION, STATE_MAX_AGE_MS } from "./common.js";
 import { matchupWeeksToFetch } from "./league-jobs.js";
+import type { NflverseJobDeps } from "./nflverse-job.js";
 
 const LEAGUE = "9000000000000000001";
 
@@ -26,7 +28,7 @@ interface Harness {
   run(
     name: SyncJobName,
     overrides?: Partial<JobContext>,
-  ): Promise<{ rowsChanged: number; status?: string; calls: number }>;
+  ): Promise<{ rowsChanged: number; status?: string; note?: string; calls: number }>;
   set(prefix: string, h: Handler): void;
 }
 
@@ -64,6 +66,51 @@ function statRow(id: string, team: string, position = "QB", proj = true): unknow
   };
 }
 
+/** A minimal, valid ScheduleGame for the BACKFILL_SEASON stub nflverse provider below. */
+function scheduleGame(id: string, season = BACKFILL_SEASON): ScheduleGame {
+  return {
+    season,
+    week: 1,
+    gameId: id,
+    gameType: "REG",
+    home: "AAA",
+    away: "BBB",
+    kickoffUtc: "2025-09-07T17:00:00.000Z",
+    kickoffApproximate: false,
+    roof: null,
+    spreadLine: null,
+    totalLine: null,
+    homeScore: null,
+    awayScore: null,
+  };
+}
+
+/**
+ * A no-network nflverse provider stub for `backfill_2025` tests (G3-FIX-2). Resolves successfully
+ * with `games` filtered to the requested season; never touches the network or filesystem.
+ */
+function stubScheduleProvider(games: readonly ScheduleGame[]): NflverseProvider {
+  return {
+    getScheduleWithDates: (season: number) =>
+      Promise.resolve({
+        ok: true,
+        data: { games: games.filter((g) => g.season === season), gamedays: new Map() },
+        meta: {
+          source: "test",
+          assetUpdatedAt: null,
+          fetchedAt: "",
+          fromCache: false,
+          warnings: [],
+        },
+      }),
+  } as unknown as NflverseProvider;
+}
+
+/** Default backfill schedule stub: two 2025 games, so "already present" becomes true after one run. */
+function defaultNflverseDeps(): NflverseJobDeps {
+  return { provider: () => stubScheduleProvider([scheduleGame("g1"), scheduleGame("g2")]) };
+}
+
 function playersBody(qbs: number): unknown {
   const out: Record<string, unknown> = {};
   for (let i = 0; i < qbs; i++) {
@@ -79,7 +126,10 @@ function playersBody(qbs: number): unknown {
   return out;
 }
 
-function harness(config: Record<string, string> = { DEFAULT_LEAGUE_ID: LEAGUE }): Harness {
+function harness(
+  config: Record<string, string> = { DEFAULT_LEAGUE_ID: LEAGUE },
+  nflverseDeps: NflverseJobDeps = defaultNflverseDeps(),
+): Harness {
   const dir = tempDataDir();
   const db = tempDb(dir);
   const clock = fakeClock("2026-10-01T12:00:00Z");
@@ -142,7 +192,9 @@ function harness(config: Record<string, string> = { DEFAULT_LEAGUE_ID: LEAGUE })
       }),
     );
   };
-  const jobs = new Map(createSleeperJobs({ fetch: fetchImpl }).map((j) => [j.name, j]));
+  const jobs = new Map(
+    createSleeperJobs({ fetch: fetchImpl }, nflverseDeps).map((j) => [j.name, j]),
+  );
   const limiter = new RateLimiter({ ratePerSecond: 10_000, maxPerWindow: 1_000_000 });
   const cfg = testConfig(dir, config);
   const ctx = (o: Partial<JobContext> = {}): JobContext => ({
@@ -382,6 +434,62 @@ describe("T1.5b stats and projections", () => {
   });
 });
 
+describe("G3-FIX-1 statsWeeksToFetch", () => {
+  it("backfills every earlier week not yet stored, plus current and previous", () => {
+    expect(statsWeeksToFetch(4, new Set([3, 4]))).toEqual([4, 3, 1, 2]);
+  });
+
+  it("fetches only current and previous once every earlier week is already stored", () => {
+    expect(statsWeeksToFetch(4, new Set([1, 2, 3]))).toEqual([4, 3]);
+  });
+
+  it("never looks forward past the current week", () => {
+    const weeks = statsWeeksToFetch(4, new Set());
+    expect(weeks).toEqual([4, 3, 1, 2]);
+    expect(weeks.every((w) => w <= 4)).toBe(true);
+  });
+
+  it("week 1 has no earlier weeks to backfill", () => {
+    expect(statsWeeksToFetch(1, new Set())).toEqual([1]);
+  });
+});
+
+describe("G3-FIX-1 statsJob self-heals a gap", () => {
+  const weekOf = (c: string): number | null => {
+    const m = /^\/stats\/nfl\/2026\/(\d+)\?/.exec(c);
+    return m ? Number(m[1]) : null;
+  };
+
+  it("fetches every week 1..current on a cold start, not just current and previous", async () => {
+    const h = harness();
+    await h.run("state"); // stateBody() defaults to week 5, 2026 regular season
+    const r = await h.run("stats");
+    const fetched = h.calls.map(weekOf).filter((w): w is number => w !== null);
+    expect(fetched.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
+    expect(r.calls).toBe(5);
+    const stored = (
+      h.db.sqlite.prepare("SELECT DISTINCT week FROM player_week_stats ORDER BY week").all() as {
+        week: number;
+      }[]
+    ).map((row) => row.week);
+    expect(stored).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("refetches a week deleted from storage (the reported bug) without repeating completed weeks", async () => {
+    const h = harness();
+    await h.run("state");
+    await h.run("stats"); // weeks 1-5 now stored
+    // Reproduces the live incident: a DB reset left only weeks 3-4 synced, weeks 1-2 missing.
+    h.db.sqlite.prepare("DELETE FROM player_week_stats WHERE week IN (1, 2)").run();
+    h.calls.length = 0;
+    await h.run("stats");
+    const fetched = h.calls.map(weekOf).filter((w): w is number => w !== null);
+    expect(fetched).toContain(1);
+    expect(fetched).toContain(2);
+    expect(fetched.sort((a, b) => a - b)).toEqual([1, 2, 4, 5]); // 3 already stored, skipped
+  });
+});
+
 describe("T1.5b backfill_2025", () => {
   it("fetches 36 calls from empty, then zero calls when data is present", async () => {
     const h = harness();
@@ -402,6 +510,71 @@ describe("T1.5b backfill_2025", () => {
     const r = await h.run("backfill_2025");
     expect(r.calls).toBe(2);
     expect(h.calls.every((c) => c.startsWith("/stats/nfl/2025/"))).toBe(true);
+  });
+});
+
+const scheduleRowCount = (h: Harness, season = BACKFILL_SEASON): number =>
+  (
+    h.db.sqlite.prepare("SELECT COUNT(*) AS n FROM schedule WHERE season = ?").get(season) as {
+      n: number;
+    }
+  ).n;
+
+describe("G3-FIX-2 backfill_2025 also backfills the 2025 nflverse schedule", () => {
+  it("calls getScheduleWithDates(2025) once and upserts the resulting games", async () => {
+    const seasonsRequested: number[] = [];
+    const base = stubScheduleProvider([scheduleGame("g1"), scheduleGame("g2")]);
+    const provider: NflverseProvider = {
+      getScheduleWithDates: (season: number) => {
+        seasonsRequested.push(season);
+        return base.getScheduleWithDates(season);
+      },
+    } as unknown as NflverseProvider;
+    const h = harness(undefined, { provider: () => provider });
+    const res = await h.run("backfill_2025");
+    expect(seasonsRequested).toEqual([BACKFILL_SEASON]);
+    expect(scheduleRowCount(h)).toBe(2);
+    expect(res.note).toMatch(/schedule: 2 games/);
+  });
+
+  it("does not refetch the schedule on a second run, while stats/projections are still rechecked independently", async () => {
+    const seasonsRequested: number[] = [];
+    const base = stubScheduleProvider([scheduleGame("g1"), scheduleGame("g2")]);
+    const provider: NflverseProvider = {
+      getScheduleWithDates: (season: number) => {
+        seasonsRequested.push(season);
+        return base.getScheduleWithDates(season);
+      },
+    } as unknown as NflverseProvider;
+    const h = harness(undefined, { provider: () => provider });
+    const first = await h.run("backfill_2025");
+    expect(first.calls).toBe(36);
+    expect(seasonsRequested).toEqual([BACKFILL_SEASON]);
+
+    // A stats week goes missing (reset, downtime, etc.): stats must still be refetched...
+    h.db.sqlite.prepare("DELETE FROM player_week_stats WHERE week = 3").run();
+    h.calls.length = 0;
+    const second = await h.run("backfill_2025");
+    expect(second.calls).toBe(1);
+    // ...but the schedule, already stored, must not be fetched again.
+    expect(seasonsRequested).toEqual([BACKFILL_SEASON]);
+    expect(scheduleRowCount(h)).toBe(2);
+  });
+
+  it("degrades the schedule portion (no throw) when ENABLE_NFLVERSE is off, without blocking stats/projections", async () => {
+    const provider: NflverseProvider = {
+      getScheduleWithDates: () => {
+        throw new Error("must not be called when nflverse is disabled");
+      },
+    } as unknown as NflverseProvider;
+    const h = harness(
+      { DEFAULT_LEAGUE_ID: LEAGUE, ENABLE_NFLVERSE: "false" },
+      { provider: () => provider },
+    );
+    const res = await h.run("backfill_2025");
+    expect(res.calls).toBe(36); // stats + projections still ran
+    expect(res.note).toMatch(/schedule: degraded:.*ENABLE_NFLVERSE/);
+    expect(scheduleRowCount(h)).toBe(0);
   });
 });
 

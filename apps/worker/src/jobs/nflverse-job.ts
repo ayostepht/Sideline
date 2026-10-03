@@ -34,35 +34,48 @@ function degraded(ctx: JobContext, why: string): JobResult {
   return { rowsChanged: 0, status: "skipped", note: `degraded: ${why}` };
 }
 
+/**
+ * Fetches one season's schedule via the nflverse provider, applies the kickoff fallback, and
+ * upserts it. Shared by `nflverseJob` (always the current season) and `backfillJob` (the fixed
+ * 2025 backfill season), so both degrade the same way instead of failing the caller's job.
+ */
+export async function syncScheduleForSeason(
+  ctx: JobContext,
+  deps: NflverseJobDeps,
+  season: number,
+): Promise<JobResult> {
+  if (!ctx.config.enableNflverse) return degraded(ctx, "ENABLE_NFLVERSE is off");
+  const provider =
+    deps.provider?.(ctx) ??
+    createNflverseProvider({
+      enabled: true,
+      dataDir: ctx.config.dataDir,
+      now: () => ctx.now(),
+      ...(deps.fetch ? { fetch: deps.fetch } : {}),
+    });
+  let res;
+  try {
+    res = await provider.getScheduleWithDates(season);
+  } catch (e) {
+    return degraded(ctx, e instanceof Error ? e.message : String(e));
+  }
+  if (!res.ok) return degraded(ctx, `${res.reason}: ${res.message}`);
+  for (const w of res.meta.warnings) ctx.logger.warn({ warning: w }, "nflverse warning");
+  const games = applyKickoffFallback(res.data.games, res.data.gamedays);
+  const out = upsertSchedule(ctx.db, games);
+  const approx = games.filter((g) => g.kickoffApproximate).length;
+  return {
+    rowsChanged: out.rowsChanged,
+    note: `${games.length} games${approx > 0 ? `, ${approx} with approximate kickoff` : ""}`,
+  };
+}
+
 export function nflverseJob(deps: NflverseJobDeps = {}): Job {
   return {
     name: "nflverse",
     async run(ctx) {
-      if (!ctx.config.enableNflverse) return degraded(ctx, "ENABLE_NFLVERSE is off");
-      const provider =
-        deps.provider?.(ctx) ??
-        createNflverseProvider({
-          enabled: true,
-          dataDir: ctx.config.dataDir,
-          now: () => ctx.now(),
-          ...(deps.fetch ? { fetch: deps.fetch } : {}),
-        });
       const season = readNflState(ctx.db)?.season ?? ctx.now().getUTCFullYear();
-      let res;
-      try {
-        res = await provider.getScheduleWithDates(season);
-      } catch (e) {
-        return degraded(ctx, e instanceof Error ? e.message : String(e));
-      }
-      if (!res.ok) return degraded(ctx, `${res.reason}: ${res.message}`);
-      for (const w of res.meta.warnings) ctx.logger.warn({ warning: w }, "nflverse warning");
-      const games = applyKickoffFallback(res.data.games, res.data.gamedays);
-      const out = upsertSchedule(ctx.db, games);
-      const approx = games.filter((g) => g.kickoffApproximate).length;
-      return {
-        rowsChanged: out.rowsChanged,
-        note: `${games.length} games${approx > 0 ? `, ${approx} with approximate kickoff` : ""}`,
-      };
+      return syncScheduleForSeason(ctx, deps, season);
     },
   };
 }

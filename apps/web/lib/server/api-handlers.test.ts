@@ -7,13 +7,18 @@ import {
   writeHeartbeat,
   type DbHandle,
 } from "@sideline/db";
-import { OnboardingStatusSchema, PlayerSearchResultSchema } from "@sideline/shared";
+import {
+  LineupResponseSchema,
+  OnboardingStatusSchema,
+  PlayerSearchResultSchema,
+} from "@sideline/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { POST as startRoute } from "../../app/api/onboarding/route";
 import { POST as leagueRoute } from "../../app/api/onboarding/league/route";
 import { GET as statusRoute } from "../../app/api/onboarding/status/route";
 import { GET as searchRoute } from "../../app/api/l/[leagueId]/search/route";
+import { GET as lineupRoute } from "../../app/api/l/[leagueId]/lineup/route";
 import { GET as getSettingsRoute, PATCH as patchSettingsRoute } from "../../app/api/settings/route";
 import { resetDbForTests } from "./db";
 import { seedLeague } from "./test-seed";
@@ -158,6 +163,31 @@ describe("GET /api/l/[leagueId]/search", () => {
     expect((await search("")).status).toBe(400);
     expect((await search("?q=ab&limit=99")).status).toBe(400);
     expect((await search("?q=ab", "x".repeat(70))).status).toBe(404);
+  });
+});
+
+describe("GET /api/l/[leagueId]/lineup", () => {
+  const lineup = (qs: string, leagueId = "L1") =>
+    lineupRoute(new Request(`http://localhost/api/l/${leagueId}/lineup${qs}`), {
+      params: Promise.resolve({ leagueId }),
+    });
+  it("returns a valid response for a real roster", async () => {
+    const h = setup();
+    seedLeague(h, { rosterCount: 2 });
+    const r = await lineup("?roster=1");
+    expect(r.status).toBe(200);
+    expect(LineupResponseSchema.safeParse(await r.json()).success).toBe(true);
+  });
+  it("400 for an invalid mode", async () => {
+    const h = setup();
+    seedLeague(h);
+    const r = await lineup("?mode=nope");
+    expect(r.status).toBe(400);
+  });
+  it("404 for an unknown league", async () => {
+    setup();
+    const r = await lineup("?roster=1", "nope");
+    expect(r.status).toBe(404);
   });
 });
 

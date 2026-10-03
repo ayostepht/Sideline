@@ -379,6 +379,10 @@ Compared with 2026 projection rows (weeks 1 to 5):
 
 Other projection keys of note: `rec_tgt`, `rec_fd`, `rush_att`, `pass_att`, `pass_cmp`, `cmp_pct`, `fgm_yds`, `yds_allow`, `pts_allow`, `tkl_loss`, `gp` (always 1 for real rows), and `bonus_*` keys. Value ranges are expected counts (fractions like `pass_td: 1.14`).
 
+### 6.1 Implemented method (T3.1)
+
+`rescoreProjection` (`packages/core/src/scoring/rescore-projection.ts`) starts from the plain `scoreStatLine` formula and layers four exceptions on top, each firing only when the matching key is actually missing from the row (so a real stats row, which does carry `fgm_50_59`, `fgmiss`, and so on by name, is never double-scored): (1) a projection's combined `fgm_50p` count is scored at the league's `fgm_50_59` rate when the league scores the split buckets and the row has no `fgm_50_59` of its own; (2) `fgmiss` is estimated as `fga - fgm` when both are present, else the sum of whichever of `fgmiss_30_39`/`fgmiss_40_49`/`fgmiss_50p` are present, else 0 with a reason; (3) a raw `pts_allow` mean (no bucket key present) is mapped to exactly one DEF points-allowed bucket by flooring the mean against the boundaries 0, 1-6, 7-13, 14-20, 21-27, 28-34, 35+ (matching the `20.5` -> `pts_allow_14_20` example above) and that bucket's `scoringSettings` value is added directly, a step-function stand-in for the true expectation over the distribution; (4) `def_st_td`, `def_st_ff`, `def_st_fum_rec`, `st_ff`, `st_fum_rec` and `fum_rec_td` contribute 0 (already true by the plain formula, since projections never carry them) but each gets a `PROJECTION_KEY_UNAVAILABLE` reason when the league scores it, so the UI can say "estimated 0, no projection data" instead of showing an unexplained 0. Every exception attaches a `Reason` with the approximation's size (`impact`) so downstream consumers can show their work.
+
 ## 7. 2025 backtest data availability
 
 `season_type=regular`, six position params. "Real rows" = projection rows with `stats.gp`. All requests returned `200`.

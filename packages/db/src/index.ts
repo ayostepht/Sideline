@@ -9,3 +9,4 @@ export * from "./cache.js";
 export * from "./app-settings.js";
 export * from "./user-leagues.js";
 export * from "./sync-reads.js";
+export * from "./derived-reads.js";
