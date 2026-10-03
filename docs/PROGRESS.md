@@ -30,9 +30,10 @@ Split per ADR-013. Batches run in order A to G; tasks in the same batch run in p
 | T3.2b | Worker recompute hook materializing `league_player_week_points` after sync | sleeper-data-engineer | T3.1, T3.2a, T3.2c | C | Done | 1 | 749388e |
 | T3.3b | Projections part 2: PROJ-2 variance and shrinkage, PROJ-3 floor and ceiling | analytics-engineer | T3.3a | C | Done | 1 | e26905e |
 | T3.4b | Optimizer part 2: locks, availability, modes, reasons and issues output, perf (LINEUP-3 to 7) | analytics-engineer | T3.4a | C | Done | 1 | 160810e |
-| T3.5a | Matchup adjustment core (MATCH-1, 2, 4) and backtest harness (MATCH-3) with report | analytics-engineer | T3.2b, T3.3b | D | Not started | 0 | |
+| T3.5a | Matchup core: MATCH-1 DvP, MATCH-2 multiplier, MATCH-4 grade (alpha/beta default to 0/0) | analytics-engineer | T3.2b, T3.3b | D | Not started | 0 | |
 | T3.6 | Golden optimizer scenarios (12+) and property tests (1000+ runs, LINEUP-8) | qa-engineer | T3.4b | D | Not started | 0 | |
 | T3.5b | Worker recompute hook materializing `defense_vs_position` (calls T3.5a) | sleeper-data-engineer | T3.5a, T3.2a | E | Not started | 0 | |
+| T3.5c | MATCH-3 backtest harness: grid-search alpha/beta, update T3.5a's constant if it clears the 1% MAE bar, report | analytics-engineer | T3.5a | E | Not started | 0 | |
 | T3.7 | Lineup data function and API with caching | backend-engineer | T3.4b, T3.5b | F | Not started | 0 | |
 | T3.8a | Lineup page | frontend-engineer | T3.7 | G | Not started | 0 | |
 | T3.8b | Home "This week" lineup issues card; carried Phase 2 design backlog (scoreboard hero, lime accent, You badge, roster stat slot) | frontend-engineer | T3.7 | G | Not started | 0 | |
