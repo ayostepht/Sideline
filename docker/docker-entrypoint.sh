@@ -6,11 +6,51 @@ set -euo pipefail
 PUID="${PUID:-99}"
 PGID="${PGID:-100}"
 DATA_DIR="${DATA_DIR:-/data}"
+# Opt-in escape hatch for PUID=0/PGID=0 (see validate_id below). Off by default: running the app
+# as root silently defeats the entire privilege-drop design this entrypoint implements.
+SIDELINE_ALLOW_ROOT="${SIDELINE_ALLOW_ROOT:-0}"
 DB_FILE="$DATA_DIR/sideline.sqlite"
 BACKUP_DIR="$DATA_DIR/backups"
 KEEP=5
 
 log() { echo "[entrypoint] $*"; }
+die() {
+  log "ERROR: $*"
+  exit 1
+}
+
+# Rejects PUID/PGID that are not a positive decimal integer, and (absent explicit opt-in) rejects
+# exactly 0: setpriv --reuid=0/--regid=0 "drops" to root, which would run web and worker as root
+# for the container's life with no indication anything went wrong.
+validate_id() {
+  name="$1"
+  value="$2"
+  case "$value" in
+    '' | *[!0-9]*) die "$name must be a positive decimal integer, got '$value'" ;;
+  esac
+  if [ "$value" -eq 0 ] && [ "$SIDELINE_ALLOW_ROOT" != "1" ]; then
+    die "$name=0 would run the web server and worker as root, defeating this entrypoint's privilege-drop design. Set SIDELINE_ALLOW_ROOT=1 to explicitly allow this (not recommended)."
+  fi
+}
+validate_id PUID "$PUID"
+validate_id PGID "$PGID"
+
+# Guards against a misconfigured DATA_DIR (operator/env-controlled) turning the chown -R below
+# into a destructive recursive re-own of an unintended part of the container filesystem.
+validate_data_dir() {
+  dir="$1"
+  [ -n "$dir" ] || die "DATA_DIR must not be empty"
+  case "$dir" in
+    /*) ;;
+    *) die "DATA_DIR must be an absolute path, got '$dir'" ;;
+  esac
+  case "$dir" in
+    / | /app | /app/* | /etc | /etc/* | /usr | /usr/* | /bin | /bin/* | /sbin | /sbin/* | /lib | /lib/* | /root | /root/* | /home | /home/*)
+      die "DATA_DIR='$dir' is a reserved system path; refusing to chown -R it. Set DATA_DIR to a dedicated data directory (default /data)."
+      ;;
+  esac
+}
+validate_data_dir "$DATA_DIR"
 
 mkdir -p "$DATA_DIR" "$BACKUP_DIR"
 chown -R "$PUID:$PGID" "$DATA_DIR"

@@ -5,22 +5,31 @@ Implements T4.3: one image runs both the web server and the sync worker.
 ## Files
 
 - `docker-entrypoint.sh`: runs as root (tini's direct child). In order:
-  1. `mkdir -p` + `chown -R $PUID:$PGID` on `$DATA_DIR` (default `/data`), so the volume is owned
+  1. Validates `PUID`/`PGID` (must be positive decimal integers; `0` is rejected unless
+     `SIDELINE_ALLOW_ROOT=1` is set, since `setpriv --reuid=0`/`--regid=0` "drops" to root and
+     silently defeats the privilege-drop design below) and `DATA_DIR` (must be a non-empty absolute
+     path, and not `/` or a reserved system path: `/app`, `/etc`, `/usr`, `/bin`, `/sbin`, `/lib`,
+     `/root`, `/home`, or anything under them). Any failure logs a clear error and exits non-zero
+     before touching the filesystem.
+  2. `mkdir -p` + `chown -R $PUID:$PGID` on `$DATA_DIR` (default `/data`), so the volume is owned
      correctly even on a fresh mount.
-  2. If `$DATA_DIR/sideline.sqlite` already exists, copies it (plus `-wal`/`-shm` if present) into
+  3. If `$DATA_DIR/sideline.sqlite` already exists, copies it (plus `-wal`/`-shm` if present) into
      `$DATA_DIR/backups/sideline-<UTC timestamp>.db[-wal|-shm]`, then deletes all but the 5 most
      recent backups (sorted by the timestamp in the filename, not file mtime: `cp -p` preserves the
      source's mtime, which is not backup time).
-  3. Runs `packages/db` migrations via `docker/migrate.ts` (invoked through `tsx`, since
-     `@sideline/db` ships TypeScript source and is not bundled for the worker).
-  4. Starts the web server (`node apps/web/server.js`) and the worker (`tsx src/main.ts`) in the
+  4. Runs `packages/db` migrations via `docker/migrate.ts` (invoked through `tsx`, since
+     `@sideline/db` ships TypeScript source and is not bundled for the worker). The script verifies
+     with `isMigrated()` (the same check `packages/db/src/cli/migrate.ts` uses) that migrations
+     actually applied, and throws (aborting the container before web/worker start) if not.
+  5. Starts the web server (`node apps/web/server.js`) and the worker (`tsx src/main.ts`) in the
      background, both via `setpriv --reuid=$PUID --regid=$PGID` (no `/etc/passwd` entry required,
      unlike `gosu`/`su`, which matters since Unraid's 99/100 usually has no matching user).
-  5. `wait -n` on both. Whichever exits first, the script kills the other and exits non-zero (even
+  6. `wait -n` on both. Whichever exits first, the script kills the other and exits non-zero (even
      if the dying process happened to exit 0), so Docker's restart policy restarts the whole
      container rather than leaving only one process alive.
-- `migrate.ts`: a small script that opens the DB at `$DATA_DIR` and applies pending migrations.
-  Copied into the worker's deployed `node_modules` tree so it can resolve `@sideline/db`.
+- `migrate.ts`: a small script that opens the DB at `$DATA_DIR` and applies pending migrations,
+  then verifies they applied with `isMigrated()`. Copied into the worker's deployed `node_modules`
+  tree so it can resolve `@sideline/db`.
 
 ## Why the image needs to start as root
 
@@ -46,11 +55,12 @@ worker) run as the configured non-root `PUID`/`PGID`; confirm with `docker top <
 
 ## Environment variables this stage introduces or defaults
 
-| Variable   | Default (set in Dockerfile) | Purpose                                                          |
-| ---------- | --------------------------- | ---------------------------------------------------------------- |
-| `PUID`     | `99`                        | Unraid-style owner uid applied to `/data` and the app processes. |
-| `PGID`     | `100`                       | Matching group id.                                               |
-| `DATA_DIR` | `/data`                     | Where the SQLite DB, WAL files, and `backups/` live.             |
+| Variable              | Default (set in Dockerfile) | Purpose                                                                                                                                                               |
+| --------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PUID`                | `99`                        | Unraid-style owner uid applied to `/data` and the app processes. Must be a positive decimal integer; `0` is rejected (see `SIDELINE_ALLOW_ROOT`).                     |
+| `PGID`                | `100`                       | Matching group id. Same validation as `PUID`.                                                                                                                         |
+| `DATA_DIR`            | `/data`                     | Where the SQLite DB, WAL files, and `backups/` live. Must be a non-empty absolute path; rejected if it is `/` or a reserved system path (see above).                  |
+| `SIDELINE_ALLOW_ROOT` | unset (`0`)                 | Not set by the Dockerfile; an operator opt-in only. Set to `1` to allow `PUID=0`/`PGID=0`, which runs web and worker as root. Not recommended; exists for edge cases. |
 
 These are read directly by `docker-entrypoint.sh` (shell, default-substitution), independent of
 `packages/shared`'s `loadConfig` (which also validates `PUID`/`PGID` for display purposes inside
