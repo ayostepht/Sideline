@@ -88,12 +88,41 @@ describe("solveOptimalAssignment (LINEUP-2)", () => {
     expect(result.totalValue).toBeCloseTo(12, 6);
   });
 
-  it("missing value entries are treated as 0", () => {
+  it("missing value entries are treated as 0, which is non-positive and loses to leaving the slot empty", () => {
+    // A missing value entry resolves to the same raw value (0) as a LINEUP-4-zeroed unavailable
+    // player: it must not be preferred over the "leave this slot empty" dummy option (see the
+    // bug-fix tests below), so with a single eligible player worth 0 and no alternative, the
+    // slot legitimately resolves to null.
     const slots = [slot("QB", ["QB"])];
     const players = [player("QB1", ["QB"])];
     const result = solveOptimalAssignment({ slots, players, values: {} });
-    expect(result.assignments).toEqual([{ slotType: "QB", playerId: "QB1" }]);
+    expect(result.assignments).toEqual([{ slotType: "QB", playerId: null }]);
     expect(result.totalValue).toBe(0);
+  });
+
+  it("a slot whose only eligible player has value 0 resolves to an empty slot, not that player (bug fix)", () => {
+    // Reproduces the unavailable-player scenario: recommend.ts passes an adjusted value of exactly
+    // 0 for Out/IR/Suspended/bye players. The solver must prefer leaving the slot empty (weight 0)
+    // over assigning a 0-value player, since 0 is not a genuine improvement over nothing.
+    const slots = [slot("RB", ["RB"])];
+    const players = [player("RB1", ["RB"])];
+    const values = { RB1: 0 };
+
+    const result = solveOptimalAssignment({ slots, players, values });
+
+    expect(result.assignments).toEqual([{ slotType: "RB", playerId: null }]);
+    expect(result.totalValue).toBe(0);
+  });
+
+  it("a slot with one positive-value and one 0-value eligible player picks the positive one (bug fix, unaffected case)", () => {
+    const slots = [slot("RB", ["RB"])];
+    const players = [player("RB1", ["RB"]), player("RB2", ["RB"])];
+    const values = { RB1: 0, RB2: 7 };
+
+    const result = solveOptimalAssignment({ slots, players, values });
+
+    expect(result.assignments).toEqual([{ slotType: "RB", playerId: "RB2" }]);
+    expect(result.totalValue).toBeCloseTo(7, 6);
   });
 
   it("empty slots produce an empty result", () => {

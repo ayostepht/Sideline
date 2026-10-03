@@ -22,9 +22,18 @@
  *
  * Maximizing total weight is run as the classic minimum-cost assignment problem on
  * `cost = -weight`. Ties (two eligible players with exactly equal value for a slot) are broken
- * deterministically in favor of the lower `playerId`, via an epsilon bonus many orders of
- * magnitude smaller than any realistic point value (so it can never change which *value* is
- * optimal, only which equally-valued assignment is reported). The epsilon is excluded from the
+ * deterministically in favor of the lower `playerId`, via an epsilon many orders of magnitude
+ * smaller than any realistic point value (so it can never change which *value* is optimal, only
+ * which equally-valued assignment is reported).
+ *
+ * The epsilon is a **bonus** (added) for a strictly positive value, so a genuinely useful player
+ * is still always preferred over leaving the slot empty (weight 0), unchanged. For a
+ * non-positive value (`<= 0` - the realistic case being LINEUP-4's zeroed-out Out/IR/Suspended/bye
+ * players, and defensively any other caller-supplied non-positive value), the epsilon is instead a
+ * **penalty** (subtracted), making that edge strictly *worse* than leaving the slot empty. Without
+ * this sign flip, `0 + epsilon > 0` would make the solver always prefer filling a slot with a
+ * worthless player over leaving it empty whenever no better option exists - silently recommending
+ * a player the system has itself determined is unavailable. The epsilon is excluded from the
  * reported `totalValue`, which is always the exact sum of real player values.
  */
 import { isPlayerEligibleForSlot, type SlotSpec } from "./eligibility.js";
@@ -112,7 +121,11 @@ export function solveOptimalAssignment(input: AssignmentInput): AssignmentResult
         if (isPlayerEligibleForSlot(player.fantasyPositions, slot.eligiblePositions)) {
           const rank = rankByPlayerId.get(player.playerId) ?? 0;
           const tiebreak = (numPlayers - rank) * TIEBREAK_EPSILON;
-          row[j] = at(rawValues, j) + tiebreak;
+          const rawValue = at(rawValues, j);
+          // Bonus for a genuinely useful (positive) value; penalty for non-positive, so a
+          // worthless/unavailable player never beats leaving the slot empty (weight 0). See the
+          // module doc's tiebreak paragraph.
+          row[j] = rawValue > 0 ? rawValue + tiebreak : rawValue - tiebreak;
         } else {
           row[j] = sentinel;
         }

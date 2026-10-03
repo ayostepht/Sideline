@@ -172,6 +172,38 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
     ]);
   });
 
+  it("never silently recommends the sole eligible player when they are unavailable (bug fix)", () => {
+    // Bug report reproduction: one slot, one eligible player who is status "Out" (adjusted value
+    // 0 after LINEUP-4 availability discounting), no current starter, no alternative. Before the
+    // fix, the solver's tiebreak epsilon made a 0-value real player always beat the "leave empty"
+    // dummy option, so this silently assigned RB1 with no warning. It must now resolve to an
+    // empty slot and surface an EMPTY_SLOT issue.
+    const slots = [slot("RB", ["RB"])];
+    const players = [
+      player({
+        playerId: "RB1",
+        fantasyPositions: ["RB"],
+        rawValue: 15,
+        status: "Out",
+        kickoffUtc: BEFORE_KICKOFF,
+      }),
+    ];
+    const result = recommendLineup({
+      slots,
+      slotWarnings: [],
+      players,
+      currentAssignment: [null],
+      now: NOW,
+    });
+
+    expect(result.optimalAssignment).toEqual([{ slotType: "RB", playerId: null }]);
+    expect(result.issues).toContainEqual({
+      code: "EMPTY_SLOT",
+      label: "No eligible player available for RB",
+      value: "RB",
+    });
+  });
+
   it("flags a currently-started Out player with an INACTIVE_STARTER issue", () => {
     const slots = [slot("RB", ["RB"])];
     const players = [
