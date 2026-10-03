@@ -38,6 +38,18 @@ Batch split and dependency rationale: ADR-015.
 | T4.6c | Home waiver-targets and risers cards | frontend-engineer | T4.6a, T4.6b | F | Done | 2 | 6fa47dc, 27d67a2 |
 | T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf (including Home's `getPlayerDetail` loop at a late-season week, Batch F code review M1), e2e | qa-engineer | T4.6a, T4.6b, T4.6c | G | Done | 1 | eae6fab |
 
+## Phase 4 live fixes (Steph's hands-on testing, before the G4 gate)
+
+Steph ran the implementation locally (`pnpm dev:lan`, real synced league data) and found 5 real issues; all fixed and committed, not tied to a task ID:
+
+| Issue | Fix | Commit |
+|---|---|---|
+| Reason chip text cut off mid-word on mobile Lineup (`"Questionable, so we lo..."`) | `ReasonChip` wraps (`break-words`) instead of truncating | `28a19f1` |
+| Waiver auto-drop suggested her only DEF, which would leave the starting DEF slot empty | Auto-drop now checks (via the existing Hungarian solver, reused as a feasibility check) that every required slot stays fillable before suggesting a drop; falls back to the old behavior only when the roster is already short-staffed independent of the drop | `010a8b6` |
+| "Why?"/"Competing" buttons did nothing on her phone | Root cause: the dev server was started with plain `next dev` instead of `pnpm dev:lan`, so `SIDELINE_DEV_ORIGINS` was unset and Next.js silently blocked HMR for her phone's LAN-IP origin. Not a code bug -- **always use `pnpm dev:lan` for phone testing**, not `pnpm --filter @sideline/web dev` | none (dev workflow only) |
+| Waiver Score breakdown showed raw unrounded floats (`94.5945945945946`) | `formatReasonValue` rounds numbers to 1 decimal in `ReasonChip`/`WhyBody`; strings pass through | `10cd72e` |
+| Lineup's Optimal column duplicated reason detail inline on every row, on top of the "Why?" sheet | Inline `ReasonChips` removed from `slot-column.tsx`; only the "Why?" trigger remains | `10cd72e` |
+
 ## Earlier phases
 
 Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`. Standing rules for briefs are in `docs/brief-rules.md`.
@@ -87,7 +99,7 @@ Remove an item when it is done; the archive keeps history.
 
 - No per-week matchup grades for waiver candidates (`WaiverCandidateSchema` only has one schedule percentile folded into a Waiver Score reason); T4.6a shows one aggregate grade instead of three. Backend-engineer follow-up if per-week grades are wanted on Waivers.
 - Players list has no "rostered by / free agent" field (unlike the search endpoint's `PlayerSearchResult.owner`) and no ROS value at list scope (by T4.5c's own documented design, deferred to keep the list fast); player detail has no forward schedule/opponent data, so T4.6b shows "not available yet" for "next 4 opponents" instead of fabricating it.
-- Several `packages/core` waiver reasons carry unrounded floats as `Reason.value` (e.g. `93.243243243243...`), rendered verbatim since `WhyBody`/`ReasonChips` don't format `value` (only `impact`/`projectedPoints` are formatted). Likely a `packages/core` source-side rounding fix or a `reason-format.ts` formatting addition.
+- ~~Several `packages/core` waiver reasons carry unrounded floats as `Reason.value`~~ Done (commit `10cd72e`): `formatReasonValue` rounds numbers to 1 decimal in both `ReasonChip` and `WhyBody`; strings (e.g. `SUGGESTED_DROP`'s player id) pass through unchanged.
 - `WAIVER_SCORE_*` reasons' `impact` is a 0-100-scale weighted-score contribution, not fantasy points, but `formatImpact` renders it identically to real point impacts elsewhere ("+40.0 pts") -- could misread as a fantasy-points claim in the Waiver Score breakdown sheet. Candidate T4.8-family follow-up (reason-format.ts and/or a per-reason-code formatting hint).
 - `data-testid="waivers-row"` is shared by both the card and table DOM nodes (only one visible per breakpoint via CSS), unlike `players-row`/`players-table-row`'s distinct ids -- a future e2e test (T4.7) must scope within `waivers-table`/`waivers-cards` or assert `toBeVisible()`, not just count matches.
 
