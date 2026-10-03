@@ -18,6 +18,7 @@ import {
   matchupMultiplier,
   recommendLineup,
   resolveSlots,
+  SLOT_ELIGIBILITY,
   weeklyStandardDeviation,
   type MatchupGradeLetter,
   type RecommendLineupPlayer,
@@ -51,6 +52,34 @@ function parseList(raw: string): string[] {
   } catch {
     return [];
   }
+}
+
+/** `roster_positions` entries that are reserve/bench capacity, absent from Sleeper's `starters`
+ * array entirely (mirrors `packages/core/src/optimizer/eligibility.ts`'s own `RESERVE_SLOT_TYPES`,
+ * which isn't exported). */
+const RESERVE_SLOT_TYPES = new Set(["BN", "IR", "TAXI"]);
+
+/**
+ * Builds `currentAssignment` aligned with `resolveSlots`' output. Sleeper's `starters` array has
+ * one entry per non-bench `roster_positions` entry, in the same order (docs/sleeper-api-notes.md
+ * section on roster fields). `resolveSlots` drops that same set of entries, but ALSO drops any
+ * slot type it doesn't recognize (surfaced only as a warning, LINEUP-1) - a type Sleeper itself
+ * still lets a user start a player in. Re-applying the identical two-part filter here (reserve
+ * types, then known slot types) keeps `currentAssignment` parallel to `slots` even when an
+ * unrecognized slot type is present, instead of silently shifting every later slot by one.
+ */
+function buildCurrentAssignment(
+  rosterPositions: readonly string[],
+  starters: string[],
+): (string | null)[] {
+  const nonBench = rosterPositions.filter((p) => !RESERVE_SLOT_TYPES.has(p));
+  const out: (string | null)[] = [];
+  nonBench.forEach((slotType, i) => {
+    if (!(slotType in SLOT_ELIGIBILITY)) return;
+    const id = starters[i];
+    out.push(id === undefined || id === "0" ? null : id);
+  });
+  return out;
 }
 
 function mean(values: readonly number[]): number {
@@ -380,7 +409,8 @@ export function getLineup(
   eligible.delete("0");
   const eligibleIds = [...eligible];
 
-  const { slots, warnings } = resolveSlots(parseList(league.roster_positions_json));
+  const rosterPositions = parseList(league.roster_positions_json);
+  const { slots, warnings } = resolveSlots(rosterPositions);
   const players = readPlayers(h, eligibleIds);
   const byes = readByeWeeks(h, league.season);
   const schedule = readWeekSchedule(h, league.season, week);
@@ -456,8 +486,9 @@ export function getLineup(
     });
   }
 
-  const currentAssignment = parseList(rosterRow.starters_json).map((id) =>
-    id === "0" ? null : id,
+  const currentAssignment = buildCurrentAssignment(
+    rosterPositions,
+    parseList(rosterRow.starters_json),
   );
 
   const recommendResult = recommendLineup({

@@ -138,6 +138,38 @@ describe("getLineup", () => {
     expect(data.players.find((p) => p.playerId === "p2")?.locked).toBe(false);
   });
 
+  it("keeps currentAssignment aligned with slots when an unknown slot type is dropped (bug fix)", () => {
+    // roster_positions has an unrecognized middle slot. Sleeper's starters array still has one
+    // entry per non-bench slot (3), but resolveSlots drops the unknown one, keeping only QB and
+    // RB (2 slots). Before the fix, currentAssignment was built straight from starters_json with
+    // no re-filtering, so slot index 1 (RB) would have seen p2 (the real UNKNOWN_SLOT starter)
+    // instead of p3 (the real RB starter) - an off-by-one past the dropped slot.
+    const h = setup({
+      rosterCount: 1,
+      rosterSize: 3,
+      playerCount: 3,
+      rosterPositions: ["QB", "UNKNOWN_SLOT", "RB"],
+    });
+    h.sqlite
+      .prepare(
+        `UPDATE players SET position = 'QB', fantasy_positions_json = '["QB"]' WHERE player_id = 'p1'`,
+      )
+      .run();
+    h.sqlite
+      .prepare(
+        `UPDATE players SET position = 'RB', fantasy_positions_json = '["RB"]' WHERE player_id = 'p3'`,
+      )
+      .run();
+    const data = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+    expect(data.currentAssignment).toEqual([
+      { slotType: "QB", playerId: "p1" },
+      { slotType: "RB", playerId: "p3" },
+    ]);
+    expect(data.issues).toContainEqual(
+      expect.objectContaining({ code: "UNKNOWN_SLOT_TYPE", value: "UNKNOWN_SLOT" }),
+    );
+  });
+
   it("resolves the opponent roster from the matchups table, and null without one", () => {
     const h = setup({ rosterCount: 3 });
     h.db
