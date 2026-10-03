@@ -6,7 +6,7 @@ import pino from "pino";
 import { describe, expect, it } from "vitest";
 import { fakeClock, silent, tempDb, testConfig, tempDataDir } from "../testutil.js";
 import type { Job, JobContext } from "../types.js";
-import { BACKFILL_SEASON, POSITION_DROP_THRESHOLD } from "./data-jobs.js";
+import { BACKFILL_SEASON, POSITION_DROP_THRESHOLD, statsWeeksToFetch } from "./data-jobs.js";
 import { createSleeperJobs, registeredJobs } from "./index.js";
 import { SIDELINE_VERSION, STATE_MAX_AGE_MS } from "./common.js";
 import { matchupWeeksToFetch } from "./league-jobs.js";
@@ -379,6 +379,62 @@ describe("T1.5b stats and projections", () => {
     ]);
     const r = await h.run("projections");
     expect(r.rowsChanged).toBe(0);
+  });
+});
+
+describe("G3-FIX-1 statsWeeksToFetch", () => {
+  it("backfills every earlier week not yet stored, plus current and previous", () => {
+    expect(statsWeeksToFetch(4, new Set([3, 4]))).toEqual([4, 3, 1, 2]);
+  });
+
+  it("fetches only current and previous once every earlier week is already stored", () => {
+    expect(statsWeeksToFetch(4, new Set([1, 2, 3]))).toEqual([4, 3]);
+  });
+
+  it("never looks forward past the current week", () => {
+    const weeks = statsWeeksToFetch(4, new Set());
+    expect(weeks).toEqual([4, 3, 1, 2]);
+    expect(weeks.every((w) => w <= 4)).toBe(true);
+  });
+
+  it("week 1 has no earlier weeks to backfill", () => {
+    expect(statsWeeksToFetch(1, new Set())).toEqual([1]);
+  });
+});
+
+describe("G3-FIX-1 statsJob self-heals a gap", () => {
+  const weekOf = (c: string): number | null => {
+    const m = /^\/stats\/nfl\/2026\/(\d+)\?/.exec(c);
+    return m ? Number(m[1]) : null;
+  };
+
+  it("fetches every week 1..current on a cold start, not just current and previous", async () => {
+    const h = harness();
+    await h.run("state"); // stateBody() defaults to week 5, 2026 regular season
+    const r = await h.run("stats");
+    const fetched = h.calls.map(weekOf).filter((w): w is number => w !== null);
+    expect(fetched.sort((a, b) => a - b)).toEqual([1, 2, 3, 4, 5]);
+    expect(r.calls).toBe(5);
+    const stored = (
+      h.db.sqlite.prepare("SELECT DISTINCT week FROM player_week_stats ORDER BY week").all() as {
+        week: number;
+      }[]
+    ).map((row) => row.week);
+    expect(stored).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("refetches a week deleted from storage (the reported bug) without repeating completed weeks", async () => {
+    const h = harness();
+    await h.run("state");
+    await h.run("stats"); // weeks 1-5 now stored
+    // Reproduces the live incident: a DB reset left only weeks 3-4 synced, weeks 1-2 missing.
+    h.db.sqlite.prepare("DELETE FROM player_week_stats WHERE week IN (1, 2)").run();
+    h.calls.length = 0;
+    await h.run("stats");
+    const fetched = h.calls.map(weekOf).filter((w): w is number => w !== null);
+    expect(fetched).toContain(1);
+    expect(fetched).toContain(2);
+    expect(fetched.sort((a, b) => a - b)).toEqual([1, 2, 4, 5]); // 3 already stored, skipped
   });
 });
 

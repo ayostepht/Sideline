@@ -111,6 +111,20 @@ export function trendingJob(deps: SleeperJobDeps): Job {
   };
 }
 
+/**
+ * Weeks of player_week_stats to fetch, in order: the current week, the previous week (stats can
+ * land late after the week rolls over), then every earlier week not yet stored. The last part
+ * self-heals a gap left by downtime or a fresh install starting mid-season. Stats only exist for
+ * weeks that have already happened, so this never looks forward past `current` (unlike
+ * `matchupWeeksToFetch`, which also schedules future weeks).
+ */
+export function statsWeeksToFetch(current: number, stored: ReadonlySet<number>): number[] {
+  const weeks: number[] = [current];
+  if (current > 1) weeks.push(current - 1);
+  for (let w = 1; w < current - 1; w++) if (!stored.has(w)) weeks.push(w);
+  return weeks;
+}
+
 export function statsJob(deps: SleeperJobDeps): Job {
   return {
     name: "stats",
@@ -118,8 +132,8 @@ export function statsJob(deps: SleeperJobDeps): Job {
       const client = makeClient(ctx, deps);
       const cursor = weekCursor(await loadState(ctx, client));
       if (cursor === null) return { rowsChanged: 0, status: "skipped", note: "no active season" };
-      // Previous week is refetched so late stat corrections land.
-      const weeks = cursor.week > 1 ? [cursor.week - 1, cursor.week] : [cursor.week];
+      const stored = readStoredStatsWeeks(ctx.db, cursor.season, cursor.seasonType);
+      const weeks = statsWeeksToFetch(cursor.week, stored);
       return syncStats(ctx, client, cursor.season, cursor.seasonType, weeks, true);
     },
   };
