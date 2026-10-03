@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatImpact, formatProjectedPoints } from "./reason-format";
+import { formatImpact, formatProjectedPoints, formatReasonValue } from "./reason-format";
 
 describe("formatImpact", () => {
   it("formats signs", () => {
@@ -26,5 +26,19 @@ describe("formatProjectedPoints", () => {
   it("returns undefined when missing or non-finite", () => {
     expect(formatProjectedPoints(undefined)).toBeUndefined();
     expect(formatProjectedPoints(Number.NaN)).toBeUndefined();
+  });
+});
+
+describe("formatReasonValue", () => {
+  it("rounds a raw float to one decimal", () => {
+    expect(formatReasonValue(94.5945945945946)).toBe("94.6");
+    expect(formatReasonValue(89.1891891891892)).toBe("89.2");
+  });
+  it("passes a string through unchanged", () => {
+    expect(formatReasonValue("WR")).toBe("WR");
+    expect(formatReasonValue("4046692")).toBe("4046692");
+  });
+  it("leaves undefined as undefined", () => {
+    expect(formatReasonValue(undefined)).toBeUndefined();
   });
 });

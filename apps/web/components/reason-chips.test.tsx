@@ -30,6 +30,19 @@ describe("ReasonChip / projectedPoints", () => {
   });
 });
 
+describe("ReasonChip / value rounding", () => {
+  it("rounds a raw float value to one decimal", () => {
+    const html = renderToStaticMarkup(<ReasonChip reason={{ ...base, value: 94.5945945945946 }} />);
+    expect(html).toContain("94.6");
+    expect(html).not.toContain("94.5945945945946");
+  });
+
+  it("renders a string value unchanged", () => {
+    const html = renderToStaticMarkup(<ReasonChip reason={{ ...base, value: "WR" }} />);
+    expect(html).toContain(">WR<");
+  });
+});
+
 describe("ReasonChip / long label wrapping", () => {
   const longLabel = "Questionable, so we lowered their projection slightly";
 

@@ -26,3 +26,16 @@ describe("WhyBody / projectedPoints", () => {
     expect(html).toContain("18.4 proj pts");
   });
 });
+
+describe("WhyBody / value rounding", () => {
+  it("rounds a raw float value to one decimal", () => {
+    const html = renderToStaticMarkup(<WhyBody reasons={[{ ...base, value: 89.1891891891892 }]} />);
+    expect(html).toContain("89.2");
+    expect(html).not.toContain("89.1891891891892");
+  });
+
+  it("renders a string value unchanged", () => {
+    const html = renderToStaticMarkup(<WhyBody reasons={[{ ...base, value: "4046692" }]} />);
+    expect(html).toContain(">4046692<");
+  });
+});
