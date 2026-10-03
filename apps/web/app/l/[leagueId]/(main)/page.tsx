@@ -89,6 +89,7 @@ export default async function HomePage({
   const rows = standings.ok ? standings.data.rows : [];
   const freshness = overview.data.freshness;
   const waiverTargets = waivers.ok ? topWaiverTargets(waivers.data.forMyTeam) : [];
+  const hasWaiverCandidates = waivers.ok && waivers.data.forMyTeam.length > 0;
   const risers: RiserRow[] = waivers.ok
     ? selectRisers(risingRosterPlayers(rosterDetails), risingFreeAgents(waivers.data.bestAvailable))
     : [];
@@ -208,8 +209,16 @@ export default async function HomePage({
             {waiverTargets.length === 0 ? (
               <EmptyState
                 icon={UserPlus}
-                title="No waiver targets right now"
-                message="Check back after the next sync or widen your search on the Waivers page."
+                title={
+                  hasWaiverCandidates
+                    ? "No upgrades beat your roster this week"
+                    : "No waiver targets right now"
+                }
+                message={
+                  hasWaiverCandidates
+                    ? "Every available player would make your lineup worse right now. Check back after the next sync."
+                    : "Check back after the next sync or widen your search on the Waivers page."
+                }
               />
             ) : (
               <ol className="flex flex-col divide-y">
@@ -272,6 +281,14 @@ export default async function HomePage({
                 ))}
               </ol>
             )}
+            <Link
+              href={`${base}/players`}
+              className={`${buttonVariants({ variant: "ghost" })} mt-2 -ml-3`}
+              data-testid="home-see-players"
+            >
+              See all players
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
           </CardContent>
         </Card>
       ) : null}

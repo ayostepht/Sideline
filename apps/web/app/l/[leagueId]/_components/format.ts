@@ -74,13 +74,16 @@ export function formatSignedPoints(n: number): string {
 
 /**
  * Home's waiver-targets card (PLAN 6.4): the top `limit` candidates from `getWaivers`'s `forMyTeam`
- * view, which is already sorted by Lineup Impact descending, so this is a plain slice.
+ * view with a positive Lineup Impact only. Mirrors the Waivers page's own
+ * `topTargetSummary` guard (`waivers/_components/format.ts`): a candidate whose Lineup Impact is
+ * zero or negative would make the lineup worse, so it is never presented as a recommendation here
+ * either. `forMyTeam` is already sorted by Lineup Impact descending, so this is filter-then-slice.
  */
 export function topWaiverTargets(
   forMyTeam: readonly WaiverCandidate[],
   limit = 3,
 ): WaiverCandidate[] {
-  return forMyTeam.slice(0, limit);
+  return forMyTeam.filter((c) => c.lineupImpact > 0).slice(0, limit);
 }
 
 /** One row of Home's "rising players" card: a player (roster or free agent) whose trend signal is

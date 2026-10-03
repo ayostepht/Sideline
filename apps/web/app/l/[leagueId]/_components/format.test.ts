@@ -178,6 +178,35 @@ describe("format", () => {
     expect(topWaiverTargets([])).toEqual([]);
   });
 
+  it("drops candidates whose Lineup Impact is zero or negative (never presented as a recommendation)", () => {
+    // All-negative (and zero): every candidate would make the lineup worse, or do nothing.
+    const allNonPositive = [
+      candidate({ playerId: "1", lineupImpact: -2 }),
+      candidate({ playerId: "2", lineupImpact: 0 }),
+      candidate({ playerId: "3", lineupImpact: -0.5 }),
+    ];
+    expect(topWaiverTargets(allNonPositive)).toEqual([]);
+
+    // All-positive: every candidate is kept, in order, up to the limit.
+    const allPositive = [
+      candidate({ playerId: "1", lineupImpact: 5 }),
+      candidate({ playerId: "2", lineupImpact: 3 }),
+      candidate({ playerId: "3", lineupImpact: 1 }),
+    ];
+    expect(topWaiverTargets(allPositive).map((c) => c.playerId)).toEqual(["1", "2", "3"]);
+
+    // Mixed: only the positive candidates are shown, order preserved from forMyTeam's existing
+    // Lineup-Impact-descending sort.
+    const mixed = [
+      candidate({ playerId: "1", lineupImpact: 5 }),
+      candidate({ playerId: "2", lineupImpact: -1 }),
+      candidate({ playerId: "3", lineupImpact: 3 }),
+      candidate({ playerId: "4", lineupImpact: -2 }),
+      candidate({ playerId: "5", lineupImpact: 2 }),
+    ];
+    expect(topWaiverTargets(mixed).map((c) => c.playerId)).toEqual(["1", "3", "5"]);
+  });
+
   const playerDetail = (over: Partial<PlayerDetailResponse>): PlayerDetailResponse => ({
     playerId: "20",
     name: "Roster Player",
