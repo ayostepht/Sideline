@@ -36,8 +36,8 @@ Split per ADR-013. Batches run in order A to G; tasks in the same batch run in p
 | T3.5c | MATCH-3 backtest harness: grid-search alpha/beta, update T3.5a's constant if it clears the 1% MAE bar, report | analytics-engineer | T3.5a | E | Done | 1 | e022826 |
 | T3.5b | Worker recompute hook materializing `defense_vs_position` (calls T3.5a) | sleeper-data-engineer | T3.5a, T3.2a, T3.2e | F | Done | 1 | c3ba684 |
 | T3.7 | Lineup data function and API with caching | backend-engineer | T3.4b, T3.5b | G | Done | 1 | 5870660 |
-| T3.8a | Lineup page | frontend-engineer | T3.7 | H | Not started | 0 | |
-| T3.8b | Home "This week" lineup issues card; carried Phase 2 design backlog (scoreboard hero, lime accent, You badge, roster stat slot) | frontend-engineer | T3.7 | H | Not started | 0 | |
+| T3.8a | Lineup page | frontend-engineer | T3.7 | H | Done | 1 | 78d8f34 |
+| T3.8b | Home "This week" lineup issues card; carried Phase 2 design backlog (scoreboard hero, lime accent, You badge, roster stat slot) | frontend-engineer | T3.7 | H | Done | 1 | dbf69f0 |
 | T3.9 | E2E lineup flow (mode toggle, swaps, Open in Sleeper, opponent view) | qa-engineer | T3.8a, T3.8b | I | Not started | 0 | |
 
 **G3 phase checks:** SCORE-2 at least 99% match on Steph's real league; golden and property tests pass; LINEUP-7 benchmark passes; backtest report exists and the alpha/beta decision is logged. Human checkpoint: Steph compares this week's recommended lineup and reasons to her own judgment.
@@ -93,6 +93,7 @@ Remove an item when it is done; the archive keeps history.
 
 ### Phase 3: scoring, projections, optimizer
 
+- **`readPositionCv` (T3.7) pooled between-player variance instead of averaging within-player CV, collapsing Safe mode's floor to 0 for most low-sample players (found in T3.8a frontend QA, fixed commit 352af52, ADR-013 item 21).** See ADR-013 item 21 for the full writeup and regression test.
 - T3.7 code review (`docs/reviews/2026-10-02-p3-t37-code.md`, ADR-013 item 20): one Major (currentAssignment could misalign with resolveSlots on an unknown slot type, fixed commit 438ffdd). Open minors: `matchupMultiplier`'s own clamp/avg-unavailable reasons aren't surfaced in the player DTO (inconsequential while alpha/beta are 0); a `schedule` coverage gap for a team/week silently reads as "not locked" (pre-existing); a player missing from `players` or a zero-eligible-player roster are handled defensively but untested; `applyAvailability` runs twice with identical inputs (redundant, not a correctness bug).
 - **Lineup cache (`getLineup`, T3.7) doesn't invalidate on an nflverse-only sync (ADR-013 item 19).** Zero impact today since the matchup multiplier is a no-op (alpha/beta default 0); add `nflverse`'s `lastSuccessAt` to `inputsHashFor` in `apps/web/lib/server/lineup.ts` once T3.5c's real backtest ships a non-zero alpha/beta.
 - **T3.6's property suite found two real bugs within its first run, both fixed same-day (ADR-013 item 14).** A locked current starter could be double-booked into a second eligible slot (`recommendLineup` excluded a locked player from the solver pool only when they weren't a current starter; fixed by excluding every locked player, commit 6137927). The property test's own `genAlternativeLineup` comparison generator had the identical bug class in its baseline-building logic, producing a false failure; fixed in the same style (commit d2550d4). Worth remembering as a model case for why LINEUP-8's property suite exists.
