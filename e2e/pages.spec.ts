@@ -173,7 +173,9 @@ test.describe("States (PLAN 6.5, ADR-009 item 2)", () => {
   test("STATE-3: each placeholder page links to Home and My Team and the links navigate", async ({
     page,
   }) => {
-    for (const seg of ["lineup", "matchup", "waivers", "players"]) {
+    // Lineup stopped being a stub in Phase 3 Batch H (T3.9): it has its own data-testid and no
+    // stub links. Matchup, Waivers and Players are still real stubs.
+    for (const seg of ["matchup", "waivers", "players"]) {
       await page.goto(`${L}/${seg}`);
       await expect(page.getByTestId("stub-page"), seg).toBeVisible();
       await page.getByTestId("stub-link-home").click();
