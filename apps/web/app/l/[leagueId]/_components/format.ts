@@ -1,5 +1,4 @@
-import type { StandingsRow, TeamPlayerRow } from "@sideline/shared";
-import { normalizeInjury } from "../../../../components/injury";
+import type { LineupPlayer, Reason, StandingsRow, TeamPlayerRow } from "@sideline/shared";
 
 /** "7-3" or "7-3-1" when there are ties. */
 export function formatRecord(r: Pick<StandingsRow, "wins" | "losses" | "ties">): string {
@@ -22,44 +21,20 @@ export function isOnBye(p: Pick<TeamPlayerRow, "byeWeek">, week: number | null):
   return week !== null && p.byeWeek === week;
 }
 
-export type IssueReason = "out" | "ir" | "bye";
-
-/** Why a starter cannot be counted on this week, or null. Out and IR-type statuses count. */
-export function issueReason(p: TeamPlayerRow, week: number | null): IssueReason | null {
-  const key = normalizeInjury(p.injuryStatus)?.key;
-  if (key === "out") return "out";
-  if (key === "ir" || key === "pup") return "ir";
-  if (isOnBye(p, week)) return "bye";
-  return null;
-}
-
-export function countStarterIssues(players: readonly TeamPlayerRow[], week: number | null): number {
-  return players.filter((p) => p.slot === "starter" && issueReason(p, week) !== null).length;
-}
-
-export function issuesText(count: number): string {
-  if (count === 0) return "No lineup issues this week";
-  return count === 1 ? "1 starter needs attention" : `${count} starters need attention`;
-}
-
-const ISSUE_LABELS: Record<IssueReason, string> = { out: "Out", ir: "IR", bye: "Bye" };
-
-export function issueLabel(reason: IssueReason): string {
-  return ISSUE_LABELS[reason];
-}
-
-/** Starters that are out, on IR or PUP, or on bye in `week`, with the reason. */
-export function starterIssues(
-  players: readonly TeamPlayerRow[],
-  week: number | null,
-): { player: TeamPlayerRow; reason: IssueReason }[] {
-  const out: { player: TeamPlayerRow; reason: IssueReason }[] = [];
-  for (const player of players) {
-    if (player.slot !== "starter") continue;
-    const reason = issueReason(player, week);
-    if (reason !== null) out.push({ player, reason });
+/**
+ * Plain-language copy for one of `LineupResponse.issues` (LINEUP-6). `INACTIVE_STARTER`'s raw
+ * label only has a player id (`packages/core/src/optimizer/recommend.ts`); substitute the
+ * player's name and their actual unavailability reason (bye, out, etc.) when known.
+ */
+export function lineupIssueLabel(issue: Reason, players: readonly LineupPlayer[]): string {
+  if (issue.code === "INACTIVE_STARTER" && typeof issue.value === "string") {
+    const player = players.find((p) => p.playerId === issue.value);
+    if (player !== undefined) {
+      const why = player.reasons.find((r) => r.code === "UNAVAILABLE")?.label;
+      return why !== undefined ? `${player.name}: ${why}` : `${player.name} is unavailable`;
+    }
   }
-  return out;
+  return issue.label;
 }
 
 export interface TeamSections {
