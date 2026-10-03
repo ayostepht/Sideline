@@ -15,3 +15,8 @@ export * from "./matchup/defense-vs-position.js";
 export * from "./matchup/multiplier.js";
 export * from "./matchup/grade.js";
 export * from "./matchup/config.js";
+export * from "./trends/scoring-trend.js";
+export * from "./trends/usage-trend.js";
+export * from "./trends/consistency.js";
+export * from "./trends/signal.js";
+export * from "./trends/momentum.js";
