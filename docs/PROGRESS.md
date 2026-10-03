@@ -35,8 +35,8 @@ Batch split and dependency rationale: ADR-015.
 | T4.6a | Waivers page | frontend-engineer | T4.4, T4.5b | E | Done | 2 | 64af436, 0e71028 |
 | T4.6b | Players explorer and player detail | frontend-engineer | T4.5c | E | Done | 2 | 1e9a764, 7e3a30a |
 | T4.8c | Render `projectedPoints` in the Lineup "why" UI | frontend-engineer | T4.8b | E | Done | 2 | 1415d02, 0e71028 |
-| T4.6c | Home waiver-targets and risers cards | frontend-engineer | T4.6a, T4.6b | F | Done | 1 | 6fa47dc |
-| T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6a, T4.6b, T4.6c | G | Not started | 0 | |
+| T4.6c | Home waiver-targets and risers cards | frontend-engineer | T4.6a, T4.6b | F | Done | 2 | 6fa47dc, 27d67a2 |
+| T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf (including Home's `getPlayerDetail` loop at a late-season week, Batch F code review M1), e2e | qa-engineer | T4.6a, T4.6b, T4.6c | G | Not started | 0 | |
 
 ## Earlier phases
 
