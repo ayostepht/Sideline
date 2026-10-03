@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 3 Batches A, B, C done; code review (Level 2) run and both findings fixed; dispatching Batch D.
+Last updated: 2026-10-02, Phase 3 Batches A through F done, two Level 2 code reviews run and all findings fixed; T3.7 (lineup API) dispatched, in flight.
 
 ## 1. Resume in five steps
 
@@ -15,23 +15,23 @@ Last updated: 2026-10-02, Phase 3 Batches A, B, C done; code review (Level 2) ru
 ## 2. Where things stand
 
 - **Phases 0 to 2 done** (G0, G1, G2 PASS; tags `gate-G0`, `gate-G1`, `gate-G2`). Phase 2 history: `docs/archive/progress-phase2.md`, gate report `docs/gates/G2.md`.
-- **Branch:** `phase/3-scoring`, created from `main` at the G2 merge. Nothing on it yet.
-- **Baseline at G2 (gate run 4):** `pnpm verify` 728 unit tests; integration 23; e2e 294 (3 main projects plus 3 chained `*-notfound` projects, ADR-012); axe 290; Lighthouse Home and League 98/100/96/100; route JS max 169,200 B (settings, target 170 KB: 800 B headroom); images about 100.8 MB, health under 2 s; lint warnings 0.
+- **Branch:** `phase/3-scoring`, created from `main` at the G2 merge. Batches A through F done (T3.1 through T3.6, T3.2c/e, T3.5a/b/c); see `docs/PROGRESS.md`'s Phase 3 task table for the full commit list.
+- **Baseline after Batch F:** `pnpm verify` 919 unit tests, 0 lint warnings. `packages/core` coverage holding at or above 90%/85%.
+- **Two Level 2 code reviews run and all findings fixed:** `docs/reviews/2026-10-02-p3-batchABC-code.md` (one Blocker: optimizer could recommend an unavailable player, fixed 23bcad0; one Major: NUL byte in a worker file, fixed 346297d) and `docs/reviews/2026-10-02-p3-batchDEF-code.md` (one Major: non-deterministic stats-source precedence in two DvP joins, fixed c2c6da2). T3.6's own property suite caught two more real bugs in `recommendLineup` and its own comparison generator, fixed same-day.
 - **Design:** ADR-011 (with its purple amendment) is the visual identity: #FFFFFF, #2A2A2A, #D9D9D9, lime #D5FC51 (fill only on light grounds), blue #2147E8/#8FA8FF, neon purple #DF00FE (non-text or large text; black text on it), Inter, corners at most 4px, dense, scoreboard feel. Phase 3 UI must follow it.
 - **Local data:** `./data` (gitignored) holds a live-synced DB. Never take screenshots from it (ADR-009 item 17). The worker now fills `sleeper_user_id` for env-seeded identity (G2-B1); Steph restarts `pnpm dev:worker` to pick it up.
 
 ## 3. In flight
 
-- Nothing. Clean point to `/clear`.
+- **T3.7** (backend-engineer): lineup data function + `GET /api/l/[leagueId]/lineup` + computed_cache wiring. Dispatched, not yet reported. If this session ends before it lands: check `git status` for files under `packages/shared/src/api/lineup.ts`, `packages/shared/src/reason.ts` (adds `ReasonSchema` only), `apps/web/lib/server/lineup.ts`, `apps/web/lib/server/api-handlers.ts`, `apps/web/app/api/l/[leagueId]/lineup/route.ts` — review against PLAN 5.4 (LINEUP-6), 5.3 (MATCH-2/4), and the already-built `recommendLineup`/`matchupMultiplier`/`matchupGrade`/`weeklyStandardDeviation`/`floorAndCeiling` in `packages/core` before committing.
 
 ## 4. Next steps (in order)
 
-1. Batches A, B, C done, each task verified independently (`pnpm verify` green) before committing: T3.1 (4a73f30), T3.2a (22d3630), T3.2c (91a2b78), T3.3a (104f08d), T3.4a (ed071b4), T3.2b (749388e, plus a NUL-byte fix 346297d), T3.3b (e26905e), T3.4b (160810e).
-2. Level 2 code review run on the full Batches A-C diff (`docs/reviews/2026-10-02-p3-batchABC-code.md`): one Blocker (optimizer could silently recommend an unavailable player instead of leaving the slot empty) fixed in 23bcad0; the NUL-byte Major above. Both re-verified. Baseline: `pnpm verify` 862 unit tests, 0 lint warnings.
-3. `packages/core` now depends on `@sideline/shared` (ADR-013 item 6). `defense_vs_position` materialization moved from T3.2 to a new T3.5b (ADR-013 items 8-10); T3.2 narrowed to `league_player_week_points` only.
-4. Dispatch Batch D next: T3.5a (analytics-engineer, matchup core MATCH-1/2/4 + MATCH-3 backtest harness, depends on T3.2b + T3.3b) and T3.6 (qa-engineer, golden optimizer scenarios + property tests LINEUP-8, depends on T3.4b) in parallel. See ADR-013 item 10 for the full batch order through H.
-5. The Phase 3 design follow-ups from the PROGRESS backlog ("Carried from Phase 2": scoreboard hero, lime on content, Home "You" badge, roster stat slot) are folded into T3.8b.
-6. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
+1. Once T3.7 lands: verify independently (acceptance criteria, scope, `pnpm verify`), then run a Level 2 code review on the cumulative diff since the Batch D-F review commit (`f5fc0e9`) given T3.7's complexity (it's the first real caller of `computed_cache`), fix any Blocker/Major findings, commit.
+2. Then Batch G/H: T3.8a, T3.8b (frontend-engineer, Lineup page and Home "This week" card, both depend on T3.7) in parallel, folding the Phase 2 design backlog ("Carried from Phase 2": scoreboard hero, lime on content, Home "You" badge, roster stat slot) into T3.8b.
+3. Then Batch I: T3.9 (qa-engineer, e2e lineup flow: mode toggle, swaps, Open in Sleeper, opponent view), depends on T3.8a/b.
+4. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
+5. Good point to suggest `/clear` to Steph once T3.7 lands and is committed — this file is enough to resume.
 
 ## 5. Briefs
 
