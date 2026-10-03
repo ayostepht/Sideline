@@ -100,6 +100,44 @@ describe("getLineup", () => {
     expect(valueOf(upside)).toBeGreaterThan(10);
   });
 
+  it("position CV prior averages each player's own week-to-week CV, not a between-player pooled CV (regression, T3.8a)", () => {
+    // Realistic shape: one star RB with a modest own week-to-week CV (~0.15), four deep-bench
+    // RBs with their own CV (~0.2 each), and a separate low-sample RB with only 1 week of their
+    // own history. The old implementation pooled every player's weekly points into one flat list
+    // before computing sd/mean, conflating "which player is this" (star vs bench, mean 20 vs
+    // mean 1.5) with "how much does one player vary week to week" - producing a pooled CV
+    // (~1.4 for this fixture) so large it collapsed the low-sample player's Safe floor to exactly
+    // 0 via `floorAndCeiling`'s `Math.max(0, ...)`. Averaging each qualifying player's own CV
+    // instead produces a realistic prior (~0.19) and a non-zero floor.
+    const h = setup({ rosterCount: 1, rosterSize: 21, playerCount: 21 });
+    insertPoints(h, [
+      // Star RB (p1): mean 20, own population sd 3 -> own CV 0.15.
+      { playerId: "p1", week: 1, actualPts: 17 },
+      { playerId: "p1", week: 2, actualPts: 23 },
+      { playerId: "p1", week: 3, actualPts: 17 },
+      { playerId: "p1", week: 4, actualPts: 23 },
+      { playerId: "p1", week: 5, actualPts: 17 },
+      { playerId: "p1", week: 6, actualPts: 23 },
+      // Four deep-bench RBs (p5, p9, p13, p17): mean 1.5, own population sd 0.3 -> own CV 0.2 each.
+      ...["p5", "p9", "p13", "p17"].flatMap((playerId) => [
+        { playerId, week: 1, actualPts: 1.2 },
+        { playerId, week: 2, actualPts: 1.8 },
+        { playerId, week: 3, actualPts: 1.2 },
+        { playerId, week: 4, actualPts: 1.8 },
+        { playerId, week: 5, actualPts: 1.2 },
+        { playerId, week: 6, actualPts: 1.8 },
+      ]),
+      // Low-sample RB under test (p21): only 1 week of their own history, below
+      // MIN_WEEKS_FOR_PLAYER_CV, so this player does not contribute to the position average
+      // either way; only the shrinkage formula's reliance on the prior is under test.
+      { playerId: "p21", week: 4, actualPts: 3 },
+      { playerId: "p21", week: 5, projPts: 15 },
+    ]);
+    const safe = ok(getLineup(h, "L1", { mode: "safe", rosterId: 1 }, SEED_NOW));
+    const floor = safe.players.find((p) => p.playerId === "p21")?.value;
+    expect(floor).toBeGreaterThan(5);
+  });
+
   it("keeps a locked starter in their slot even when a higher-value player is eligible", () => {
     const h = setup({
       rosterCount: 1,

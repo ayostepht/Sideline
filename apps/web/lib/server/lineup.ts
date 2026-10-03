@@ -248,29 +248,66 @@ function readDefenseVsPosition(
   return out;
 }
 
-/** League-wide coefficient of variation (sd / mean) of actual points per position (PROJ-2 prior). */
+/**
+ * Minimum number of a player's own weekly `actual_pts` samples required before their own
+ * coefficient of variation contributes to {@link readPositionCv}'s position average. Below this,
+ * one or two noisy weeks would dominate the average; 4 keeps most midseason-rostered players
+ * (who by week 5 typically have several weeks of their own history) eligible while still
+ * requiring enough samples for the player's own sd/mean to mean something, echoing PROJ-2's own
+ * shrinkage constant `k = 6` (the point at which a player's own data starts to dominate the
+ * shrinkage blend) without requiring the full `k` weeks just to seed the position-level prior.
+ */
+const MIN_WEEKS_FOR_PLAYER_CV = 4;
+
+/**
+ * Position-level coefficient of variation prior for PROJ-2's shrinkage formula
+ * (`weeklyStandardDeviation`): the average, across qualifying players at a position, of each
+ * player's OWN week-to-week CV (that player's own sd / mean over their own weekly `actual_pts`).
+ *
+ * This is deliberately NOT computed by pooling every player's weekly points into one flat list
+ * and taking that list's sd / mean. Pooling conflates between-player dispersion (a star RB
+ * scoring 20+ next to a deep-bench RB scoring 1-2, every week) with the within-player variability
+ * PROJ-2 actually needs as a shrinkage prior for a low-sample player, and produces a CV far
+ * larger than any individual player's real week-to-week swing - inflating `sd` in
+ * `weeklyStandardDeviation` enough to collapse `floorAndCeiling`'s floor to 0 for most low-sample
+ * players (found in T3.8a frontend QA against the fixture DB; see `lineup.test.ts`).
+ */
 function readPositionCv(h: DbHandle, leagueId: string, season: number): Map<string, number> {
   const rows = h.sqlite
     .prepare(
-      `SELECT p.position AS position, lpwp.actual_pts AS actualPts
+      `SELECT p.position AS position, lpwp.player_id AS playerId, lpwp.actual_pts AS actualPts
        FROM league_player_week_points lpwp
        JOIN players p ON p.player_id = lpwp.player_id
        WHERE lpwp.league_id = ? AND lpwp.season = ? AND lpwp.actual_pts IS NOT NULL`,
     )
-    .all(leagueId, season) as { position: string | null; actualPts: number }[];
-  const byPosition = new Map<string, number[]>();
+    .all(leagueId, season) as { position: string | null; playerId: string; actualPts: number }[];
+
+  const byPositionPlayer = new Map<string, Map<string, number[]>>();
   for (const r of rows) {
     if (r.position === null) continue;
-    const arr = byPosition.get(r.position) ?? [];
+    const byPlayer = byPositionPlayer.get(r.position) ?? new Map<string, number[]>();
+    const arr = byPlayer.get(r.playerId) ?? [];
     arr.push(r.actualPts);
-    byPosition.set(r.position, arr);
+    byPlayer.set(r.playerId, arr);
+    byPositionPlayer.set(r.position, byPlayer);
   }
+
   const out = new Map<string, number>();
-  for (const [position, values] of byPosition) {
-    const m = mean(values);
-    const variance = mean(values.map((v) => (v - m) ** 2));
-    const sd = Math.sqrt(variance);
-    out.set(position, m === 0 ? 0 : sd / m);
+  for (const [position, byPlayer] of byPositionPlayer) {
+    const perPlayerCvs: number[] = [];
+    for (const values of byPlayer.values()) {
+      // Too few of this player's own weeks to estimate their own CV meaningfully; skip rather
+      // than let one or two noisy samples dominate the position average.
+      if (values.length < MIN_WEEKS_FOR_PLAYER_CV) continue;
+      const m = mean(values);
+      if (m === 0) continue; // Same divide-by-zero guard as before, applied per player now.
+      const variance = mean(values.map((v) => (v - m) ** 2));
+      perPlayerCvs.push(Math.sqrt(variance) / m);
+    }
+    // No player at this position had enough of their own history to qualify; leave the position
+    // out of the map. The caller already treats a missing entry as 0 via `?? 0`.
+    if (perPlayerCvs.length === 0) continue;
+    out.set(position, mean(perPlayerCvs));
   }
   return out;
 }
