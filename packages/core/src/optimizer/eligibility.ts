@@ -65,7 +65,7 @@ export function resolveSlots(rosterPositions: readonly string[]): ResolveSlotsRe
     if (eligiblePositions === undefined) {
       warnings.push({
         code: "UNKNOWN_SLOT_TYPE",
-        label: `Unknown roster slot type "${slotType}" cannot be filled`,
+        label: `"${slotType}" is a roster slot we don't recognize`,
         value: slotType,
       });
       continue;

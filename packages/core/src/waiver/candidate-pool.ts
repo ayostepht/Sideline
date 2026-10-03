@@ -79,28 +79,28 @@ export function buildCandidatePool(input: CandidatePoolInput): CandidatePoolResu
   const reasons: Reason[] = [
     {
       code: "CANDIDATE_POOL_SIZE",
-      label: `${candidates.length} players are available free agents in a league-used position`,
+      label: `${candidates.length} free agents available at a position your league uses`,
       value: candidates.length,
     },
   ];
   if (excludedRostered > 0) {
     reasons.push({
       code: "EXCLUDED_ROSTERED",
-      label: "Excluded players already on a roster (including IR and taxi)",
+      label: "Already on a roster (including IR and taxi)",
       value: excludedRostered,
     });
   }
   if (excludedInactive > 0) {
     reasons.push({
       code: "EXCLUDED_INACTIVE",
-      label: `Excluded players without an "${ACTIVE_PLAYER_STATUS}" status`,
+      label: "Not currently active in the NFL",
       value: excludedInactive,
     });
   }
   if (excludedPosition > 0) {
     reasons.push({
       code: "EXCLUDED_POSITION",
-      label: "Excluded players whose position the league does not use",
+      label: "Plays a position your league doesn't use",
       value: excludedPosition,
     });
   }

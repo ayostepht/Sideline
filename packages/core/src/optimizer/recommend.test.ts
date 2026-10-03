@@ -52,7 +52,7 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
     expect(result.swaps).toEqual([]);
     expect(result.pointDelta).toBeCloseTo(0, 9);
     expect(result.playerReasons.RB1).toEqual([
-      { code: "LOCKED", label: "Locked: game has started" },
+      { code: "LOCKED", label: "Game has already started" },
     ]);
   });
 
@@ -78,7 +78,7 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
     expect(result.playerReasons.RB1).toEqual([
       {
         code: "LOCKED",
-        label: "Locked: game has started (estimated kickoff time)",
+        label: "Game has already started (kickoff time is estimated)",
         value: "approximate",
       },
     ]);
@@ -168,7 +168,7 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
 
     expect(result.optimalAssignment).toEqual([{ slotType: "DEF", playerId: null }]);
     expect(result.issues).toEqual([
-      { code: "EMPTY_SLOT", label: "No eligible player available for DEF", value: "DEF" },
+      { code: "EMPTY_SLOT", label: "No one on your roster can fill DEF", value: "DEF" },
     ]);
   });
 
@@ -199,7 +199,7 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
     expect(result.optimalAssignment).toEqual([{ slotType: "RB", playerId: null }]);
     expect(result.issues).toContainEqual({
       code: "EMPTY_SLOT",
-      label: "No eligible player available for RB",
+      label: "No one on your roster can fill RB",
       value: "RB",
     });
   });
@@ -225,7 +225,7 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
 
     expect(result.issues).toContainEqual({
       code: "INACTIVE_STARTER",
-      label: "Currently started player RB1 is unavailable",
+      label: "Your current starter isn't available this week",
       value: "RB1",
     });
   });
@@ -234,7 +234,7 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
     const slotWarnings = [
       {
         code: "UNKNOWN_SLOT_TYPE",
-        label: 'Unknown roster slot type "FOO" cannot be filled',
+        label: '"FOO" is a roster slot we don\'t recognize',
         value: "FOO",
       },
     ];
@@ -284,7 +284,7 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
     expect(new Set(assignedIds).size).toBe(assignedIds.length);
     expect(result.issues).toContainEqual({
       code: "EMPTY_SLOT",
-      label: "No eligible player available for QB",
+      label: "No one on your roster can fill QB",
       value: "QB",
     });
   });

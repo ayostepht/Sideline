@@ -142,7 +142,7 @@ export function computeWaiverOrder(input: WaiverOrderInput): WaiverOrderResult {
       reasons: [
         {
           code: "MY_TEAM_NOT_FOUND",
-          label: "My team id was not found among the rosters supplied",
+          label: "Couldn't find your team in this league's rosters",
           value: myTeamId,
         },
       ],
@@ -157,7 +157,7 @@ export function computeWaiverOrder(input: WaiverOrderInput): WaiverOrderResult {
     reasons: [
       {
         code: "WAIVER_POSITION",
-        label: `Waiver position ${String(mine.rank)} of ${String(order.length)}`,
+        label: `You're ${String(mine.rank)} of ${String(order.length)} in the waiver order`,
         value: mine.rank,
       },
     ],
@@ -250,15 +250,15 @@ export function computeCompetingClaims(input: CompetingClaimsInput): CompetingCl
     if (!aheadOfMe) {
       reasons.push({
         code: "NOT_AHEAD_OF_ME",
-        label: "This team is not ahead of me in the waiver order, so it cannot block my claim",
+        label: "This team is behind you in the waiver order, so it can't block your claim",
         value: team.waiverPosition,
       });
     }
     reasons.push({
       code: exceedsThreshold ? "TEAM_NEED_LIKELY" : "TEAM_NEED_UNLIKELY",
       label: exceedsThreshold
-        ? `This candidate would add ${lineupImpact.impact.toFixed(1)} projected points to this team's optimal lineup, above the ${threshold.toFixed(1)}-point competing-need threshold`
-        : `This candidate would add only ${lineupImpact.impact.toFixed(1)} projected points to this team's optimal lineup, at or below the ${threshold.toFixed(1)}-point competing-need threshold`,
+        ? `Would add about ${lineupImpact.impact.toFixed(1)} points to this team's lineup, likely a real need for them`
+        : `Would add only about ${lineupImpact.impact.toFixed(1)} points to this team's lineup, likely not a priority for them`,
       value: lineupImpact.impact,
       impact: lineupImpact.impact,
     });
@@ -269,7 +269,7 @@ export function computeCompetingClaims(input: CompetingClaimsInput): CompetingCl
     if (failedMatches.length > 0) {
       reasons.push({
         code: "PRIOR_FAILED_CLAIM_SAME_POSITION",
-        label: `This team has ${String(failedMatches.length)} failed claim(s) at this candidate's position this season, corroborating but not changing the Lineup Impact estimate above`,
+        label: `This team already tried and failed to claim a player at this position ${String(failedMatches.length)} time(s) this season`,
         value: failedMatches.length,
       });
     }
@@ -290,7 +290,7 @@ export function computeCompetingClaims(input: CompetingClaimsInput): CompetingCl
     reasons: [
       {
         code: "COMPETING_NEED_THRESHOLD",
-        label: `Teams ahead of me are flagged as likely competing when their own Lineup Impact for this candidate exceeds ${threshold.toFixed(1)} points`,
+        label: `Teams ahead of you are flagged as competing if this player would help their lineup by more than ${threshold.toFixed(1)} points`,
         value: threshold,
       },
     ],
@@ -364,14 +364,14 @@ export function computeClaimAdvice(input: ClaimAdviceInput): ClaimAdviceResult {
   const reasons: Reason[] = [
     {
       code: "PRIORITY_VALUE_BREAKDOWN",
-      label: `Value of priority: ${baseValue.toFixed(1)} base x ${positionFactor.toFixed(2)} position factor (waiver position ${String(myWaiverPosition)}) x ${weeksFactor.toFixed(2)} weeks factor (${String(weeksRemaining)} of ${String(seasonWeeks)} weeks remaining) = ${valueOfPriority.toFixed(1)} points`,
+      label: `Keeping your waiver spot is worth about ${valueOfPriority.toFixed(1)} points`,
       value: valueOfPriority,
     },
     {
       code: worthIt ? "CLAIM_WORTH_IT" : "CLAIM_NOT_WORTH_IT",
       label: worthIt
-        ? `Lineup Impact (${lineupImpact.impact.toFixed(1)} pts) exceeds the value of priority (${valueOfPriority.toFixed(1)} pts): worth dropping to the back of the order`
-        : `Lineup Impact (${lineupImpact.impact.toFixed(1)} pts) does not exceed the value of priority (${valueOfPriority.toFixed(1)} pts): hold your spot`,
+        ? `Worth it: this adds more value (${lineupImpact.impact.toFixed(1)} pts) than keeping your spot (${valueOfPriority.toFixed(1)} pts)`
+        : `Not worth it: keeping your spot (${valueOfPriority.toFixed(1)} pts) is worth more than this add (${lineupImpact.impact.toFixed(1)} pts)`,
       value: lineupImpact.impact - valueOfPriority,
       impact: lineupImpact.impact,
     },
@@ -426,7 +426,7 @@ export function computeNextWaiverClear(input: NextWaiverClearInput): NextWaiverC
   if (waiverDayOfWeek === null && !dailyWaivers) {
     reasons.push({
       code: "WAIVER_DAY_UNKNOWN_ASSUMED_DAILY",
-      label: "League has no waiver_day_of_week set; treating waivers as processing daily",
+      label: "Your league hasn't set a waiver day, so we're assuming claims process daily",
     });
   }
 
@@ -486,14 +486,14 @@ export function computeFreeAgentTime(input: FreeAgentTimeInput): FreeAgentTimeRe
     reasons.push({
       code: "WAIVER_CLEAR_DAYS_UNKNOWN_ASSUMED_IMMEDIATE",
       label:
-        "League has no waiver_clear_days set; treating dropped players as immediately available",
+        "Your league hasn't set a waiver clear time, so dropped players become free agents immediately",
     });
   }
   const days = waiverClearDays ?? 0;
   const freeAgentAt = new Date(droppedAt.getTime() + days * DAY_MS);
   reasons.push({
     code: "FREE_AGENT_TIME",
-    label: `Becomes a free agent, first come first served, ${String(days)} day(s) after being dropped`,
+    label: `Becomes a free agent (first come, first served) ${String(days)} day(s) after being dropped`,
     value: freeAgentAt.toISOString(),
   });
   return { freeAgentAt, reasons };

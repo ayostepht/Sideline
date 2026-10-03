@@ -68,7 +68,7 @@ export function computeScoringTrend(input: ScoringTrendInput): ScoringTrendResul
   if (gamesPlayed < TREND_L3_WINDOW) {
     reasons.push({
       code: "TREND_L3_SMALL_SAMPLE",
-      label: `Fewer than ${TREND_L3_WINDOW} games played; L3 uses all available games`,
+      label: `Fewer than ${TREND_L3_WINDOW} games played; using all available games for recent form`,
       value: gamesPlayed,
     });
   }

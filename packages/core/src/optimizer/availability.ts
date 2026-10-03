@@ -38,10 +38,10 @@ export function applyAvailability(input: AvailabilityInput): AvailabilityResult 
   const { status, isBye, rawValue } = input;
 
   if (isBye || (status !== null && ZERO_VALUE_STATUSES.has(status))) {
-    const label = isBye ? "On bye this week" : `Status: ${status ?? ""}`;
+    const label = isBye ? "On bye this week" : `Not playing this week (${status ?? ""})`;
     return {
       value: 0,
-      reasons: [{ code: "UNAVAILABLE", label, impact: -rawValue }],
+      reasons: [{ code: "UNAVAILABLE", label, impact: -rawValue, projectedPoints: rawValue }],
     };
   }
 
@@ -53,9 +53,10 @@ export function applyAvailability(input: AvailabilityInput): AvailabilityResult 
       reasons: [
         {
           code: "DOUBTFUL_DISCOUNT",
-          label: "Doubtful: value discounted",
+          label: "Doubtful, so we lowered their projection",
           value: multiplier,
           impact: value - rawValue,
+          projectedPoints: rawValue,
         },
       ],
     };
@@ -69,9 +70,10 @@ export function applyAvailability(input: AvailabilityInput): AvailabilityResult 
       reasons: [
         {
           code: "QUESTIONABLE_DISCOUNT",
-          label: "Questionable: value discounted",
+          label: "Questionable, so we lowered their projection slightly",
           value: multiplier,
           impact: value - rawValue,
+          projectedPoints: rawValue,
         },
       ],
     };

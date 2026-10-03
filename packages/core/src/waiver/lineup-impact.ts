@@ -157,14 +157,13 @@ export function computeLineupImpact(input: LineupImpactInput): LineupImpactResul
       droppedPlayerId = dropPlayerId;
       reasons.push({
         code: "SUGGESTED_DROP",
-        label: "Suggested drop (explicit override)",
+        label: "You chose this player to drop (override)",
         value: dropPlayerId,
       });
     } else {
       reasons.push({
         code: "DROP_PLAYER_NOT_ON_ROSTER",
-        label:
-          "The requested drop player is not on this roster; evaluating the candidate as a pure add with no corresponding drop",
+        label: "That player isn't on your roster, so we're evaluating this as a straight add",
         value: dropPlayerId,
       });
     }
@@ -173,14 +172,13 @@ export function computeLineupImpact(input: LineupImpactInput): LineupImpactResul
     if (nonIR.length === 0) {
       reasons.push({
         code: "NO_LEGAL_DROP",
-        label:
-          "No eligible roster player to drop (roster is empty or every player is on IR); evaluating the candidate as a pure add with no corresponding drop",
+        label: "No one on your roster can be dropped, so we're evaluating this as a straight add",
       });
     } else {
       droppedPlayerId = pickLowestRosValue(nonIR).playerId;
       reasons.push({
         code: "SUGGESTED_DROP",
-        label: "Suggested drop: lowest rest-of-season value on the roster",
+        label: "We suggest dropping your lowest-value player for the rest of the season",
         value: droppedPlayerId,
       });
     }

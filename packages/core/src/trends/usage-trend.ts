@@ -83,7 +83,7 @@ export function computeUsageTrend(input: UsageTrendInput): UsageTrendResult {
       reasons: [
         {
           code: "TREND_USAGE_NOT_POSITION_RELEVANT",
-          label: `No usage stats are tracked for position ${position}`,
+          label: `We don't track usage stats for ${position}`,
           value: position,
         },
       ],

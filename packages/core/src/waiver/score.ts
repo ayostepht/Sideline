@@ -172,7 +172,7 @@ export function computeWaiverScore(input: WaiverScoreInput): WaiverScoreResult {
     if (clamped !== component.percentile) {
       reasons.push({
         code: "WAIVER_SCORE_PERCENTILE_CLAMPED",
-        label: `${component.label} percentile was outside 0-100 and was clamped`,
+        label: `${component.label} score was out of range, so we capped it`,
         value: component.percentile,
       });
     }

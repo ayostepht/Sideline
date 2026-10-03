@@ -93,7 +93,7 @@ export function computeConsistency(input: ConsistencyInput): ConsistencyResult {
     cv = 0;
     reasons.push({
       code: "TREND_CV_ZERO_MEAN",
-      label: "Average points is zero; consistency score is not meaningful",
+      label: "Average points is zero, so consistency isn't meaningful",
       value: 0,
     });
   } else {
@@ -103,7 +103,7 @@ export function computeConsistency(input: ConsistencyInput): ConsistencyResult {
   if (n < 2) {
     reasons.push({
       code: "TREND_CV_SMALL_SAMPLE",
-      label: "Fewer than 2 games played; consistency estimate is unreliable",
+      label: "Fewer than 2 games played, so this estimate is unreliable",
       value: n,
     });
   }
@@ -111,7 +111,7 @@ export function computeConsistency(input: ConsistencyInput): ConsistencyResult {
   if (startableCount <= 0) {
     reasons.push({
       code: "TREND_INVALID_STARTABLE_COUNT",
-      label: "League-wide startable count is zero or negative; boom/bust flags are unavailable",
+      label: "Not enough league data to flag boom or bust weeks",
       value: startableCount,
     });
     const weeksResult = weeks.map((w) => ({ ...w, isBoom: false, isBust: false }));

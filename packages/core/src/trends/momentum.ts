@@ -66,12 +66,12 @@ export function computeTrendingMomentum(input: TrendingMomentumInput): TrendingM
   const reasons: Reason[] = [
     {
       code: "TREND_MOMENTUM_ADDS",
-      label: "Sleeper adds in the lookback window",
+      label: "Times added on Sleeper recently",
       value: addCount,
     },
     {
       code: "TREND_MOMENTUM_DROPS",
-      label: "Sleeper drops in the lookback window",
+      label: "Times dropped on Sleeper recently",
       value: dropCount,
     },
   ];
@@ -79,7 +79,7 @@ export function computeTrendingMomentum(input: TrendingMomentumInput): TrendingM
   if (entries.length === 0) {
     reasons.push({
       code: "TREND_MOMENTUM_NO_DATA",
-      label: "No Sleeper trending data available for this player",
+      label: "No Sleeper trending data for this player",
     });
   }
 

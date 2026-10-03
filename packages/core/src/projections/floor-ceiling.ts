@@ -60,7 +60,7 @@ export function floorAndCeiling(input: FloorCeilingInput): FloorCeilingResult {
       reasons: [
         {
           code: "FLOOR_CEILING_EMPIRICAL",
-          label: "Floor and ceiling use this player's historical weekly results",
+          label: "Based on this player's actual weekly scores",
           value: historicalWeeklyPoints.length,
         },
       ],
@@ -73,7 +73,7 @@ export function floorAndCeiling(input: FloorCeilingInput): FloorCeilingResult {
     reasons: [
       {
         code: "FLOOR_CEILING_NORMAL_APPROX",
-        label: "Floor and ceiling estimated from a normal distribution truncated at 0",
+        label: "Estimated range since we don't have enough game history yet",
       },
     ],
   };

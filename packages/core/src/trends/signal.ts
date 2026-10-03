@@ -69,7 +69,7 @@ export function computeTrendSignal(input: TrendSignalInput): TrendSignalResult {
   const reasons: Reason[] = [
     {
       code: "TREND_SIGNAL_POINTS_DELTA",
-      label: "Points trend: last 3 weeks versus season average",
+      label: "Scoring trend: last 3 weeks vs. season average",
       impact: l3Delta,
     },
   ];
@@ -77,7 +77,7 @@ export function computeTrendSignal(input: TrendSignalInput): TrendSignalResult {
   if (usageDelta === null) {
     reasons.push({
       code: "TREND_SIGNAL_NO_USAGE_DATA",
-      label: "No usage data available; trend is based on scoring only",
+      label: "No usage data, so this is based on scoring alone",
     });
     return { signal: pointsSignal, reasons };
   }
@@ -85,7 +85,7 @@ export function computeTrendSignal(input: TrendSignalInput): TrendSignalResult {
   const usageSignal = signalFromDelta(usageDelta, USAGE_STEADY_BAND);
   reasons.push({
     code: "TREND_SIGNAL_USAGE_DELTA",
-    label: "Usage trend: last 3 weeks versus prior weeks",
+    label: "Usage trend: last 3 weeks vs. earlier weeks",
     value: usageDelta,
   });
 
@@ -102,7 +102,7 @@ export function computeTrendSignal(input: TrendSignalInput): TrendSignalResult {
   // One is Rising and the other is Falling: the two best signals disagree.
   reasons.push({
     code: "TREND_SIGNAL_CONFLICTING",
-    label: "Scoring and usage trends disagree; showing Steady",
+    label: "Scoring and usage trends disagree, so we're calling it Steady",
   });
   return { signal: "Steady", reasons };
 }

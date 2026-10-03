@@ -55,14 +55,14 @@ export function restOfSeasonProjection(
   if (estimatedFromPpgCount > 0) {
     reasons.push({
       code: "ROS_ESTIMATED_FROM_PPG",
-      label: "Some remaining weeks use the season points-per-game average as an estimate",
+      label: "Used season average for weeks without a projection",
       value: estimatedFromPpgCount,
     });
   }
   if (noDataCount > 0) {
     reasons.push({
       code: "ROS_WEEK_NO_DATA",
-      label: "Some remaining weeks have no projection or season average to estimate from",
+      label: "No data to estimate some remaining weeks",
       value: noDataCount,
     });
   }

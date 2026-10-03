@@ -72,7 +72,7 @@ export function prefilterCandidates<T extends PrefilterCandidate>(
   if (candidates.length > trimmed.length) {
     reasons.push({
       code: "PREFILTER_TRIMMED",
-      label: `Narrowed ${candidates.length} candidates to the top ${trimmed.length} by rest-of-season value and recent usage before computing Lineup Impact`,
+      label: `Narrowed down to the top ${trimmed.length} candidates by rest-of-season value and recent usage`,
       value: candidates.length - trimmed.length,
     });
   }
