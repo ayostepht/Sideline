@@ -24,12 +24,12 @@ Last updated: 2026-10-03. Phase 3 Batch H (T3.8a, T3.8b: Lineup page, Home card,
 
 ## 3. In flight
 
-- Nothing. Clean point to `/clear`.
+- **T3.9 (qa-engineer, e2e lineup flow) dispatched 2026-10-03, background agent.** Scope: `e2e/pages.spec.ts` (fix STATE-3: drop `"lineup"` from its stub-page loop, T3.8a replaced that stub), new `e2e/lineup.spec.ts` covering mode toggle, swap/issues rendering, opponent `?roster=` view, a bad `?roster=` 404, and the Open in Sleeper link. If this session ends before its completion notification arrives: check `git status`/`git log --oneline -5` on `phase/3-scoring` — its edits land as uncommitted working-tree changes until verified and committed (Level 1: `pnpm playwright test e2e/pages.spec.ts` and the new spec, then `pnpm verify`), or they were never applied and T3.9 needs re-dispatching from `docs/PROGRESS.md`'s Phase 3 task table.
 
 ## 4. Next steps (in order)
 
-1. Dispatch Batch I: T3.9 (qa-engineer, e2e lineup flow: mode toggle, swaps, Open in Sleeper, opponent view), depends on T3.8a/b. **Must include in the brief:** fix `e2e/pages.spec.ts` STATE-3 (and STATE-2 if it shares the loop) to drop `"lineup"` from the stub-page assertion loop — T3.8a replaced that stub with a real page (`data-testid="lineup-page"`, not `"stub-page"`); this is currently a known-red e2e test (docs/reviews/2026-10-03-p3-batchH-code.md finding M1, docs/reviews/2026-10-03-p3-batchH-ux.md finding M4).
-2. After T3.8/T3.9 land and are reviewed, Phase 3 is done pending G3 (human checkpoint, PLAN 9): SCORE-2 at least 99% match on Steph's real league, LINEUP-7 benchmark, backtest report and alpha/beta decision logged (T3.5c's real run against live data, not the fixture smoke test already done). Run these live checks before writing the gate report.
+1. Verify and commit T3.9 (section 3) when it lands, update `docs/PROGRESS.md`'s T3.9 row.
+2. After T3.9 lands and is reviewed, Phase 3 is done pending G3 (human checkpoint, PLAN 9): SCORE-2 at least 99% match on Steph's real league, LINEUP-7 benchmark, backtest report and alpha/beta decision logged (T3.5c's real run against live data, not the fixture smoke test already done). Run these live checks before writing the gate report.
 3. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
 
 ## 5. Briefs
