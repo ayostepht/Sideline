@@ -21,6 +21,7 @@ import { RateLimiter } from "@sideline/sleeper";
 import pino, { type Logger } from "pino";
 import { registeredJobs } from "../jobs/index.js";
 import { LEASE_RENEW_MS, LeaseKeeper, newHolderId } from "../lease.js";
+import { createDefenseVsPositionRecomputeHook } from "../recompute-hooks/defense-vs-position.js";
 import { createLeaguePointsRecomputeHook } from "../recompute-hooks/league-points.js";
 import { recomputeHooks } from "../recompute.js";
 import { createJobRegistry, type JobRegistry } from "../registry.js";
@@ -151,6 +152,7 @@ if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.a
   const config = loadConfig(process.env);
   const logger = pino({ level: config.logLevel }, pino.destination(2));
   recomputeHooks.register(createLeaguePointsRecomputeHook({ logger }));
+  recomputeHooks.register(createDefenseVsPositionRecomputeHook({ logger }));
   runSyncCli(process.argv.slice(2), {
     config,
     registry: createJobRegistry(registeredJobs),
