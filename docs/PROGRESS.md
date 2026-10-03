@@ -23,7 +23,7 @@ Batch split and dependency rationale: ADR-015.
 | ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|---|
 | T4.1 | Trends and usage metrics (TREND-1 to 5) | analytics-engineer | G3 | A | Done | 1 | ad3b10a |
-| T4.2a | Waiver candidate pool, prefilter, Lineup Impact (WAIVER-1, 2) | analytics-engineer | G3 | A | Dispatched | 0 | |
+| T4.2a | Waiver candidate pool, prefilter, Lineup Impact (WAIVER-1, 2) | analytics-engineer | G3 | A | Done | 1 | b94c236 |
 | T4.3 | Production Docker image beta (HOST-1 to 6 partial) | devops-engineer | G3 | A | Dispatched | 0 | |
 | T4.2b | Waiver Score composite, two views (WAIVER-3, 4) | analytics-engineer | T4.2a | B | Not started | 0 | |
 | T4.4 | Waiver priority advisor (WAIVER-6a to 6d) | analytics-engineer | T4.2a | B | Not started | 0 | |
@@ -71,6 +71,12 @@ Remove an item when it is done; the archive keeps history.
 - T1.5c: compute the ADR-002 fallback kickoff when gametime is missing; with nflverse off no fallback rows exist.
 - T1.4a m6/m8: nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, write-then-swap.
 - Injectable `sleep` in `makeClient` (sturdier backoff tests; the 503 retry test takes about 4 s). apps/worker has no `test` script (devops).
+
+### Carried from Phase 4 Batch A
+
+- T4.2b must add `export * from "./waiver/index.js"` to `packages/core/src/index.ts` (T4.2a left its own barrel unwired, mirroring `projections/index.ts`'s existing pattern, out of its scope).
+- `packages/core/package.json` has no `"test"` script (only `"typecheck"`), so `pnpm --filter @sideline/core test` silently no-ops instead of erroring (devops-engineer).
+- T4.5's brief needs: per-week league-wide `positionRank` and `startableCount` for TREND-3 (not computed anywhere yet, by design); real percentiles across the live candidate pool for T4.2b's composite inputs (also by design, decoupled per ADR-015).
 
 ### Tests and tooling
 
