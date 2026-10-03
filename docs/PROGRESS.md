@@ -24,7 +24,7 @@ Batch split and dependency rationale: ADR-015.
 |---|---|---|---|---|---|---|---|
 | T4.1 | Trends and usage metrics (TREND-1 to 5) | analytics-engineer | G3 | A | Done | 1 | ad3b10a |
 | T4.2a | Waiver candidate pool, prefilter, Lineup Impact (WAIVER-1, 2) | analytics-engineer | G3 | A | Done | 1 | b94c236 |
-| T4.3 | Production Docker image beta (HOST-1 to 6 partial) | devops-engineer | G3 | A | Done | 1 | 7711881 |
+| T4.3 | Production Docker image beta (HOST-1 to 6 partial) | devops-engineer | G3 | A | Done | 2 | 7711881, 91a616c |
 | T4.2b | Waiver Score composite, two views (WAIVER-3, 4) | analytics-engineer | T4.2a | B | Done | 1 | 63b415a |
 | T4.4 | Waiver priority advisor (WAIVER-6a to 6d) | analytics-engineer | T4.2a | B | Not started | 0 | |
 | T4.8a | Reason contract amendment (Lineup "why" detail, Steph's G3 ask) | backend-engineer | none | B | Done | 1 | 6384643 |
@@ -79,6 +79,7 @@ Remove an item when it is done; the archive keeps history.
 - T4.5's brief needs: per-week league-wide `positionRank` and `startableCount` for TREND-3 (not computed anywhere yet, by design); real percentiles across the live candidate pool for T4.2b's composite inputs (also by design, decoupled per ADR-015).
 - **T4.3 Docker image size is ambiguous: `docker images` reports 551 MB, but the `CONTENT SIZE` column (unique layers added by this repo's Dockerfile, excluding the shared base image) is 129 MB** -- the latter is the number directly comparable to G1-G3's ~100.8 MB web-only figure. T6.2 (HOST-5, 400 MB budget, multi-arch CI) must settle on one measurement method before enforcing the budget; `better-sqlite3` prebuilds and `sharp` are still untrimmed (pre-existing backlog item above).
 - T6.2 follow-ups from T4.3: `packages/shared`'s `AppConfigSchema.puid`/`pgid` (default 1000/1000) are unused by any code path and now inconsistent with the container's real 99/100 default (backend-engineer: wire them to something real or align the default); a bare `docker exec <c> whoami` returns `root` by design (no `USER` instruction, entrypoint drops privileges per-process via `setpriv`) -- gate verification scripts must use `docker top` or `docker exec -u <uid>:<gid>`, not `whoami`, to check non-root; PUID/PGID chown was verified on a named Docker volume and a real Linux host, not a macOS bind mount (a known virtualized-bind-mount limitation on this dev machine, not an entrypoint bug).
+- **T4.3-FIX (commit `91a616c`) closed the 3 Major code-review findings** (unverified migrations, unvalidated `DATA_DIR` before a recursive root `chown`, no guard against `PUID=0`/`PGID=0`); see `docs/reviews/2026-10-03-p4-batchA-code.md`'s resolution note. Two Minors remain open for T6.2: no `SIGTERM`/`SIGINT` trap in the entrypoint (hard kill instead of graceful drain on `docker stop`); unconditional `chown -R` on every boot instead of only when ownership is already wrong.
 
 ### Tests and tooling
 
