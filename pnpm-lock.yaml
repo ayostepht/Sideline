@@ -336,7 +336,11 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
 
-  packages/core: {}
+  packages/core:
+    dependencies:
+      '@sideline/shared':
+        specifier: workspace:*
+        version: link:../shared
 
   packages/db:
     dependencies:

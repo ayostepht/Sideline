@@ -22,7 +22,7 @@
     "test:contract": "vitest run --project contract",
     "lhci": "lhci autorun",
     "screens": "tsx scripts/screens.ts",
-    "validate:scoring": "tsx scripts/not-implemented.ts T3.1 validate:scoring",
+    "validate:scoring": "tsx scripts/validate-scoring/index.ts",
     "backtest": "tsx scripts/not-implemented.ts T3.5 backtest",
     "sync": "tsx scripts/dev-run.ts sync",
     "db:migrate": "pnpm -C packages/db run db:migrate",
