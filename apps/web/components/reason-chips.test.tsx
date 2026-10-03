@@ -29,3 +29,21 @@ describe("ReasonChip / projectedPoints", () => {
     expect(sameButExplicitUndefined).toBe(before);
   });
 });
+
+describe("ReasonChip / long label wrapping", () => {
+  const longLabel = "Questionable, so we lowered their projection slightly";
+
+  it("renders the full label text without truncating it", () => {
+    const html = renderToStaticMarkup(
+      <ReasonChip reason={{ code: "INJURY", label: longLabel, projectedPoints: 9.3 }} />,
+    );
+    expect(html).toContain(longLabel);
+    expect(html).not.toContain("truncate");
+    expect(html).not.toContain(`title="${longLabel}"`);
+  });
+
+  it("wraps the label with break-words instead of a single-line ellipsis", () => {
+    const html = renderToStaticMarkup(<ReasonChip reason={{ ...base, label: longLabel }} />);
+    expect(html).toContain("break-words");
+  });
+});

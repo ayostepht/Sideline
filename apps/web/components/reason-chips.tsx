@@ -10,17 +10,15 @@ export function ReasonChip({ reason }: { reason: Reason }) {
   return (
     <li
       className={cn(
-        "inline-flex max-w-full min-w-0 items-center gap-1 rounded-control border bg-muted px-2 py-1.5 text-[13px] leading-4 sm:py-1 sm:text-xs",
+        "inline-flex max-w-full min-w-0 items-start gap-1 rounded-control border bg-muted px-2 py-1.5 text-[13px] leading-4 sm:py-1 sm:text-xs",
         imp.sign === "up" && "text-positive",
         imp.sign === "down" && "text-negative",
         imp.sign === "none" && "text-foreground",
       )}
       data-testid="reason-chip"
     >
-      {Icon ? <Icon className="size-3 shrink-0" aria-hidden /> : null}
-      <span className="min-w-0 truncate text-foreground" title={reason.label}>
-        {reason.label}
-      </span>
+      {Icon ? <Icon className="size-3 shrink-0 translate-y-0.5" aria-hidden /> : null}
+      <span className="min-w-0 break-words text-foreground">{reason.label}</span>
       {reason.value !== undefined ? (
         <span className="shrink-0 font-medium tabular-nums text-foreground">{reason.value}</span>
       ) : null}
