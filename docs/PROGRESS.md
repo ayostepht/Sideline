@@ -34,7 +34,7 @@ Batch split and dependency rationale: ADR-015.
 | T4.5c | Players list and detail data functions, API routes, response DTOs | backend-engineer | T4.5a, T4.1 | D | Done | 1 | f75d318 |
 | T4.6a | Waivers page | frontend-engineer | T4.4, T4.5b | E | Not started | 0 | |
 | T4.6b | Players explorer and player detail | frontend-engineer | T4.5c | E | Not started | 0 | |
-| T4.8c | Render `projectedPoints` in the Lineup "why" UI | frontend-engineer | T4.8b | E | Not started | 0 | |
+| T4.8c | Render `projectedPoints` in the Lineup "why" UI | frontend-engineer | T4.8b | E | Done | 1 | 1415d02 |
 | T4.6c | Home waiver-targets and risers cards | frontend-engineer | T4.6a, T4.6b | F | Not started | 0 | |
 | T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6a, T4.6b, T4.6c | G | Not started | 0 | |
 
@@ -105,7 +105,7 @@ Remove an item when it is done; the archive keeps history.
 
 Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
 
-- **Lineup "why" needs more detail (Steph, G3 approval 2026-10-03).** Scheduled as T4.8a/b/c (ADR-015), riding alongside Phase 4 Batches B to D.
+- ~~**Lineup "why" needs more detail (Steph, G3 approval 2026-10-03).**~~ Done: T4.8a (6384643) added the contract, T4.8b (f97a16e) rewrote every reason's copy to plain language and populated it on the three availability-discount reasons, T4.8c (1415d02) renders it in `ReasonChips`/`WhySheet`. Worth a quick look at the G4 human checkpoint.
 - **Lighthouse (`lighthouserc.json`) only measures Home and League; Lineup (T3.8) was never added.** Add it before Phase 4 adds Waivers/Players too (devops/qa).
 - **Lineup route JS is 178,735 B, over the 170,000 B soft target** (under the 200,000 B hard budget). Watch before Phase 4 adds more client code to that route (frontend-engineer).
 - `scheduleAlreadyStored` (`apps/worker/src/jobs/data-jobs.ts`) uses a raw SQL query instead of a typed `packages/db` helper, inconsistent with its siblings `readStoredStatsWeeks`/`readStoredProjectionWeeks`.
