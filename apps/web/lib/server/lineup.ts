@@ -250,14 +250,37 @@ function readDefenseVsPosition(
 
 /**
  * Minimum number of a player's own weekly `actual_pts` samples required before their own
- * coefficient of variation contributes to {@link readPositionCv}'s position average. Below this,
- * one or two noisy weeks would dominate the average; 4 keeps most midseason-rostered players
- * (who by week 5 typically have several weeks of their own history) eligible while still
- * requiring enough samples for the player's own sd/mean to mean something, echoing PROJ-2's own
- * shrinkage constant `k = 6` (the point at which a player's own data starts to dominate the
- * shrinkage blend) without requiring the full `k` weeks just to seed the position-level prior.
+ * coefficient of variation can contribute to {@link readPositionCv}'s position average.
+ *
+ * Lowered from 4 to 2 (follow-up to the T3.8a/352af52 pooling fix, found by ux-reviewer at the
+ * real app's week 4 the same day): population sd of a *single* sample is always exactly 0 and
+ * carries no variability signal at all, so 1 week never qualifies. But sd of *two* samples is
+ * already nonzero whenever the two differ - the common case for real weekly fantasy scores - so
+ * 2 is the lowest threshold that still means something for an individual player's own estimate.
+ *
+ * 4's original rationale ("one or two noisy weeks would dominate the average") conflated two
+ * different noise sources: a single player's own CV estimate from 2-3 weeks is indeed noisy, but
+ * {@link MIN_PLAYERS_FOR_POSITION_CV} below controls for exactly that by requiring breadth
+ * (several independent players) before the position-level average is trusted at all - which is
+ * the right lever, since averaging many independent noisy-but-unbiased per-player estimates
+ * reduces the aggregate's variance even though each individual contribution is itself noisy.
+ * Requiring 4 weeks *per player* instead left a realistic week-4 league (where most rostered
+ * players have at most 1-3 of their own weeks so far) with literally zero qualifying players at
+ * any position, collapsing `readPositionCv`'s map to empty and, via the caller's `?? 0` fallback
+ * and `weeklyStandardDeviation`'s shrinkage formula, every player's `sd` to exactly 0 - erasing
+ * all Safe/Upside separation from Projected for the entire league.
  */
-const MIN_WEEKS_FOR_PLAYER_CV = 4;
+const MIN_WEEKS_FOR_PLAYER_CV = 2;
+
+/**
+ * Minimum number of qualifying players (each with at least {@link MIN_WEEKS_FOR_PLAYER_CV} of
+ * their own weekly samples) required before a position's averaged CV is trusted at all. This is
+ * the breadth lever described above: one qualifying player's own CV, even on its own, is a single
+ * noisy point estimate and must never single-handedly set a position's prior when there's no one
+ * else to average it against. 2 is the lowest value for which "averaged alongside other players"
+ * is literally true; below it there is no averaging happening at all.
+ */
+const MIN_PLAYERS_FOR_POSITION_CV = 2;
 
 /**
  * Position-level coefficient of variation prior for PROJ-2's shrinkage formula
@@ -304,9 +327,10 @@ function readPositionCv(h: DbHandle, leagueId: string, season: number): Map<stri
       const variance = mean(values.map((v) => (v - m) ** 2));
       perPlayerCvs.push(Math.sqrt(variance) / m);
     }
-    // No player at this position had enough of their own history to qualify; leave the position
-    // out of the map. The caller already treats a missing entry as 0 via `?? 0`.
-    if (perPlayerCvs.length === 0) continue;
+    // Fewer than MIN_PLAYERS_FOR_POSITION_CV qualifying players: no breadth to average across,
+    // so leave the position out rather than trust a single noisy point estimate alone. The
+    // caller already treats a missing entry as 0 via `?? 0`.
+    if (perPlayerCvs.length < MIN_PLAYERS_FOR_POSITION_CV) continue;
     out.set(position, mean(perPlayerCvs));
   }
   return out;

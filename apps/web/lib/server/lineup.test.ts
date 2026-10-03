@@ -138,6 +138,39 @@ describe("getLineup", () => {
     expect(floor).toBeGreaterThan(5);
   });
 
+  it("position CV prior is usable at realistic week-4 sample sizes, not just at 6+ weeks (regression, follow-up to T3.8a/352af52)", () => {
+    // Realistic week-4 shape: three RBs (p1, p5, p9) each with only 2-3 of their own weeks so
+    // far (the most any player can have by week 4), differing week to week so each has a real
+    // nonzero own CV. A fourth RB (p13) under test has NO actual_pts history at all (a brand-new
+    // or untouched bench player), so their own sdPlayer is 0 and their Safe/Upside separation
+    // depends entirely on the position CV prior. Under the old MIN_WEEKS_FOR_PLAYER_CV = 4, none
+    // of p1/p5/p9 would qualify (all have fewer than 4 of their own weeks), the position CV map
+    // would be empty, and p13's floor/ceiling would collapse to exactly their projection.
+    const h = setup({ rosterCount: 1, rosterSize: 16, playerCount: 16 });
+    insertPoints(h, [
+      // p1: 2 weeks, mean 12, own CV ~0.167.
+      { playerId: "p1", week: 1, actualPts: 10 },
+      { playerId: "p1", week: 2, actualPts: 14 },
+      // p5: 2 weeks, mean 6, own CV ~0.167.
+      { playerId: "p5", week: 1, actualPts: 5 },
+      { playerId: "p5", week: 2, actualPts: 7 },
+      // p9: 3 weeks, mean 4, own CV ~0.204.
+      { playerId: "p9", week: 1, actualPts: 3 },
+      { playerId: "p9", week: 2, actualPts: 5 },
+      { playerId: "p9", week: 3, actualPts: 4 },
+      // p13 under test: no actual_pts at all, only a week 5 projection.
+      { playerId: "p13", week: 5, projPts: 20 },
+    ]);
+    const projected = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+    const safe = ok(getLineup(h, "L1", { mode: "safe", rosterId: 1 }, SEED_NOW));
+    const upside = ok(getLineup(h, "L1", { mode: "upside", rosterId: 1 }, SEED_NOW));
+    const valueOf = (r: LineupResponse): number | undefined =>
+      r.players.find((p) => p.playerId === "p13")?.value;
+    expect(valueOf(projected)).toBe(20);
+    expect(valueOf(safe)).toBeLessThan(20);
+    expect(valueOf(upside)).toBeGreaterThan(20);
+  });
+
   it("keeps a locked starter in their slot even when a higher-value player is eligible", () => {
     const h = setup({
       rosterCount: 1,
