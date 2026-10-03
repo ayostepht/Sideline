@@ -30,7 +30,7 @@ Batch split and dependency rationale: ADR-015.
 | T4.8a | Reason contract amendment (Lineup "why" detail, Steph's G3 ask) | backend-engineer | none | B | Done | 1 | 6384643 |
 | T4.5a | `packages/db` read helpers: usage, trending, positional ranking, rostered-id set | backend-engineer | T4.1, T4.2a | C | Done | 1 | 8cb05e0, f2f8e8a |
 | T4.8b | Populate Reason field, rewrite reason-code copy to plain language | analytics-engineer | T4.8a | C | Done | 1 | f97a16e |
-| T4.5b | Waivers data function, API route, response DTOs | backend-engineer | T4.5a, T4.2b, T4.4 | D | Not started | 0 | |
+| T4.5b | Waivers data function, API route, response DTOs | backend-engineer | T4.5a, T4.2b, T4.4 | D | Done | 1 | daf4251 |
 | T4.5c | Players list and detail data functions, API routes, response DTOs | backend-engineer | T4.5a, T4.1 | D | Done | 1 | 7f324dc |
 | T4.6 | Waivers page, Players explorer, Home waiver/riser cards | frontend-engineer | T4.4, T4.5b, T4.5c | E | Not started | 0 | |
 | T4.8c | Render richer reason detail in `slot-column.tsx` | frontend-engineer | T4.8b | E | Not started | 0 | |
@@ -67,6 +67,8 @@ Remove an item when it is done; the archive keeps history.
 - `SIDELINE_VERSION` must track the package version; consider `etag: false` for regular stats and projections (keeps multi-MB bodies out of http_cache).
 
 ### Worker and providers (sleeper-data-engineer)
+
+- **No worker job ever calls `upsertUsageWeek` (found by T4.5b, confirmed by the orchestrator via `grep -rn "upsertUsageWeek" apps/worker/src/`: zero hits outside tests).** `packages/providers/src/usage.ts`'s `joinUsage` already computes Sleeper-matched usage rows from nflverse data, but `apps/worker/src/jobs/data-jobs.ts`'s `nflverseJob` never persists them to the `usage_week` table. Practical effect on real data: TREND-2 (usage trend) and T4.5b's usage-trend Waiver Score component silently fall back to a scoring-trend proxy for every player, all the time, not just when nflverse is disabled. Needs a worker-job fix (sleeper-data-engineer) wiring `joinUsage`'s output into `upsertUsageWeek`, ideally before Phase 4 closes since it affects two features this phase shipped.
 
 - p1 Batch B m2, m3, m7: providers cache meta zod, atomic cache writes, season_type filter; m5 stats rows without gp are did-not-play (T3.1); m6 document starters "0" as an empty slot.
 - p1 Batch E m1 to m4: `storeState` in one transaction; recompute changed tables includes failed jobs with rowsChanged > 0; zod for the fixture manifest; test that a real gametime replaces an approximate kickoff.
