@@ -50,6 +50,13 @@ Steph ran the implementation locally (`pnpm dev:lan`, real synced league data) a
 | Waiver Score breakdown showed raw unrounded floats (`94.5945945945946`) | `formatReasonValue` rounds numbers to 1 decimal in `ReasonChip`/`WhyBody`; strings pass through | `10cd72e` |
 | Lineup's Optimal column duplicated reason detail inline on every row, on top of the "Why?" sheet | Inline `ReasonChips` removed from `slot-column.tsx`; only the "Why?" trigger remains | `10cd72e` |
 
+## Phase 4 gate-time fixes (found during G4 prep, before declaring PASS)
+
+| Issue | Fix | Commit |
+|---|---|---|
+| WAIVER-6d `computeNextWaiverClear` approximated America/New_York with a fixed UTC-5 offset, wrong by exactly 1 hour during EDT (mid-March to early November, most of the NFL season). Found live by the orchestrator checking against Steph's real league settings (`waiver_day_of_week=2`, `waiver_clear_days=2`): 2026-10-03 (EDT) computed a clear time that displayed as 4:00 AM ET against a "3:00 ET" label. | Resolves the real DST-aware offset per-instant with the same `Intl.DateTimeFormat` technique `packages/providers/src/schedule.ts` already uses for kickoff times, reimplemented locally in `packages/core` (no new cross-package dependency). `etUtcOffsetHours` is now `@deprecated` and ignored. Includes a 2-line orchestrator fix to a golden test that hardcoded the same wrong offset for a January/EST case. | `624771b` [T4.9] |
+| No script existed to run the G4 phase check "beta image runs against live data for 30 minutes with healthy sync runs". | devops-engineer building `pnpm gate:soak [--minutes=N]`, reusable for Phase 6's 60-minute soak too. In flight as of this writing. | [T4.10] |
+
 ## Earlier phases
 
 Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`. Standing rules for briefs are in `docs/brief-rules.md`.
