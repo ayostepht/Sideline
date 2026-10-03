@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-03. **G4 PASS, merged to `main`, tagged `gate-G4`. Steph has replied and approved.** `phase/4-waivers` is fully merged (commit `6a1cd26`); `main` is the working base for Phase 5. All Phase 4 implementation, 5 pre-gate live fixes, and 3 gate-prep/gate-time fixes are in (see `docs/gates/G4.md`, both zero-Blocker/Major reviews). The real 30-minute Docker soak test passed (15/15 sync runs, zero failures). Steph's G4 reply (2026-10-03): Waivers recommendations match her read, the DST-corrected clear time is right, Waivers/Players look and feel approved, merge/tag approved. She also found 2 more real display bugs testing live (a raw player id instead of a name in the Why sheet's SUGGESTED_DROP reason; a week-count rendering as a bare decimal "14.0") -- **both found, fixed, and committed same-session** (`73f0897`, `700eaaf`), plus 2 feature requests logged to `docs/PROGRESS.md`'s "Later phases" backlog for a future phase (Players detail prior-performance/news; a trade-analyzer "likely to be accepted" signal, which extends the already-roadmapped TRADE-1/TRADE-2 P1 spec). `pnpm verify` green on `main`: 120 files, 1208 unit tests, 0 lint warnings. Dev server (`pnpm dev:lan`) and worker (`pnpm dev:worker`) both running for Steph's continued testing. Next: start Phase 5 planning (PLAN.md section 9, Phase 5 table) -- nothing is blocking it.
+Last updated: 2026-10-03. **Phase 5 planning done (ADR-016), Batch A dispatched.** Branch `phase/5-matchups` created off `main` (`30175bd`). `pnpm verify` baseline confirmed green before starting: 120 files, 1208 unit tests, 0 lint warnings. Phase 5 task table (T5.1-T5.6, batches A-E) is in `docs/PROGRESS.md`; the batch/dependency shape differs from PLAN.md's literal table (T5.3 gets its own Batch B, T5.4 moves to Batch C and depends on T5.3 too) per ADR-016 -- read it before touching T5.3 or T5.4. Decided (ADR-016 item 5): `getPlayerDetail` perf and the missing `upsertUsageWeek` wiring stay backlog, not a dedicated Phase 5 task -- neither blocks any Phase 5 requirement. **In flight now:** Batch A, two analytics-engineer subagents dispatched in parallel -- T5.1 (SIM-1 to 3, Monte Carlo matchup win probability and swing players, new `packages/core/src/sim/`, owns the new seeded-RNG utility) and T5.2 (LEAGUE-1,2,3,4,6: all-play, luck, power score, heatmap, manager tendencies, new `packages/core/src/league/`). Next after both land: Level 1 verify each, code-reviewer on the Batch A diff, commit, then Batch B (T5.3 playoff odds, reusing T5.1's RNG).
 
 ## 1. Resume in five steps
 
@@ -29,13 +29,14 @@ Last updated: 2026-10-03. **G4 PASS, merged to `main`, tagged `gate-G4`. Steph h
 
 ## 3. In flight
 
-- Nothing. Working tree clean on `main`, all commits through `6a1cd26` plus tag `gate-G4`. Clean point to `/clear`.
+- Batch A: T5.1 (analytics-engineer, `packages/core/src/sim/`) and T5.2 (analytics-engineer, `packages/core/src/league/`), dispatched in parallel 2026-10-03 on branch `phase/5-matchups`. Agents die with the session -- if resuming mid-batch, check for uncommitted files in those two directories, verify and commit, or discard and re-dispatch.
 
 ## 4. Next steps (in order)
 
-1. **Start Phase 5 planning** (PLAN.md section 9, Phase 5 table: T5.1-T5.6, matchup Monte Carlo and swing players, league intelligence -- all-play/luck/power score/heatmap/manager tendencies, playoff odds, data functions/APIs, Matchup page/League intelligence sections/Home win probability, tests). Branch `phase/5-matchups` off `main`. Steph's G4 reply is in and both live bugs it surfaced are already fixed -- nothing outstanding to fold in first.
-2. Decide (with Steph if needed, but not blocking) whether the `getPlayerDetail` perf cost and the missing `upsertUsageWeek` wiring (both in section 2 above) get a dedicated fix task early in Phase 5 or continue riding as backlog.
-3. Follow the same batch/verify/review/gate cycle as Phases 1-4 (CLAUDE.md sections 3-4).
+1. When both T5.1 and T5.2 report back: run Level 1 verification on each (CLAUDE.md section 4) against their acceptance criteria, `pnpm verify`, `git diff --stat` scoped to their owned paths.
+2. Run `code-reviewer` on the Batch A diff (`git diff main...HEAD`). Fix any Blocker/Major findings before Batch B.
+3. Commit (one commit per task, conventional format with the task id), update `docs/PROGRESS.md`'s Phase 5 task table, update this file.
+4. Dispatch Batch B (T5.3, playoff odds, analytics-engineer, depends on T5.1 -- reuse its RNG/sampler, don't rebuild one). Then continue Batches C-E per `docs/PROGRESS.md`'s Phase 5 task table and ADR-016.
 
 ## 5. Briefs
 

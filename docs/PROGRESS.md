@@ -9,12 +9,27 @@
 | 2 App shell and league views | G2 (human) | `phase/2-shell` (merged) | Done, G2 PASS 2026-10-02 (Steph approved) |
 | 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` | Done, G4 PASS 2026-10-03 (human checkpoint optional, awaiting Steph's reply, not blocking Phase 5) |
-| 5 Matchups and league intelligence | G5 | | Not started |
+| 5 Matchups and league intelligence | G5 | `phase/5-matchups` | In progress, Batch A dispatched 2026-10-03 |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
 
 ## Resume point
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
+
+## Phase 5 task table
+
+Batch letters and dependencies amended from PLAN.md's literal table per ADR-016 (T5.3 gets its own batch; T5.4 moves one batch later and depends on T5.3 too).
+
+| ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
+|---|---|---|---|---|---|---|---|
+| T5.1 | Matchup Monte Carlo and swing players (SIM-1 to SIM-3), `packages/core/src/sim/` | analytics-engineer | G4 | A | Dispatched | 1 | |
+| T5.2 | All-play, luck, power score, positional heatmap, manager tendencies (LEAGUE-1 to 4, 6), `packages/core/src/league/` | analytics-engineer | G4 | A | Dispatched | 1 | |
+| T5.3 | Playoff odds (LEAGUE-5) | analytics-engineer | T5.1 | B | Not started | 0 | |
+| T5.4 | Data functions and APIs for matchup and league intelligence; `computed_cache` wiring and invalidation | backend-engineer | T5.1, T5.2, T5.3 | C | Not started | 0 | |
+| T5.5 | Matchup page; League intelligence sections; Home win probability | frontend-engineer | T5.3, T5.4 | D | Not started | 0 | |
+| T5.6 | Tests: seeded determinism; symmetry; playoff odds sum to `playoff_teams` x 100% within 0.5%; perf; e2e matchup and league | qa-engineer | T5.5 | E | Not started | 0 | |
+
+**Decided at Phase 5 planning (not a dedicated task, per ADR-016 item 5):** `getPlayerDetail`'s perf cost and the missing `upsertUsageWeek` wiring stay in the backlog below — neither blocks any Phase 5 requirement.
 
 ## Earlier phases
 
