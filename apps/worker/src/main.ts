@@ -5,6 +5,8 @@ import pino from "pino";
 import { createAllJobs, registeredJobs } from "./jobs/index.js";
 import { fixtureFetchFromEnv } from "./fixture-mode.js";
 import { LeaseKeeper, newHolderId } from "./lease.js";
+import { createLeaguePointsRecomputeHook } from "./recompute-hooks/league-points.js";
+import { recomputeHooks } from "./recompute.js";
 import { createJobRegistry } from "./registry.js";
 import { Worker, raceTimeout } from "./worker.js";
 
@@ -22,6 +24,7 @@ const logger = pino({ level: config.logLevel, base: { app: "sideline-worker" } }
 const db = openDb(dbPathFromDataDir(config.dataDir));
 migrate(db);
 const lease = new LeaseKeeper(db, newHolderId(), () => new Date());
+recomputeHooks.register(createLeaguePointsRecomputeHook({ logger }));
 const worker = new Worker({
   db,
   config,

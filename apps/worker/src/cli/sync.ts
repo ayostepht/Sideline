@@ -21,6 +21,8 @@ import { RateLimiter } from "@sideline/sleeper";
 import pino, { type Logger } from "pino";
 import { registeredJobs } from "../jobs/index.js";
 import { LEASE_RENEW_MS, LeaseKeeper, newHolderId } from "../lease.js";
+import { createLeaguePointsRecomputeHook } from "../recompute-hooks/league-points.js";
+import { recomputeHooks } from "../recompute.js";
 import { createJobRegistry, type JobRegistry } from "../registry.js";
 import type { SleeperJobDeps } from "../jobs/common.js";
 import { ensureUserIdForCycle, runJobs } from "../runner.js";
@@ -148,6 +150,7 @@ export async function runSyncCli(argv: readonly string[], deps: CliDeps): Promis
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const config = loadConfig(process.env);
   const logger = pino({ level: config.logLevel }, pino.destination(2));
+  recomputeHooks.register(createLeaguePointsRecomputeHook({ logger }));
   runSyncCli(process.argv.slice(2), {
     config,
     registry: createJobRegistry(registeredJobs),
