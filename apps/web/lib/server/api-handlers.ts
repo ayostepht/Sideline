@@ -3,6 +3,8 @@ import {
   OnboardingStatusSchema,
   PlayerSearchRequestSchema,
   PlayerSearchResultSchema,
+  LineupRequestSchema,
+  LineupResponseSchema,
   SelectLeagueRequestSchema,
   SleeperUsernameSchema,
   AppSettingsSchema,
@@ -11,6 +13,7 @@ import { z } from "zod";
 import { errorResult, type ApiResult } from "./http";
 import { getSettings } from "./identity";
 import { searchPlayers } from "./league-views";
+import { getLineup } from "./lineup";
 import { getOnboardingStatus, selectLeague, startOnboarding } from "./onboarding";
 import { withMigratedDb } from "./sync";
 
@@ -106,6 +109,43 @@ export function handleSearch(leagueId: string, params: URLSearchParams): ApiResu
     const r = searchPlayers(h, idOk.data, parsed.data.q, parsed.data.limit);
     if (!r.ok) return errorResult(404, "not_found", "League not found.");
     return { status: 200, body: z.array(PlayerSearchResultSchema).parse(r.data) };
+  });
+}
+
+export function handleLineup(
+  leagueId: string,
+  params: URLSearchParams,
+  now: Date = new Date(),
+): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(404, "not_found", "League not found.");
+  const raw: Record<string, string> = {};
+  const week = params.get("week");
+  const mode = params.get("mode");
+  const roster = params.get("roster");
+  if (week !== null) raw["week"] = week;
+  if (mode !== null) raw["mode"] = mode;
+  if (roster !== null) raw["roster"] = roster;
+  const parsed = LineupRequestSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return withMigratedDb((h) => {
+    const r = getLineup(
+      h,
+      idOk.data,
+      {
+        ...(parsed.data.week !== undefined ? { week: parsed.data.week } : {}),
+        mode: parsed.data.mode,
+        ...(parsed.data.roster !== undefined ? { rosterId: parsed.data.roster } : {}),
+      },
+      now,
+    );
+    if (!r.ok) {
+      if (r.reason === "no_team") {
+        return errorResult(404, "no_team", "No roster found for the stored Sleeper user.");
+      }
+      return errorResult(404, "not_found", "League, week, or roster not found.");
+    }
+    return { status: 200, body: LineupResponseSchema.parse(r.data) };
   });
 }
 

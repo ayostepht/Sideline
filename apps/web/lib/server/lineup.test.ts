@@ -1,0 +1,203 @@
+import { schema, type DbHandle } from "@sideline/db";
+import { LineupResponseSchema, type LineupResponse } from "@sideline/shared";
+import { afterEach, describe, expect, it } from "vitest";
+import { getLineup, type Lookup } from "./lineup";
+import { SEED_NOW, seedLeague } from "./test-seed";
+import { useTempDb, type TempDb } from "./test-utils";
+
+let tmp: TempDb | null = null;
+afterEach(() => {
+  tmp?.cleanup();
+  tmp = null;
+});
+
+function setup(opts: Parameters<typeof seedLeague>[1] = {}): DbHandle {
+  tmp = useTempDb({ migrated: true });
+  const h = tmp.handle;
+  if (h === null) throw new Error("handle");
+  seedLeague(h, opts);
+  return h;
+}
+
+function ok(r: Lookup<LineupResponse>): LineupResponse {
+  if (!r.ok) throw new Error(`expected ok, got ${r.reason}`);
+  return r.data;
+}
+
+function insertPoints(
+  h: DbHandle,
+  rows: { playerId: string; week: number; projPts?: number; actualPts?: number }[],
+): void {
+  for (const r of rows) {
+    h.db
+      .insert(schema.leaguePlayerWeekPoints)
+      .values({
+        leagueId: "L1",
+        season: 2026,
+        week: r.week,
+        playerId: r.playerId,
+        ...(r.projPts !== undefined ? { projPts: r.projPts } : {}),
+        ...(r.actualPts !== undefined ? { actualPts: r.actualPts } : {}),
+      })
+      .run();
+  }
+}
+
+describe("getLineup", () => {
+  it("assembles a full realistic roster into a valid response", () => {
+    const h = setup({ rosterCount: 4, rosterSize: 8, playerCount: 60 });
+    insertPoints(
+      h,
+      Array.from({ length: 8 }, (_, i) => ({
+        playerId: `p${i + 1}`,
+        week: 5,
+        projPts: (i + 1) * 5,
+      })),
+    );
+    const data = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+    expect(LineupResponseSchema.safeParse(data).success).toBe(true);
+    expect(data.players).toHaveLength(8);
+    expect(data.optimalAssignment.map((a) => a.slotType)).toEqual(["QB", "RB", "WR", "TE", "FLEX"]);
+    expect(data.currentAssignment).toHaveLength(5);
+  });
+
+  it("is not_found for an unknown league, and for an explicit roster that does not exist", () => {
+    const h = setup();
+    expect(getLineup(h, "nope", { mode: "projected", rosterId: 1 }, SEED_NOW)).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+    expect(getLineup(h, "L1", { mode: "projected", rosterId: 999 }, SEED_NOW)).toEqual({
+      ok: false,
+      reason: "not_found",
+    });
+  });
+
+  it("treats a missing league_player_week_points row as projPts 0", () => {
+    const h = setup({ rosterCount: 1 });
+    insertPoints(h, [{ playerId: "p2", week: 5, projPts: 12 }]);
+    const data = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+    expect(data.players.find((p) => p.playerId === "p1")?.value).toBe(0);
+    expect(data.players.find((p) => p.playerId === "p2")?.value).toBe(12);
+  });
+
+  it("safe and upside modes differ from projected for a player with real variance", () => {
+    const h = setup({ rosterCount: 1 });
+    insertPoints(h, [
+      { playerId: "p1", week: 1, actualPts: 2 },
+      { playerId: "p1", week: 2, actualPts: 2 },
+      { playerId: "p1", week: 3, actualPts: 30 },
+      { playerId: "p1", week: 4, actualPts: 2 },
+      { playerId: "p1", week: 5, projPts: 10 },
+    ]);
+    const projected = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+    const safe = ok(getLineup(h, "L1", { mode: "safe", rosterId: 1 }, SEED_NOW));
+    const upside = ok(getLineup(h, "L1", { mode: "upside", rosterId: 1 }, SEED_NOW));
+    const valueOf = (r: LineupResponse): number | undefined =>
+      r.players.find((p) => p.playerId === "p1")?.value;
+    expect(valueOf(projected)).toBe(10);
+    expect(valueOf(safe)).toBeLessThan(10);
+    expect(valueOf(upside)).toBeGreaterThan(10);
+  });
+
+  it("keeps a locked starter in their slot even when a higher-value player is eligible", () => {
+    const h = setup({
+      rosterCount: 1,
+      rosterSize: 4,
+      playerCount: 4,
+      rosterPositions: ["QB", "BN", "BN", "BN"],
+    });
+    h.sqlite
+      .prepare(
+        `UPDATE players SET position = 'QB', fantasy_positions_json = '["QB"]', team = 'T02'
+         WHERE player_id = 'p1'`,
+      )
+      .run();
+    h.sqlite
+      .prepare(
+        `UPDATE players SET position = 'QB', fantasy_positions_json = '["QB"]', team = 'T03'
+         WHERE player_id = 'p2'`,
+      )
+      .run();
+    h.sqlite
+      .prepare(
+        `INSERT INTO schedule (season, week, game_id, game_type, home, away, kickoff_utc)
+         VALUES (2026, 5, 'g1', 'REG', 'T02', 'T99', '2026-10-01T00:00:00.000Z')`,
+      )
+      .run();
+    insertPoints(h, [
+      { playerId: "p1", week: 5, projPts: 10 },
+      { playerId: "p2", week: 5, projPts: 20 },
+    ]);
+    const data = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+    expect(data.optimalAssignment).toEqual([{ slotType: "QB", playerId: "p1" }]);
+    expect(data.swaps).toEqual([]);
+    const p1 = data.players.find((p) => p.playerId === "p1");
+    expect(p1?.locked).toBe(true);
+    expect(p1?.reasons.some((r) => r.code === "LOCKED")).toBe(true);
+    expect(data.players.find((p) => p.playerId === "p2")?.locked).toBe(false);
+  });
+
+  it("resolves the opponent roster from the matchups table, and null without one", () => {
+    const h = setup({ rosterCount: 3 });
+    h.db
+      .insert(schema.matchups)
+      .values([
+        {
+          leagueId: "L1",
+          week: 5,
+          rosterId: 1,
+          matchupId: 1,
+          startersJson: "[]",
+          playersJson: "[]",
+          playersPointsJson: "{}",
+          points: 0,
+        },
+        {
+          leagueId: "L1",
+          week: 5,
+          rosterId: 2,
+          matchupId: 1,
+          startersJson: "[]",
+          playersJson: "[]",
+          playersPointsJson: "{}",
+          points: 0,
+        },
+      ])
+      .run();
+    expect(
+      ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW)).opponentRosterId,
+    ).toBe(2);
+    expect(
+      ok(getLineup(h, "L1", { mode: "projected", rosterId: 3 }, SEED_NOW)).opponentRosterId,
+    ).toBe(null);
+  });
+
+  describe("caching", () => {
+    it("hits the cache for identical inputs, and misses once a relevant sync job succeeds", () => {
+      const h = setup({ rosterCount: 1 });
+      insertPoints(h, [{ playerId: "p1", week: 5, projPts: 10 }]);
+      const first = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+      expect(first.players.find((p) => p.playerId === "p1")?.value).toBe(10);
+
+      // Mutate the underlying data without a sync success: lastSuccessAt is unchanged, so the
+      // inputs hash is unchanged, so this should be a cache hit returning the stale value.
+      h.sqlite
+        .prepare("UPDATE league_player_week_points SET proj_pts = 50 WHERE player_id = 'p1'")
+        .run();
+      const second = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+      expect(second).toEqual(first);
+      expect(second.players.find((p) => p.playerId === "p1")?.value).toBe(10);
+
+      // A relevant sync success changes lastSuccessAt("stats"), changing the inputs hash: a
+      // fresh computation now picks up the mutated value.
+      h.sqlite
+        .prepare(
+          "INSERT INTO sync_runs (job, started_at, finished_at, status) VALUES ('stats', ?, ?, 'success')",
+        )
+        .run("2026-10-02T11:00:00.000Z", "2026-10-02T11:30:00.000Z");
+      const third = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+      expect(third.players.find((p) => p.playerId === "p1")?.value).toBe(50);
+    });
+  });
+});
