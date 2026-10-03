@@ -102,8 +102,17 @@ Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
 - T4.x auth refuses to start with an empty SESSION_SECRET or APP_PASSWORD.
 - T6.2: remove the next@16.3.8 `minimumReleaseAgeExclude`. T6.3: themeColor vs the in-app theme toggle.
 - P1: nflverse play-by-play for red-zone touches (TREND-2).
+- **Feature request (Steph, G4 reply 2026-10-03): Players detail page should show a player's prior performance this season and news about them.** TREND-1 (season/L3 PPG, weekly series) and TREND-2/3/5 (usage, consistency, Sleeper momentum) already compute most of the "prior performance" data; `apps/web/app/l/[leagueId]/players/_components/player-detail-view.tsx` (T4.6b) may already render some of this -- check what's shown today before scoping a follow-up task. "News about them" (headlines, beat-writer notes) is a new data source not yet in PLAN.md's provider list (3.1-3.3) -- would need its own spike (candidate provider, rate limits, caching) before implementation. Candidate Phase 5 or P1 backlog item; not scoped or estimated yet.
 
 ## Questions for Steph
 
-- **G4's 4 questions, sent 2026-10-03, reply pending (optional checkpoint, not blocking Phase 5):** does Waivers' recommendations/claim advice match her own read this week; does the now-DST-corrected clear time match what she's actually seen Sleeper do; look and feel of Waivers/Players approved as is or changes wanted before Phase 5; approve the already-completed merge to `main` and tag `gate-G4`. See `docs/gates/G4.md`'s Human checkpoint section.
-- Earlier, all answered: G2 (2026-10-02: ADR-011, ADR-012, final approval). G3 (2026-10-03: lineup recommendation and look/feel approved; wanted more detail in the "why" -- done in T4.8a/b/c; three Minor UX findings deferred; approved merge and tag `gate-G3`).
+- None open. (G4 answered 2026-10-03: Waivers recommendations match her read; DST-corrected clear time matches what she's seen Sleeper do; Waivers/Players look and feel approved; approved the already-completed merge and tag `gate-G4`. She also found a real live bug -- see below -- and requested a future feature, logged under "Later phases". Earlier: G2 2026-10-02, G3 2026-10-03, both fully resolved, see archive.)
+
+### Phase 4 post-merge live fix (Steph's G4 reply, 2026-10-03)
+
+Found via a real screenshot of the Waivers "Why?" sheet (Darren Waller, TE): two reason rows were confusing. Both root-caused and in flight, not tied to a task ID:
+
+| Issue | Fix | Status |
+|---|---|---|
+| `SUGGESTED_DROP` reason's `value` was the raw Sleeper player id ("9484") instead of the player's name ("Tucker Kraft"), even though the same screen's card text already showed the name correctly. | Resolve the id to a name in `apps/web/lib/server/waivers.ts` where the players map is already in scope, same pattern as the existing card-level `suggestedDropText`. | Dispatched (backend-engineer) |
+| `ROS_ESTIMATED_FROM_PPG` reason's `value` is an integer count of weeks that used a season-average fallback, but the generic formatter renders every number with `.toFixed(1)`, so Steph saw a bare "14.0" with no unit -- reads like points, not a week count. | Teach `formatReasonValue` a per-reason-code override (`apps/web/components/reason-format.ts`) so this code renders as "N week(s)", not a decimal. | Dispatched (frontend-engineer) |
