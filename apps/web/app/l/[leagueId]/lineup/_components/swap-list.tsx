@@ -31,29 +31,33 @@ export function SwapList({
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: slot types can repeat (two FLEX)
               key={`${swap.slotIndex}-${swap.slotType}-${i}`}
-              className="flex min-h-11 flex-wrap items-center gap-2 px-3 py-2 text-sm"
+              className="flex min-h-11 flex-col gap-1 px-3 py-2 text-sm"
               data-testid="lineup-swap-row"
             >
-              <span className="shrink-0 text-xs font-medium text-muted-foreground">
-                {swap.slotType}
-              </span>
-              <span className="min-w-0 flex-1 truncate" title={outName}>
-                {outName}
-              </span>
-              <ArrowRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-              <span className="min-w-0 flex-1 truncate font-medium" title={inName}>
-                {inName}
-              </span>
-              {delta !== null ? (
-                <span
-                  className={cn(
-                    "shrink-0 font-semibold tabular-nums",
-                    delta >= 0 ? "text-positive" : "text-negative",
-                  )}
-                >
-                  {formatSignedPoints(delta)}
+              <div className="flex items-center justify-between gap-2">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  {swap.slotType}
                 </span>
-              ) : null}
+                {delta !== null ? (
+                  <span
+                    className={cn(
+                      "shrink-0 font-semibold tabular-nums",
+                      delta >= 0 ? "text-positive" : "text-negative",
+                    )}
+                  >
+                    {formatSignedPoints(delta)}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="min-w-0 flex-1 whitespace-normal break-words leading-tight">
+                  {outName}
+                </span>
+                <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="min-w-0 flex-1 whitespace-normal break-words font-medium leading-tight">
+                  {inName}
+                </span>
+              </div>
             </li>
           );
         })}
