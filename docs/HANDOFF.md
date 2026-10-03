@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-02, Phase 3 batch plan drafted (ADR-013), waiting on Steph's go-ahead before dispatching Batch A.
+Last updated: 2026-10-02, Phase 3 Batch A done (T3.1, T3.2a), Steph approved the plan, dispatching Batch B.
 
 ## 1. Resume in five steps
 
@@ -26,9 +26,9 @@ Last updated: 2026-10-02, Phase 3 batch plan drafted (ADR-013), waiting on Steph
 
 ## 4. Next steps (in order)
 
-1. Phase 3 is read and planned (PLAN.md section 9 and 5.1-5.4, 6.4; `docs/sleeper-api-notes.md` sections 4-6; ADR-002). Batch plan and task splits logged in ADR-013; task table in PROGRESS.md "Phase 3 task table". Waiting on Steph's go-ahead.
-2. On approval, dispatch Batch A: T3.1 (analytics-engineer, scoring engine SCORE-1/2/3) and T3.2a (backend-engineer, `packages/db` upsert helpers for `league_player_week_points` and `defense_vs_position`) in parallel.
-3. Then Batch B: T3.2b, T3.3a, T3.4a in parallel (see ADR-013 item 5 for the full batch order through G).
+1. Batch A done: T3.1 (`packages/core/src/scoring/`, `scripts/validate-scoring/`, commit 4a73f30) and T3.2a (`packages/db` upsert helpers, commit 22d3630). Both verified independently (`pnpm verify` green, 778 tests) before committing. `packages/core` now depends on `@sideline/shared` (ADR-013 item 6, a logged one-off exception to the devops-owns-dependencies rule).
+2. Dispatch Batch B next: T3.2b (sleeper-data-engineer, worker recompute hook, depends on T3.1 + T3.2a), T3.3a (analytics-engineer, projections part 1: PROJ-1 base rescore + PROJ-4 ROS, depends on T3.1), T3.4a (analytics-engineer, optimizer part 1: Hungarian solver + slot/eligibility, depends on T3.1) — all three in parallel (disjoint paths: `apps/worker`, `packages/core/src/projections/`, `packages/core/src/optimizer/`).
+3. Then Batch C: T3.3b, T3.4b in parallel (see ADR-013 item 5 for the full batch order through G).
 4. The Phase 3 design follow-ups from the PROGRESS backlog ("Carried from Phase 2": scoreboard hero, lime on content, Home "You" badge, roster stat slot) are folded into T3.8b.
 5. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
 
