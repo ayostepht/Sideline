@@ -8,7 +8,13 @@ import { getLeagueOverview, getStandings } from "../../../../lib/server/league-v
 import { getLineup } from "../../../../lib/server/lineup";
 import { readPage } from "../_components/load";
 import { NoTeamState } from "../_components/no-team";
-import { isMineRoster, parseMode, parseRosterId, teamNameFor } from "./_components/format";
+import {
+  isMineRoster,
+  parseMode,
+  parseRosterId,
+  rosterExists,
+  teamNameFor,
+} from "./_components/format";
 import { LineupIssuesBanner } from "./_components/issues-banner";
 import { ModeToggle } from "./_components/mode-toggle";
 import { OpenInSleeperButton } from "./_components/open-in-sleeper";
@@ -56,6 +62,9 @@ export default async function LineupPage({
   if (!overview.ok) return <DbError retryHref={`${base}/lineup`} />;
 
   if (!lineup.ok) {
+    if (rosterId !== undefined && standings.ok && !rosterExists(standings.data.rows, rosterId)) {
+      notFound();
+    }
     if (lineup.reason === "no_team") {
       return (
         <div className="flex flex-col gap-3" data-testid="lineup-page">

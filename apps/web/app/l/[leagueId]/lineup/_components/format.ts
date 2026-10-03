@@ -99,3 +99,11 @@ type MineLookupRow = Pick<StandingsRow, "rosterId" | "isMine">;
 export function isMineRoster(rows: readonly MineLookupRow[], rosterId: number): boolean {
   return rows.find((r) => r.rosterId === rosterId)?.isMine ?? false;
 }
+
+type RosterLookupRow = Pick<StandingsRow, "rosterId">;
+
+/** Whether the given roster id is a real roster in the league (distinguishes a bad `?roster=`
+ * from genuine preseason, since `getLineup`'s "not_found" reason covers both). */
+export function rosterExists(rows: readonly RosterLookupRow[], rosterId: number): boolean {
+  return rows.some((r) => r.rosterId === rosterId);
+}

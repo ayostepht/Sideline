@@ -9,6 +9,7 @@ import {
   parseMode,
   parseRosterId,
   playerById,
+  rosterExists,
   swapDelta,
   teamNameFor,
 } from "./format";
@@ -169,5 +170,17 @@ describe("isMineRoster", () => {
   it("is false when the roster or standings are unavailable", () => {
     expect(isMineRoster(rows, 9)).toBe(false);
     expect(isMineRoster([], 1)).toBe(false);
+  });
+});
+
+describe("rosterExists", () => {
+  const rows = [row(1, "Alpha", true), row(2, "Beta", false)];
+  it("is true for a roster id present in standings", () => {
+    expect(rosterExists(rows, 1)).toBe(true);
+    expect(rosterExists(rows, 2)).toBe(true);
+  });
+  it("is false for an unknown roster id or empty standings", () => {
+    expect(rosterExists(rows, 9)).toBe(false);
+    expect(rosterExists([], 1)).toBe(false);
   });
 });
