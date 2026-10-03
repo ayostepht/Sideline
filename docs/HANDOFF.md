@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-03. Phase 3 Batch H (T3.8a, T3.8b: Lineup page, Home card, design backlog) landed, committed, Level 2 reviewed (code + UX), and all Major findings fixed and committed (`765a18d`, `066fc44`). `pnpm verify`: 97 files, 954 tests, 0 lint warnings. Clean point to `/clear`. Next: dispatch Batch I (T3.9).
+Last updated: 2026-10-03. Phase 3 Batches A through I all done (T3.1 through T3.9). Batch H (Lineup page, Home card, design backlog) Level 2 reviewed (code + UX), all Major findings fixed. Batch I (T3.9, e2e lineup flow) landed and independently verified (`93edfc0`). `pnpm verify`: 97 files, 954 tests, 0 lint warnings; e2e `lineup.spec.ts` + `pages.spec.ts` 20/20 passed. Clean point to `/clear`. Next: Phase 3 is feature-complete, pending the G3 human checkpoint (live checks, then gate report).
 
 ## 1. Resume in five steps
 
@@ -24,13 +24,14 @@ Last updated: 2026-10-03. Phase 3 Batch H (T3.8a, T3.8b: Lineup page, Home card,
 
 ## 3. In flight
 
-- **T3.9 (qa-engineer, e2e lineup flow) dispatched 2026-10-03, background agent.** Scope: `e2e/pages.spec.ts` (fix STATE-3: drop `"lineup"` from its stub-page loop, T3.8a replaced that stub), new `e2e/lineup.spec.ts` covering mode toggle, swap/issues rendering, opponent `?roster=` view, a bad `?roster=` 404, and the Open in Sleeper link. If this session ends before its completion notification arrives: check `git status`/`git log --oneline -5` on `phase/3-scoring` — its edits land as uncommitted working-tree changes until verified and committed (Level 1: `pnpm playwright test e2e/pages.spec.ts` and the new spec, then `pnpm verify`), or they were never applied and T3.9 needs re-dispatching from `docs/PROGRESS.md`'s Phase 3 task table.
+- Nothing. Clean point to `/clear`.
 
 ## 4. Next steps (in order)
 
-1. Verify and commit T3.9 (section 3) when it lands, update `docs/PROGRESS.md`'s T3.9 row.
-2. After T3.9 lands and is reviewed, Phase 3 is done pending G3 (human checkpoint, PLAN 9): SCORE-2 at least 99% match on Steph's real league, LINEUP-7 benchmark, backtest report and alpha/beta decision logged (T3.5c's real run against live data, not the fixture smoke test already done). Run these live checks before writing the gate report.
-3. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
+1. **Phase 3 feature work is done. Next is the G3 gate** (PLAN.md section 9/10, human checkpoint). Before writing the gate report: SCORE-2 at least 99% match on Steph's real league (live run of `pnpm validate:scoring` or equivalent against her actual league, not the fixture), LINEUP-7 performance benchmark (under 50ms for any roster of 30 or fewer players — check if T3.4b already captured this in its report; if not, re-run), confirm T3.5c's backtest report and alpha/beta decision are logged against real historical data (not just the fixture smoke test already done).
+2. Run the full universal + UI + phase-specific gate checklist (PLAN.md section 10), write `docs/gates/G3.md`, tag `gate-G3` once Steph approves.
+3. **G3 is a human checkpoint**: present the gate summary to Steph (how to view this week's recommended lineup and reasons on her real league) and wait for her reply before starting Phase 4.
+4. Watch the settings route JS headroom (800 B) and the gallery budget when adding UI.
 
 ## 5. Briefs
 

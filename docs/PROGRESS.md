@@ -38,7 +38,7 @@ Split per ADR-013. Batches run in order A to G; tasks in the same batch run in p
 | T3.7 | Lineup data function and API with caching | backend-engineer | T3.4b, T3.5b | G | Done | 1 | 5870660 |
 | T3.8a | Lineup page | frontend-engineer | T3.7 | H | Done | 1 | 78d8f34 |
 | T3.8b | Home "This week" lineup issues card; carried Phase 2 design backlog (scoreboard hero, lime accent, You badge, roster stat slot) | frontend-engineer | T3.7 | H | Done | 1 | dbf69f0 |
-| T3.9 | E2E lineup flow (mode toggle, swaps, Open in Sleeper, opponent view) | qa-engineer | T3.8a, T3.8b | I | Not started | 0 | |
+| T3.9 | E2E lineup flow (mode toggle, swaps, Open in Sleeper, opponent view) | qa-engineer | T3.8a, T3.8b | I | Done | 1 | 93edfc0 |
 
 **G3 phase checks:** SCORE-2 at least 99% match on Steph's real league; golden and property tests pass; LINEUP-7 benchmark passes; backtest report exists and the alpha/beta decision is logged. Human checkpoint: Steph compares this week's recommended lineup and reasons to her own judgment.
 
