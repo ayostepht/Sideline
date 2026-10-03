@@ -27,9 +27,9 @@ Split per ADR-013. Batches run in order A to G; tasks in the same batch run in p
 | T3.2c | `packages/db` read helpers: `player_week_stats`, `player_week_projections`, `leagues` content | backend-engineer | G2 | B | Done | 1 | 91a2b78 |
 | T3.3a | Projections part 1: PROJ-1 base rescore, PROJ-4 rest-of-season | analytics-engineer | T3.1 | B | Done | 1 | 104f08d |
 | T3.4a | Optimizer part 1: Hungarian solver, slot and eligibility resolution (LINEUP-1, 2, 9) | analytics-engineer | T3.1 | B | Done | 1 | ed071b4 |
-| T3.2b | Worker recompute hook materializing `league_player_week_points` after sync | sleeper-data-engineer | T3.1, T3.2a, T3.2c | C | Not started | 0 | |
-| T3.3b | Projections part 2: PROJ-2 variance and shrinkage, PROJ-3 floor and ceiling | analytics-engineer | T3.3a | C | Not started | 0 | |
-| T3.4b | Optimizer part 2: locks, availability, modes, reasons and issues output, perf (LINEUP-3 to 7) | analytics-engineer | T3.4a | C | Not started | 0 | |
+| T3.2b | Worker recompute hook materializing `league_player_week_points` after sync | sleeper-data-engineer | T3.1, T3.2a, T3.2c | C | Done | 1 | 749388e |
+| T3.3b | Projections part 2: PROJ-2 variance and shrinkage, PROJ-3 floor and ceiling | analytics-engineer | T3.3a | C | Done | 1 | e26905e |
+| T3.4b | Optimizer part 2: locks, availability, modes, reasons and issues output, perf (LINEUP-3 to 7) | analytics-engineer | T3.4a | C | Done | 1 | 160810e |
 | T3.5a | Matchup adjustment core (MATCH-1, 2, 4) and backtest harness (MATCH-3) with report | analytics-engineer | T3.2b, T3.3b | D | Not started | 0 | |
 | T3.6 | Golden optimizer scenarios (12+) and property tests (1000+ runs, LINEUP-8) | qa-engineer | T3.4b | D | Not started | 0 | |
 | T3.5b | Worker recompute hook materializing `defense_vs_position` (calls T3.5a) | sleeper-data-engineer | T3.5a, T3.2a | E | Not started | 0 | |
@@ -88,6 +88,10 @@ Remove an item when it is done; the archive keeps history.
 - `pnpm fixtures:check` needs the raw cache or live API, so it can't run in CI; the orchestrator runs it at commits touching fixtures and at gates.
 - Fixtures 5.6 MB of a 6 MB target: re-record with trimming, not growth.
 - pnpm peer-dependency warning on install not investigated; @types/better-sqlite3 9.6.0 may lag v13.
+
+### Phase 3: scoring, projections, optimizer
+
+- **Optimizer can recommend an unavailable player with no warning (found in T3.4b review, pending code-reviewer confirmation).** `recommendLineup`'s `issues` list only checks *today's current* starters for an `UNAVAILABLE` reason (`INACTIVE_STARTER`); when the optimizer's own *recommended* assignment places a 0-value (Out/IR/Suspended/bye) player into a slot because no eligible alternative exists, nothing flags it. `packages/core/src/optimizer/recommend.ts` around the `issues` section (step i): add a loop over `optimalAssignment` parallel to the existing current-starter check, emitting a new issue code (e.g. `RECOMMENDED_UNAVAILABLE`) when the recommended player has an `UNAVAILABLE` reason, plus a unit test for the scenario (a slot whose only eligible player is Out).
 
 ### Later phases
 
