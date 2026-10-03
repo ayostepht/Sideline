@@ -26,3 +26,4 @@ export * from "./api/freshness.js";
 export * from "./api/onboarding.js";
 export * from "./api/league.js";
 export * from "./api/lineup.js";
+export * from "./api/waiver.js";
