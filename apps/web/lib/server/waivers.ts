@@ -509,6 +509,23 @@ function readFailedWaiverClaims(
   return out;
 }
 
+/** Steph live-testing fix: `computeLineupImpact` (a pure `@sideline/core` function with no access
+ * to player names) emits `SUGGESTED_DROP`'s `value` as a raw Sleeper player id. Rewrite just that
+ * one reason code's value to the dropped player's display name before it reaches the DTO/UI, which
+ * renders `Reason.value` as-is (`reason-format.ts`). Falls back to the raw id if the player can't
+ * be resolved (shouldn't happen in practice). Every other reason code/value passes through
+ * unchanged. */
+function resolveSuggestedDropReasons(
+  reasons: readonly Reason[],
+  playersById: ReadonlyMap<string, FullPlayerRow>,
+): Reason[] {
+  return reasons.map((r) => {
+    if (r.code !== "SUGGESTED_DROP" || typeof r.value !== "string") return r;
+    const name = playersById.get(r.value)?.fullName;
+    return name === undefined ? r : { ...r, value: name };
+  });
+}
+
 function toPlayer(row: FullPlayerRow): Player {
   return {
     playerId: row.playerId,
@@ -816,7 +833,10 @@ function computeWaivers(
       trendSignal: r.trendSignal,
       momentumLabel: r.momentumLabel,
       suggestedDropPlayerId: r.droppedPlayerId,
-      reasons: [...scoreResult.reasons, ...r.lineupImpactReasons, ...r.rosReasons],
+      reasons: resolveSuggestedDropReasons(
+        [...scoreResult.reasons, ...r.lineupImpactReasons, ...r.rosReasons],
+        allPlayersById,
+      ),
     };
   });
 
@@ -1005,7 +1025,7 @@ function computePriorityAdvisor(
             aheadOfMe: t.aheadOfMe,
             lineupImpact: t.lineupImpact.impact,
             likelyCompeting: t.likelyCompeting,
-            reasons: t.reasons,
+            reasons: resolveSuggestedDropReasons(t.reasons, allPlayersById),
           };
         }),
         claimAdvice: {
@@ -1014,7 +1034,7 @@ function computePriorityAdvisor(
           valueOfPriority: claimAdviceResult.valueOfPriority,
           positionFactor: claimAdviceResult.positionFactor,
           weeksFactor: claimAdviceResult.weeksFactor,
-          reasons: claimAdviceResult.reasons,
+          reasons: resolveSuggestedDropReasons(claimAdviceResult.reasons, allPlayersById),
         },
       });
     }

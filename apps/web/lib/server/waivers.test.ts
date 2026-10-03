@@ -155,6 +155,11 @@ describe("getWaivers", () => {
     expect(p10).toBeDefined();
     expect(p9?.lineupImpact).toBeGreaterThan(p10?.lineupImpact ?? 0);
     expect(p9?.suggestedDropPlayerId).toBe("p3");
+    // Steph report: the SUGGESTED_DROP reason's `value` must be the dropped player's display
+    // name ("Player Number3"), not the raw id ("p3") that `@sideline/core` emits - the id is
+    // already exposed separately via `suggestedDropPlayerId` above.
+    const suggestedDropReason = p9?.reasons.find((r) => r.code === "SUGGESTED_DROP");
+    expect(suggestedDropReason?.value).toBe("Player Number3");
 
     // "For my team": sorted by Lineup Impact descending -> p9 first.
     expect(data.forMyTeam.map((c) => c.playerId)).toEqual(["p9", "p10"]);
