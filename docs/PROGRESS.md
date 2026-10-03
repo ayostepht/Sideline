@@ -16,52 +16,9 @@
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
 
-## Phase 4 task table
-
-Batch split and dependency rationale: ADR-015.
-
-| ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
-|---|---|---|---|---|---|---|---|
-| T4.1 | Trends and usage metrics (TREND-1 to 5) | analytics-engineer | G3 | A | Done | 1 | ad3b10a |
-| T4.2a | Waiver candidate pool, prefilter, Lineup Impact (WAIVER-1, 2) | analytics-engineer | G3 | A | Done | 1 | b94c236 |
-| T4.3 | Production Docker image beta (HOST-1 to 6 partial) | devops-engineer | G3 | A | Done | 2 | 7711881, 91a616c |
-| T4.2b | Waiver Score composite, two views (WAIVER-3, 4) | analytics-engineer | T4.2a | B | Done | 1 | 63b415a |
-| T4.4 | Waiver priority advisor (WAIVER-6a to 6d) | analytics-engineer | T4.2a | B | Done | 1 | a6ba38c |
-| T4.8a | Reason contract amendment (Lineup "why" detail, Steph's G3 ask) | backend-engineer | none | B | Done | 1 | 6384643 |
-| T4.5a | `packages/db` read helpers: usage, trending, positional ranking, rostered-id set | backend-engineer | T4.1, T4.2a | C | Done | 1 | 8cb05e0, f2f8e8a |
-| T4.8b | Populate Reason field, rewrite reason-code copy to plain language | analytics-engineer | T4.8a | C | Done | 1 | f97a16e |
-| T4.5b | Waivers data function, API route, response DTOs | backend-engineer | T4.5a, T4.2b, T4.4 | D | Done | 2 | ee08fc4, 68eb1b5 |
-| T4.5c | Players list and detail data functions, API routes, response DTOs | backend-engineer | T4.5a, T4.1 | D | Done | 1 | f75d318 |
-| T4.6a | Waivers page | frontend-engineer | T4.4, T4.5b | E | Done | 2 | 64af436, 0e71028 |
-| T4.6b | Players explorer and player detail | frontend-engineer | T4.5c | E | Done | 2 | 1e9a764, 7e3a30a |
-| T4.8c | Render `projectedPoints` in the Lineup "why" UI | frontend-engineer | T4.8b | E | Done | 2 | 1415d02, 0e71028 |
-| T4.6c | Home waiver-targets and risers cards | frontend-engineer | T4.6a, T4.6b | F | Done | 2 | 6fa47dc, 27d67a2 |
-| T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf (including Home's `getPlayerDetail` loop at a late-season week, Batch F code review M1), e2e | qa-engineer | T4.6a, T4.6b, T4.6c | G | Done | 1 | eae6fab |
-
-## Phase 4 live fixes (Steph's hands-on testing, before the G4 gate)
-
-Steph ran the implementation locally (`pnpm dev:lan`, real synced league data) and found 5 real issues; all fixed and committed, not tied to a task ID:
-
-| Issue | Fix | Commit |
-|---|---|---|
-| Reason chip text cut off mid-word on mobile Lineup (`"Questionable, so we lo..."`) | `ReasonChip` wraps (`break-words`) instead of truncating | `28a19f1` |
-| Waiver auto-drop suggested her only DEF, which would leave the starting DEF slot empty | Auto-drop now checks (via the existing Hungarian solver, reused as a feasibility check) that every required slot stays fillable before suggesting a drop; falls back to the old behavior only when the roster is already short-staffed independent of the drop | `010a8b6` |
-| "Why?"/"Competing" buttons did nothing on her phone | Root cause: the dev server was started with plain `next dev` instead of `pnpm dev:lan`, so `SIDELINE_DEV_ORIGINS` was unset and Next.js silently blocked HMR for her phone's LAN-IP origin. Not a code bug -- **always use `pnpm dev:lan` for phone testing**, not `pnpm --filter @sideline/web dev` | none (dev workflow only) |
-| Waiver Score breakdown showed raw unrounded floats (`94.5945945945946`) | `formatReasonValue` rounds numbers to 1 decimal in `ReasonChip`/`WhyBody`; strings pass through | `10cd72e` |
-| Lineup's Optimal column duplicated reason detail inline on every row, on top of the "Why?" sheet | Inline `ReasonChips` removed from `slot-column.tsx`; only the "Why?" trigger remains | `10cd72e` |
-
-## Phase 4 gate-time fixes (found during G4 prep, before declaring PASS)
-
-| Issue | Fix | Commit |
-|---|---|---|
-| WAIVER-6d `computeNextWaiverClear` approximated America/New_York with a fixed UTC-5 offset, wrong by exactly 1 hour during EDT (mid-March to early November, most of the NFL season). Found live by the orchestrator checking against Steph's real league settings (`waiver_day_of_week=2`, `waiver_clear_days=2`): 2026-10-03 (EDT) computed a clear time that displayed as 4:00 AM ET against a "3:00 ET" label. | Resolves the real DST-aware offset per-instant with the same `Intl.DateTimeFormat` technique `packages/providers/src/schedule.ts` already uses for kickoff times, reimplemented locally in `packages/core` (no new cross-package dependency). `etUtcOffsetHours` is now `@deprecated` and ignored. Includes a 2-line orchestrator fix to a golden test that hardcoded the same wrong offset for a January/EST case. | `624771b` [T4.9] |
-| No script existed to run the G4 phase check "beta image runs against live data for 30 minutes with healthy sync runs". | `pnpm gate:soak [--minutes=N]`, reusable for Phase 6's 60-minute soak too. Real 30-minute run: 15/15 sync runs succeeded, zero failures, zero stuck rows. | `f6a8093` [T4.10] |
-| `pnpm gate`'s coverage-instrumented run (U2a) failed deterministically: V8 coverage instrumentation inflated WAIVER-2's 450-Hungarian-solve perf test from ~266ms (real) to 2000-3800ms, blowing its own margin and the real spec budget. Test-tooling artifact, not a production regression (7.5x real margin). | Excluded `*.perf.test.ts` from `--coverage` runs only; `pnpm verify`/`test:unit` still run them for real. Confirmed no coverage-threshold regression. | `974f380` |
-| `e2e/pages.spec.ts`'s STATE-2/STATE-3 still asserted Waivers and Players render as stub placeholders, stale since T4.6a/T4.6b shipped real pages. | Scoped the stub-page assertion to Matchup, the only section still a stub. Found and fixed by qa-engineer's own gate run. | `974f380` |
-
 ## Earlier phases
 
-Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`. Standing rules for briefs are in `docs/brief-rules.md`.
+Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`; Phase 4 (task table, live fixes, gate-time fixes, G4 phase checks) in `docs/archive/progress-phase4.md`. Standing rules for briefs are in `docs/brief-rules.md`.
 
 ## Backlog (open items only)
 
@@ -99,31 +56,24 @@ Remove an item when it is done; the archive keeps history.
 - T1.4a m6/m8: nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, write-then-swap.
 - Injectable `sleep` in `makeClient` (sturdier backoff tests; the 503 retry test takes about 4 s). apps/worker has no `test` script (devops).
 
-### Carried from Phase 4 Batch E (UX minors, not blocking)
+### Carried from Phase 4
+
+Full detail and fully-fixed history: `docs/archive/progress-phase4.md`.
 
 - Waivers' "Suggested drop" shows the identical player across most candidates (correct -- always the lowest ROS-value bench player, independent of position) with no inline cue it's intentional; only explained one click deep in the "Why?" sheet. Consider an inline qualifier like "Suggested drop (lowest value overall): ...".
 - Fullback-position players render with a generic "FLEX" badge (pre-existing `PositionBadge`/`normalizePosition` fallback, not introduced by Phase 4, now visible since Players surfaces the full player pool).
-
-### Carried from Phase 4 Batch E (frontend-reported backend gaps)
-
 - No per-week matchup grades for waiver candidates (`WaiverCandidateSchema` only has one schedule percentile folded into a Waiver Score reason); T4.6a shows one aggregate grade instead of three. Backend-engineer follow-up if per-week grades are wanted on Waivers.
 - Players list has no "rostered by / free agent" field (unlike the search endpoint's `PlayerSearchResult.owner`) and no ROS value at list scope (by T4.5c's own documented design, deferred to keep the list fast); player detail has no forward schedule/opponent data, so T4.6b shows "not available yet" for "next 4 opponents" instead of fabricating it.
-- ~~Several `packages/core` waiver reasons carry unrounded floats as `Reason.value`~~ Done (commit `10cd72e`): `formatReasonValue` rounds numbers to 1 decimal in both `ReasonChip` and `WhyBody`; strings (e.g. `SUGGESTED_DROP`'s player id) pass through unchanged.
-- `WAIVER_SCORE_*` reasons' `impact` is a 0-100-scale weighted-score contribution, not fantasy points, but `formatImpact` renders it identically to real point impacts elsewhere ("+40.0 pts") -- could misread as a fantasy-points claim in the Waiver Score breakdown sheet. Candidate T4.8-family follow-up (reason-format.ts and/or a per-reason-code formatting hint).
-- `data-testid="waivers-row"` is shared by both the card and table DOM nodes (only one visible per breakpoint via CSS), unlike `players-row`/`players-table-row`'s distinct ids -- a future e2e test (T4.7) must scope within `waivers-table`/`waivers-cards` or assert `toBeVisible()`, not just count matches.
-
-### Carried from Phase 4 Batch A
-
-- T4.2b must add `export * from "./waiver/index.js"` to `packages/core/src/index.ts` (T4.2a left its own barrel unwired, mirroring `projections/index.ts`'s existing pattern, out of its scope).
+- `WAIVER_SCORE_*` reasons' `impact` is a 0-100-scale weighted-score contribution, not fantasy points, but `formatImpact` renders it identically to real point impacts elsewhere ("+40.0 pts") -- could misread as a fantasy-points claim in the Waiver Score breakdown sheet. Candidate reason-format.ts follow-up (and/or a per-reason-code formatting hint).
+- `data-testid="waivers-row"` is shared by both the card and table DOM nodes (only one visible per breakpoint via CSS), unlike `players-row`/`players-table-row`'s distinct ids -- a future e2e test must scope within `waivers-table`/`waivers-cards` or assert `toBeVisible()`, not just count matches.
 - `packages/core/package.json` has no `"test"` script (only `"typecheck"`), so `pnpm --filter @sideline/core test` silently no-ops instead of erroring (devops-engineer).
-- T4.5's brief needs: per-week league-wide `positionRank` and `startableCount` for TREND-3 (not computed anywhere yet, by design); real percentiles across the live candidate pool for T4.2b's composite inputs (also by design, decoupled per ADR-015).
-- **T4.3 Docker image size is ambiguous: `docker images` reports 551 MB, but the `CONTENT SIZE` column (unique layers added by this repo's Dockerfile, excluding the shared base image) is 129 MB** -- the latter is the number directly comparable to G1-G3's ~100.8 MB web-only figure. T6.2 (HOST-5, 400 MB budget, multi-arch CI) must settle on one measurement method before enforcing the budget; `better-sqlite3` prebuilds and `sharp` are still untrimmed (pre-existing backlog item above).
-- `apps/web/lib/server/lineup.ts`'s private `readPlayers`/`readRoster` duplicate logic now available as `packages/db`'s `readPlayers`/`readRosteredPlayerIds` (T4.5a) -- a future cleanup could switch `lineup.ts` over; not done here (out of T4.5a's scope).
-- **T4.7 measured the `getPlayerDetail` cost directly (no longer speculative): ~125ms per call at a realistic week-17/1,000-player seed, versus under 1ms for every other data function in `perf.test.ts`.** Home's `getPlayerDetail` x16 loop (one call per roster player) totals ~2.0-2.7s, which passes the documented 4,800ms aggregate budget (300ms/call x 16) but confirms `readLeagueWeekPositionRanks`'s per-call, per-played-week whole-table rescan is real, measurable cost on the highest-traffic page. `getPlayersList`/`getPlayerDetail` still have no `computed_cache` entry (unlike `lineup.ts`/`waivers.ts`). Candidate for backend-engineer: a `computed_cache` entry on `getPlayerDetail`, or caching `readLeagueWeekPositionRanks`/`readUsageWeek` per (league, season, week) instead of recomputing per player.
-- T4.8b's `PRIORITY_VALUE_BREAKDOWN` reason dropped its formula breakdown from `label` (now a short one-line summary) in favor of short chip copy; the numeric inputs (`positionFactor`/`weeksFactor`/`valueOfPriority`) are still on `ClaimAdviceResult` for T4.6/T4.5b to render if Steph wants the detailed math visible.
-- T6.2 follow-ups from T4.3: `packages/shared`'s `AppConfigSchema.puid`/`pgid` (default 1000/1000) are unused by any code path and now inconsistent with the container's real 99/100 default (backend-engineer: wire them to something real or align the default); a bare `docker exec <c> whoami` returns `root` by design (no `USER` instruction, entrypoint drops privileges per-process via `setpriv`) -- gate verification scripts must use `docker top` or `docker exec -u <uid>:<gid>`, not `whoami`, to check non-root; PUID/PGID chown was verified on a named Docker volume and a real Linux host, not a macOS bind mount (a known virtualized-bind-mount limitation on this dev machine, not an entrypoint bug).
+- **T4.3 Docker image size is ambiguous: `docker images` reports 551 MB, but the `CONTENT SIZE` column (unique layers added by this repo's Dockerfile, excluding the shared base image) is ~124-130 MB (G4: 123.6 MB arm64, 124.4 MB amd64)** -- the latter is the number directly comparable to G1-G3's ~100.8 MB web-only figure. T6.2 (HOST-5, 400 MB budget, multi-arch CI) must settle on one measurement method before enforcing the budget; `better-sqlite3` prebuilds and `sharp` are still untrimmed.
+- `apps/web/lib/server/lineup.ts`'s private `readPlayers`/`readRoster` duplicate logic now available as `packages/db`'s `readPlayers`/`readRosteredPlayerIds` (T4.5a) -- a future cleanup could switch `lineup.ts` over.
+- **`getPlayerDetail` costs ~125-127ms/call at a realistic week-17/1,000-player seed, confirmed stable (not worse) through the G4 gate, versus under 1ms for every other data function.** Home's `getPlayerDetail` x16 loop totals ~2.0-2.7s, under the 4,800ms budget but a real, worsening-with-the-season cost on the highest-traffic page. No `computed_cache` entry exists for `getPlayerDetail`/`getPlayersList` yet. Candidate for backend-engineer: a `computed_cache` entry, or caching `readLeagueWeekPositionRanks`/`readUsageWeek` per (league, season, week) instead of recomputing per player.
+- T4.8b's `PRIORITY_VALUE_BREAKDOWN` reason dropped its formula breakdown from `label` (now a short one-line summary) in favor of short chip copy; the numeric inputs (`positionFactor`/`weeksFactor`/`valueOfPriority`) are still on `ClaimAdviceResult` for a future render if Steph wants the detailed math visible.
+- T6.2 follow-ups from T4.3: `packages/shared`'s `AppConfigSchema.puid`/`pgid` (default 1000/1000) are unused by any code path and now inconsistent with the container's real 99/100 default (backend-engineer: wire them to something real or align the default); a bare `docker exec <c> whoami` returns `root` by design -- gate verification scripts must use `docker top` or `docker exec -u <uid>:<gid>`, not `whoami`, to check non-root; PUID/PGID chown was verified on a named Docker volume and a real Linux host, not a macOS bind mount. No `SIGTERM`/`SIGINT` trap in the entrypoint (hard kill instead of graceful drain on `docker stop`); unconditional `chown -R` on every boot instead of only when ownership is already wrong.
 - **G4 gate code review (m3):** `apps/web/lib/server/waivers.test.ts`'s only end-to-end `nextClearAt` assertion for T4.9's DST fix uses a January (EST) date, so the DST branch itself isn't exercised at the web-integration layer (only at `packages/core`'s unit/golden level, which is thorough). Low risk, candidate qa-engineer follow-up: add an EDT-dated integration case.
-- **T4.3-FIX (commit `91a616c`) closed the 3 Major code-review findings** (unverified migrations, unvalidated `DATA_DIR` before a recursive root `chown`, no guard against `PUID=0`/`PGID=0`); see `docs/reviews/2026-10-03-p4-batchA-code.md`'s resolution note. Two Minors remain open for T6.2: no `SIGTERM`/`SIGINT` trap in the entrypoint (hard kill instead of graceful drain on `docker stop`); unconditional `chown -R` on every boot instead of only when ownership is already wrong.
+- **Route JS over the 170,000 B soft target (all under the 204,800 B hard budget), confirmed at the G4 gate:** Lineup 178,893 B, Waivers 191,364 B, Players list 178,260 B, Players detail 193,914 B (least headroom, ~5.3%). Worth revisiting the soft target's realism for feature-dense routes if Phase 5 adds more client code to any of these.
 
 ### Tests and tooling
 
@@ -140,9 +90,6 @@ Remove an item when it is done; the archive keeps history.
 
 Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
 
-- ~~**Lineup "why" needs more detail (Steph, G3 approval 2026-10-03).**~~ Done: T4.8a (6384643) added the contract, T4.8b (f97a16e) rewrote every reason's copy to plain language and populated it on the three availability-discount reasons, T4.8c (1415d02) renders it in `ReasonChips`/`WhySheet`. Worth a quick look at the G4 human checkpoint.
-- **Lighthouse (`lighthouserc.json`) only measures Home and League; Lineup (T3.8) was never added.** Add it before Phase 4 adds Waivers/Players too (devops/qa).
-- **Lineup route JS is 178,874 B, over the 170,000 B soft target** (under the 204,800 B hard budget). Phase 4 added two more routes in the same position: Waivers 191,328 B, Players detail 193,981 B, Players list 178,346 B (all measured with a clean `pnpm --filter @sideline/web build` + `scripts/gate/routes-size.ts` on 2026-10-03, all under the hard budget but over the soft target). Worth revisiting the soft target's realism for feature-dense routes at the next gate (T4.6a's own suggestion) rather than stripping functionality.
 - `scheduleAlreadyStored` (`apps/worker/src/jobs/data-jobs.ts`) uses a raw SQL query instead of a typed `packages/db` helper, inconsistent with its siblings `readStoredStatsWeeks`/`readStoredProjectionWeeks`.
 - Three UX Minors (deferred by Steph): Lineup's summary banner says "projected" even in Safe/Upside mode; its rounded total can disagree with its own swap rows (e.g. a signed "-0.0 pts") with no zero-delta floor like Home's `hasSwaps` guard; "this is your team" uses two different badge variants on the same Home page (`variant="accent"` vs `variant="you"`) -- standardize on `variant="you"`.
 - `packages/db`'s `computed_cache` keys only on data-input timestamps, never algorithm version, so a running instance could keep serving a pre-fix cached lineup until the next relevant sync. Related: the lineup cache (`getLineup`, T3.7) doesn't invalidate on an nflverse-only sync (ADR-013 item 19) -- zero impact today since alpha/beta is confirmed 0 by the real G3 backtest; revisit together if a future backtest ever ships non-zero alpha/beta.
@@ -158,4 +105,5 @@ Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
 
 ## Questions for Steph
 
-- None open. (G2 answered 2026-10-02: ADR-011, ADR-012, final approval. G3 answered 2026-10-03: lineup recommendation and look/feel approved; wants more detail in the "why" -- projected stats plus plainer language -- deferred to a future phase, logged above; three Minor UX findings deferred; approved merge to `main` and tag `gate-G3`.)
+- **G4's 4 questions, sent 2026-10-03, reply pending (optional checkpoint, not blocking Phase 5):** does Waivers' recommendations/claim advice match her own read this week; does the now-DST-corrected clear time match what she's actually seen Sleeper do; look and feel of Waivers/Players approved as is or changes wanted before Phase 5; approve the already-completed merge to `main` and tag `gate-G4`. See `docs/gates/G4.md`'s Human checkpoint section.
+- Earlier, all answered: G2 (2026-10-02: ADR-011, ADR-012, final approval). G3 (2026-10-03: lineup recommendation and look/feel approved; wanted more detail in the "why" -- done in T4.8a/b/c; three Minor UX findings deferred; approved merge and tag `gate-G3`).
