@@ -22,7 +22,7 @@ Batch split and dependency rationale: ADR-015.
 
 | ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|---|
-| T4.1 | Trends and usage metrics (TREND-1 to 5) | analytics-engineer | G3 | A | Dispatched | 0 | |
+| T4.1 | Trends and usage metrics (TREND-1 to 5) | analytics-engineer | G3 | A | Done | 1 | ad3b10a |
 | T4.2a | Waiver candidate pool, prefilter, Lineup Impact (WAIVER-1, 2) | analytics-engineer | G3 | A | Dispatched | 0 | |
 | T4.3 | Production Docker image beta (HOST-1 to 6 partial) | devops-engineer | G3 | A | Dispatched | 0 | |
 | T4.2b | Waiver Score composite, two views (WAIVER-3, 4) | analytics-engineer | T4.2a | B | Not started | 0 | |
