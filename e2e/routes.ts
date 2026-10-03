@@ -16,6 +16,7 @@ export const existingRoutes: readonly string[] = [
   `${L}/matchup`,
   `${L}/waivers`,
   `${L}/players`,
+  `${L}/players/${DATA.myPlayerId}`,
   // The seeded server has an active league, so onboarding opens on its done view.
   "/onboarding",
   "/dev/gallery",

@@ -58,6 +58,27 @@ function setWaiverMode(h: DbHandle, leagueId: string, mode: string): void {
   h.sqlite.prepare(`UPDATE leagues SET waiver_mode = ? WHERE league_id = ?`).run(mode, leagueId);
 }
 
+/** T4.7: sets the WAIVER-6d schedule fields on a league row directly. */
+function setWaiverSchedule(
+  h: DbHandle,
+  leagueId: string,
+  opts: { waiverDayOfWeek: number | null; waiverClearDays: number | null; dailyWaivers?: boolean },
+): void {
+  h.sqlite
+    .prepare(
+      `UPDATE leagues SET waiver_day_of_week = ?, waiver_clear_days = ?, daily_waivers = ?
+       WHERE league_id = ?`,
+    )
+    .run(opts.waiverDayOfWeek, opts.waiverClearDays, opts.dailyWaivers === true ? 1 : 0, leagueId);
+}
+
+/** T4.7: overrides a player's position and fantasyPositions (WAIVER-1's position-used check). */
+function setPosition(h: DbHandle, playerId: string, position: string): void {
+  h.sqlite
+    .prepare(`UPDATE players SET position = ?, fantasy_positions_json = ? WHERE player_id = ?`)
+    .run(position, JSON.stringify([position]), playerId);
+}
+
 /** Inserts a flat `projPts` for `playerId` across every week in `weeks`. */
 function insertProj(
   h: DbHandle,
@@ -279,6 +300,122 @@ describe("getWaivers", () => {
     expect(data.priorityAdvisor.applicable).toBe(false);
     expect(data.priorityAdvisor.candidates).toEqual([]);
     expect(data.priorityAdvisor.reasons.some((r) => r.code === "FAAB_NOT_SUPPORTED")).toBe(true);
+  });
+
+  // --- T4.7: new coverage beyond what existed before this task ---------------------------------
+  // Already covered above (not repeated): not_found league, fully-rostered empty pool, forMyTeam
+  // vs. bestAvailable sort order, position filter narrowing both views, one competing-claim flag,
+  // computed_cache reuse across calls, taxi-vs-IR auto-drop eligibility (M1), FAAB league disabling
+  // the priority advisor (M2). New below: WAIVER-1's two other pool exclusions (inactive status,
+  // position the league doesn't use), WAIVER-3's Waiver Score breakdown chips end-to-end,
+  // WAIVER-6c's claimAdvice end-to-end (not exercised anywhere above - only 6b's competingTeams
+  // was), and WAIVER-6d's nextClearAt/waiverClearDays end-to-end (also not exercised above).
+
+  it("WAIVER-1: an inactive free agent and one at a position the league doesn't use are both excluded, a plain Active one is not", () => {
+    const h = setup({
+      rosterCount: 2,
+      rosterSize: 4,
+      playerCount: 12,
+      rosterPositions: ["QB", "RB", "WR", "TE"],
+    });
+    // Free agents (unrostered, ids 9-12): p9 RB, p10 WR, p11 WR, p12 QB per seedLeague's n%4 cycle.
+    // p9: left with the default null status -> excluded (EXCLUDED_INACTIVE covers every non-Active
+    // value, including null; the module doc calls this out explicitly).
+    // p10: marked Active, left at its real WR position -> the one candidate that must survive.
+    setStatus(h, ["p10"], "Active");
+    insertProj(h, "L1", 2026, "p10", WEEKS_5_TO_18, 10);
+    // p11: marked Active, but repositioned to "K" - this league's roster_positions (QB/RB/WR/TE)
+    // has no slot eligible for K, so it must be excluded even though it is active.
+    setStatus(h, ["p11"], "Active");
+    setPosition(h, "p11", "K");
+    insertProj(h, "L1", 2026, "p11", WEEKS_5_TO_18, 10);
+    // p12 stays null-status and untouched (a second EXCLUDED_INACTIVE case, not asserted on
+    // individually, just confirms the pool size math below).
+
+    const data = ok(getWaivers(h, "L1", { rosterId: 1 }, SEED_NOW));
+    expect(data.candidatePoolSize).toBe(1);
+    expect(data.forMyTeam.map((c) => c.playerId)).toEqual(["p10"]);
+    expect(data.bestAvailable.map((c) => c.playerId)).toEqual(["p10"]);
+    expect(data.poolReasons.some((r) => r.code === "EXCLUDED_INACTIVE")).toBe(true);
+    expect(data.poolReasons.some((r) => r.code === "EXCLUDED_POSITION")).toBe(true);
+  });
+
+  it("WAIVER-3: every candidate's reasons carry all five Waiver Score breakdown chips", () => {
+    const h = setup({
+      rosterCount: 2,
+      rosterSize: 4,
+      playerCount: 10,
+      rosterPositions: ["QB", "RB", "WR", "TE"],
+    });
+    setStatus(h, ["p9", "p10"], "Active");
+    insertProj(h, "L1", 2026, "p9", WEEKS_5_TO_7, 20);
+    insertProj(h, "L1", 2026, "p10", WEEKS_5_TO_18, 12);
+
+    const data = ok(getWaivers(h, "L1", { rosterId: 1 }, SEED_NOW));
+    expect(data.forMyTeam.length).toBeGreaterThan(0);
+    const expectedChipCodes = [
+      "WAIVER_SCORE_LINEUP_IMPACT",
+      "WAIVER_SCORE_ROS_VALUE",
+      "WAIVER_SCORE_USAGE_TREND",
+      "WAIVER_SCORE_MOMENTUM",
+      "WAIVER_SCORE_SCHEDULE",
+    ];
+    for (const candidate of data.forMyTeam) {
+      const codes = candidate.reasons.map((r) => r.code);
+      for (const chip of expectedChipCodes) expect(codes).toContain(chip);
+      expect(candidate.waiverScore).toBeGreaterThanOrEqual(0);
+      expect(candidate.waiverScore).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it("WAIVER-6c: claimAdvice.worthIt and valueOfPriority flow end-to-end from my real waiver position", () => {
+    const h = setup({
+      rosterCount: 2,
+      rosterSize: 4,
+      playerCount: 10,
+      rosterPositions: ["QB", "RB", "WR", "TE"],
+    });
+    insertProj(h, "L1", 2026, "p1", WEEKS_5_TO_18, 8);
+    insertProj(h, "L1", 2026, "p2", WEEKS_5_TO_18, 10);
+    insertProj(h, "L1", 2026, "p3", WEEKS_5_TO_18, 5);
+    insertProj(h, "L1", 2026, "p4", WEEKS_5_TO_18, 10);
+    setStatus(h, ["p9"], "Active");
+    insertProj(h, "L1", 2026, "p9", WEEKS_5_TO_7, 20);
+    // I hold waiver position 1 (first, the maximum value-of-priority case): positionFactor = 1.
+    setWaiverPosition(h, "L1", 1, 1);
+    setWaiverPosition(h, "L1", 2, 2);
+
+    const data = ok(getWaivers(h, "L1", { rosterId: 1 }, SEED_NOW));
+    expect(data.priorityAdvisor.myWaiverPosition).toBe(1);
+    const p9 = data.priorityAdvisor.candidates.find((c) => c.playerId === "p9");
+    expect(p9).toBeDefined();
+    // By hand: positionFactor = 1 (first in order); weeksRemaining = DEFAULT_SEASON_WEEKS(18) -
+    // SEED_NOW's nfl_state week(5) + 1 = 14; weeksFactor = 14/18 = 0.777...;
+    // valueOfPriority = 6 * 1 * (14/18) = 4.666... A near-term 20 pt/week bump over 3 weeks is far
+    // above that bar, so worthIt must be true.
+    expect(p9?.claimAdvice.positionFactor).toBeCloseTo(1, 9);
+    expect(p9?.claimAdvice.valueOfPriority).toBeCloseTo(6 * (14 / 18), 6);
+    expect(p9?.claimAdvice.worthIt).toBe(true);
+    expect(p9?.claimAdvice.reasons.map((r) => r.code)).toContain("CLAIM_WORTH_IT");
+  });
+
+  it("WAIVER-6d: nextClearAt and waiverClearDays end-to-end reflect the league's real settings", () => {
+    const h = setup({
+      rosterCount: 2,
+      rosterSize: 4,
+      playerCount: 10,
+      rosterPositions: ["QB", "RB", "WR", "TE"],
+    });
+    // waiver_day_of_week = 0 (Monday); matches the core unit test's own hand-verified weekly/EST
+    // case exactly (priority-advisor.test.ts: "now before this week's Monday 3am ET clear returns
+    // today's run"), reused here only to prove the real DB field reaches `computeNextWaiverClear`
+    // unmodified end-to-end (getWaivers passes no etUtcOffsetHours/clearHourEt override, so the
+    // defaults -5/3 apply, same as that unit test).
+    setWaiverSchedule(h, "L1", { waiverDayOfWeek: 0, waiverClearDays: 2 });
+    const now = new Date("2026-01-05T06:30:00.000Z"); // a Monday, 01:30 ET, before the 03:00 clear
+    const data = ok(getWaivers(h, "L1", { rosterId: 1 }, now));
+    expect(data.priorityAdvisor.nextClearAt).toBe("2026-01-05T08:00:00.000Z");
+    expect(data.priorityAdvisor.waiverClearDays).toBe(2);
   });
 });
 
