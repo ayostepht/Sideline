@@ -32,9 +32,11 @@ Batch split and dependency rationale: ADR-015.
 | T4.8b | Populate Reason field, rewrite reason-code copy to plain language | analytics-engineer | T4.8a | C | Done | 1 | f97a16e |
 | T4.5b | Waivers data function, API route, response DTOs | backend-engineer | T4.5a, T4.2b, T4.4 | D | Done | 2 | ee08fc4, 68eb1b5 |
 | T4.5c | Players list and detail data functions, API routes, response DTOs | backend-engineer | T4.5a, T4.1 | D | Done | 1 | f75d318 |
-| T4.6 | Waivers page, Players explorer, Home waiver/riser cards | frontend-engineer | T4.4, T4.5b, T4.5c | E | Not started | 0 | |
-| T4.8c | Render richer reason detail in `slot-column.tsx` | frontend-engineer | T4.8b | E | Not started | 0 | |
-| T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6 | F | Not started | 0 | |
+| T4.6a | Waivers page | frontend-engineer | T4.4, T4.5b | E | Not started | 0 | |
+| T4.6b | Players explorer and player detail | frontend-engineer | T4.5c | E | Not started | 0 | |
+| T4.8c | Render `projectedPoints` in the Lineup "why" UI | frontend-engineer | T4.8b | E | Not started | 0 | |
+| T4.6c | Home waiver-targets and risers cards | frontend-engineer | T4.6a, T4.6b | F | Not started | 0 | |
+| T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6a, T4.6b, T4.6c | G | Not started | 0 | |
 
 ## Earlier phases
 
