@@ -8,13 +8,31 @@
 | 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
 | 2 App shell and league views | G2 (human) | `phase/2-shell` (merged) | Done, G2 PASS 2026-10-02 (Steph approved) |
 | 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
-| 4 Waivers, players, Docker beta | G4 (human, optional) | | Next: plan batches (not started) |
+| 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` | In progress: Batch A dispatched |
 | 5 Matchups and league intelligence | G5 | | Not started |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
 
 ## Resume point
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
+
+## Phase 4 task table
+
+Batch split and dependency rationale: ADR-015.
+
+| ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
+|---|---|---|---|---|---|---|---|
+| T4.1 | Trends and usage metrics (TREND-1 to 5) | analytics-engineer | G3 | A | Dispatched | 0 | |
+| T4.2a | Waiver candidate pool, prefilter, Lineup Impact (WAIVER-1, 2) | analytics-engineer | G3 | A | Dispatched | 0 | |
+| T4.3 | Production Docker image beta (HOST-1 to 6 partial) | devops-engineer | G3 | A | Dispatched | 0 | |
+| T4.2b | Waiver Score composite, two views (WAIVER-3, 4) | analytics-engineer | T4.2a | B | Not started | 0 | |
+| T4.4 | Waiver priority advisor (WAIVER-6a to 6d) | analytics-engineer | T4.2a | B | Not started | 0 | |
+| T4.8a | Reason contract amendment (Lineup "why" detail, Steph's G3 ask) | backend-engineer | none | B | Not started | 0 | |
+| T4.5 | Data functions and APIs: waivers, players list, player detail | backend-engineer | T4.1, T4.2a, T4.2b, T4.4 | C | Not started | 0 | |
+| T4.8b | Populate Reason field, rewrite reason-code copy to plain language | analytics-engineer | T4.8a | C | Not started | 0 | |
+| T4.6 | Waivers page, Players explorer, Home waiver/riser cards | frontend-engineer | T4.4, T4.5 | D | Not started | 0 | |
+| T4.8c | Render richer reason detail in `slot-column.tsx` | frontend-engineer | T4.8b | D | Not started | 0 | |
+| T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6 | E | Not started | 0 | |
 
 ## Earlier phases
 
@@ -69,7 +87,7 @@ Remove an item when it is done; the archive keeps history.
 
 Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
 
-- **Lineup "why" needs more detail (Steph, G3 approval 2026-10-03).** See "Later phases" below.
+- **Lineup "why" needs more detail (Steph, G3 approval 2026-10-03).** Scheduled as T4.8a/b/c (ADR-015), riding alongside Phase 4 Batches B to D.
 - **Lighthouse (`lighthouserc.json`) only measures Home and League; Lineup (T3.8) was never added.** Add it before Phase 4 adds Waivers/Players too (devops/qa).
 - **Lineup route JS is 178,735 B, over the 170,000 B soft target** (under the 200,000 B hard budget). Watch before Phase 4 adds more client code to that route (frontend-engineer).
 - `scheduleAlreadyStored` (`apps/worker/src/jobs/data-jobs.ts`) uses a raw SQL query instead of a typed `packages/db` helper, inconsistent with its siblings `readStoredStatsWeeks`/`readStoredProjectionWeeks`.
@@ -79,7 +97,6 @@ Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
 
 ### Later phases
 
-- **Lineup "why" needs more detail (Steph, G3 approval 2026-10-03): show each player's actual projected stat line/points number, and rewrite reason text in plain, human-readable language instead of terse labels.** Explicitly deferred by Steph to a future phase, not blocking G3. Touches the `Reason` payload (`packages/shared/src/reason.ts`, `{code, label, value, impact}`) and its rendering in `apps/web/app/l/[leagueId]/lineup/_components/slot-column.tsx`; likely needs both a shape change (surface the projected points number alongside the existing code/label) and a copy pass on every reason code's label (analytics-engineer for the payload, frontend-engineer for rendering and copy). Candidate for Phase 4 or a dedicated polish task.
 - T3.5 and T4.1 own the real `gradeFromScore` and `trendFromDelta` thresholds (placeholders now). No testing-library/jsdom: components have mapping tests only.
 - T4.3: supervisor starts the worker, runs migrations, PUID/PGID 99/100; worker container inherits NODE_ENV=production; trim better-sqlite3 prebuilds and sharp; revisit health (stale heartbeat fails the healthcheck).
 - T4.x auth refuses to start with an empty SESSION_SECRET or APP_PASSWORD.

@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-03. **Phase 3 done, G3 PASS, Steph approved.** `phase/3-scoring` merged to `main`, tagged `gate-G3`. Steph's G3 feedback: lineup recommendation and look/feel approved; wants more detail in the "why" (projected stats plus plainer language), explicitly deferred to a future phase (logged in `docs/PROGRESS.md`'s "Later phases"); three Minor UX findings deferred; merge approved. Clean point to `/clear`. Next: plan Phase 4 batches (PLAN.md section 9: waivers, players, trends, Docker beta; gate G4 is a human checkpoint but optional).
+Last updated: 2026-10-03. **Phase 4 planned, Batch A dispatched.** `phase/4-waivers` branched from `main` (G3 merged and tagged `gate-G3`). Batch split, dependency, and decoupling rationale: ADR-015. Task table: `docs/PROGRESS.md` "Phase 4 task table". Steph's G3 "Lineup why" ask is folded in as T4.8a/b/c, riding alongside Batches B to D rather than blocking them.
 
 ## 1. Resume in five steps
 
@@ -24,14 +24,16 @@ Last updated: 2026-10-03. **Phase 3 done, G3 PASS, Steph approved.** `phase/3-sc
 
 ## 3. In flight
 
-- Nothing. Clean point to `/clear`.
+- **Batch A dispatched** (2026-10-03): T4.1 (trends, analytics-engineer), T4.2a (waiver pool and Lineup Impact, analytics-engineer), T4.3 (Docker beta, devops-engineer). All three depend only on G3 and have disjoint file ownership. Check each Task Report, run Level 1 verification (CLAUDE.md section 4) on each independently as they return, then commit.
 
 ## 4. Next steps (in order)
 
-1. **Plan Phase 4 batches.** Read PLAN.md section 9's Phase 4 table (T4.1 trends, T4.2 waiver engine, T4.3 Docker beta, T4.4 waiver priority advisor, T4.5 data functions/APIs, T4.6 Waivers/Players pages, T4.7 tests) and section 10's G4 phase checks. Split per CLAUDE.md's ~400-line target and ownership rules (log any split in `docs/DECISIONS.md`, same pattern as ADR-013 for Phase 3). Create `phase/4-waivers` from `main`.
-2. Decide whether to fold in the carried-forward "Lineup why" enhancement (Steph's G3 ask) as an early Phase 4 task or a standalone polish task before Phase 4 proper starts — Steph said either is fine.
-3. Dispatch Batch A (tasks with no Phase 4 intra-phase dependency, disjoint files, max 3 parallel).
-4. Watch the backlog items above (Lighthouse coverage, Lineup route JS) when Phase 4 adds more routes and client code.
+1. On each Batch A task's return: verify (`pnpm verify`, acceptance criteria, `git diff --stat` stays in-scope), commit with its task id, update the PROGRESS.md task table row.
+2. Once all of Batch A is committed: run `code-reviewer` on the combined Batch A diff (Level 2). Fix Blocker/Major findings before Batch B.
+3. Dispatch Batch B: T4.2b (depends T4.2a), T4.4 (depends T4.2a), T4.8a (Reason contract amendment, backend-engineer, no dependency). See ADR-015 for the full brief contracts (percentile-input decoupling for T4.2b, plain-number decoupling for TREND-4).
+4. Continue through Batches C (T4.5, T4.8b), D (T4.6, T4.8c), E (T4.7) per ADR-015's batch order, with a code-reviewer pass after each batch that touches feature code and a ux-reviewer pass once T4.6 lands UI.
+5. Watch the backlog items above (Lighthouse coverage, Lineup route JS) when Phase 4 adds more routes and client code.
+6. At the end of Batch A's reviews, suggest `/clear` to Steph (section 6 below) before starting Batch B.
 
 ## 5. Briefs
 
