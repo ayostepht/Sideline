@@ -91,7 +91,7 @@ Remove an item when it is done; the archive keeps history.
 
 ### Phase 3: scoring, projections, optimizer
 
-- **Optimizer can recommend an unavailable player with no warning (found in T3.4b review, pending code-reviewer confirmation).** `recommendLineup`'s `issues` list only checks *today's current* starters for an `UNAVAILABLE` reason (`INACTIVE_STARTER`); when the optimizer's own *recommended* assignment places a 0-value (Out/IR/Suspended/bye) player into a slot because no eligible alternative exists, nothing flags it. `packages/core/src/optimizer/recommend.ts` around the `issues` section (step i): add a loop over `optimalAssignment` parallel to the existing current-starter check, emitting a new issue code (e.g. `RECOMMENDED_UNAVAILABLE`) when the recommended player has an `UNAVAILABLE` reason, plus a unit test for the scenario (a slot whose only eligible player is Out).
+- Batch A-C code review (`docs/reviews/2026-10-02-p3-batchABC-code.md`, ADR-013 item 12): one Blocker (optimizer could silently recommend an unavailable player) and one Major (embedded NUL byte in `league-points.ts`), both fixed before Batch D. Minor/informational items left open: `solve.ts`'s `TIEBREAK_EPSILON` undocumented at unrealistic (~1e15) value magnitudes; `scripts/validate-scoring/validate.ts` reads one player-week at a time rather than batch-reading (fine for a manual gate script, not a pattern for hot-path code); `rescoreProjection`'s `stats` parameter has no nominal type separating a projection row from a real stats row (no live bug, one correctly-scoped caller today).
 
 ### Later phases
 
