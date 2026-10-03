@@ -31,6 +31,7 @@ import {
   weekCursor,
   type SleeperJobDeps,
 } from "./common.js";
+import { syncScheduleForSeason, type NflverseJobDeps } from "./nflverse-job.js";
 import { scheduleTeamCode } from "./team-code.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -225,13 +226,25 @@ export function projectionsJob(deps: SleeperJobDeps): Job {
   };
 }
 
+/** True when any schedule row for the season is already stored (no row count threshold needed). */
+function scheduleAlreadyStored(ctx: JobContext, season: number): boolean {
+  const row = ctx.db.sqlite
+    .prepare("SELECT COUNT(*) AS n FROM schedule WHERE season = ?")
+    .get(season) as { n: number };
+  return row.n > 0;
+}
+
 /**
- * One-shot, manual: 2025 regular-season weekly stats and projections (about 36 calls). Weeks
- * already stored are skipped, so a complete backfill makes zero calls. Stored without ETags to
- * keep large bodies out of http_cache. Historical projections get no pregame snapshots (their
- * fetch time is after kickoff by definition).
+ * One-shot, manual: 2025 regular-season weekly stats and projections (about 36 calls), plus the
+ * 2025 schedule via nflverse (one more call) so backtests have a resolvable opponent for every
+ * 2025 player-week (see `syncScheduleForSeason`). The three parts are skipped independently: each
+ * already-stored part makes zero calls for that part, so a complete backfill makes zero calls at
+ * all. The schedule part degrades (skips without failing the job) when ENABLE_NFLVERSE is off or
+ * nflverse is unreachable, same as the "nflverse" job. Stats and projections are stored without
+ * ETags to keep large bodies out of http_cache. Historical projections get no pregame snapshots
+ * (their fetch time is after kickoff by definition).
  */
-export function backfillJob(deps: SleeperJobDeps): Job {
+export function backfillJob(deps: SleeperJobDeps, nflverseDeps: NflverseJobDeps = {}): Job {
   return {
     name: "backfill_2025",
     async run(ctx) {
@@ -242,12 +255,22 @@ export function backfillJob(deps: SleeperJobDeps): Job {
       const all = Array.from({ length: MAX_REGULAR_WEEK }, (_, i) => i + 1);
       const statWeeks = all.filter((w) => !have.stats.has(w));
       const projWeeks = all.filter((w) => !have.proj.has(w));
-      if (statWeeks.length === 0 && projWeeks.length === 0) {
+      const scheduleAlready = scheduleAlreadyStored(ctx, BACKFILL_SEASON);
+      if (statWeeks.length === 0 && projWeeks.length === 0 && scheduleAlready) {
         return { rowsChanged: 0, status: "skipped", note: "2025 data already present" };
+      }
+      let rowsChanged = 0;
+      let scheduleNote: string;
+      if (scheduleAlready) {
+        scheduleNote = "schedule: 2025 already present";
+      } else {
+        const sched = await syncScheduleForSeason(ctx, nflverseDeps, BACKFILL_SEASON);
+        rowsChanged += sched.rowsChanged;
+        scheduleNote = `schedule: ${sched.note ?? "synced"}`;
       }
       const client = makeClient(ctx, deps);
       const stats = await syncStats(ctx, client, BACKFILL_SEASON, "regular", statWeeks, false);
-      let rowsChanged = stats.rowsChanged;
+      rowsChanged += stats.rowsChanged;
       const unavailable: number[] = [];
       for (const week of projWeeks) {
         checkAbort(ctx);
@@ -268,6 +291,7 @@ export function backfillJob(deps: SleeperJobDeps): Job {
           .immediate();
       }
       const notes = [
+        scheduleNote,
         stats.note,
         unavailable.length
           ? `projections unavailable for weeks ${unavailable.join(",")}`

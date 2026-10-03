@@ -11,8 +11,15 @@ import {
   usersJob,
 } from "./league-jobs.js";
 
-/** All Sleeper jobs (T1.5b). `deps.fetch` is for tests; production uses the global fetch. */
-export function createSleeperJobs(deps: SleeperJobDeps = {}): Job[] {
+/**
+ * All Sleeper jobs (T1.5b). `deps.fetch` is for tests; production uses the global fetch.
+ * `nflverseDeps` is passed through only to `backfill_2025`, which also backfills the 2025
+ * nflverse schedule (G3-FIX-2); the recurring `nflverse` job is registered separately below.
+ */
+export function createSleeperJobs(
+  deps: SleeperJobDeps = {},
+  nflverseDeps: NflverseJobDeps = {},
+): Job[] {
   return [
     stateJob(deps),
     leagueJob(deps),
@@ -24,7 +31,7 @@ export function createSleeperJobs(deps: SleeperJobDeps = {}): Job[] {
     trendingJob(deps),
     statsJob(deps),
     projectionsJob(deps),
-    backfillJob(deps),
+    backfillJob(deps, nflverseDeps),
   ];
 }
 
@@ -39,5 +46,8 @@ export function createAllJobs(deps: {
   sleeper?: SleeperJobDeps;
   nflverse?: NflverseJobDeps;
 }): Job[] {
-  return [...createSleeperJobs(deps.sleeper ?? {}), nflverseJob(deps.nflverse ?? {})];
+  return [
+    ...createSleeperJobs(deps.sleeper ?? {}, deps.nflverse ?? {}),
+    nflverseJob(deps.nflverse ?? {}),
+  ];
 }
