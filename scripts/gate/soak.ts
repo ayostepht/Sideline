@@ -25,8 +25,13 @@
  * Privacy: SLEEPER_USERNAME and DEFAULT_LEAGUE_ID (and the other .env values the container
  * needs) are read only from the repo root .env at runtime, written to a 0600 temp file and
  * handed to the container with `docker run --env-file`, never as a `-e KEY=VALUE` argument
- * (which would show up in this script's own command-line logging, `docker inspect`, and
- * `ps`) and never printed to stdout/stderr or into docs/gates output.
+ * (which would show up in this script's own command-line logging and in `ps`) and never
+ * printed to stdout/stderr or into docs/gates output. This keeps secrets out of everything
+ * this script itself does, but `--env-file` still resolves into the container's own stored
+ * config the same as `-e` would: `docker inspect` on the running container (e.g.
+ * `docker inspect --format '{{json .Config.Env}}' <name>`) will show the real values while
+ * the soak is in progress, same as any other container using env-var secrets. Don't paste
+ * raw `docker inspect` output for this container into a bug report or screen-share.
  */
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
