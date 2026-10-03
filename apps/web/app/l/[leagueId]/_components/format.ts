@@ -1,4 +1,11 @@
-import type { LineupPlayer, Reason, StandingsRow, TeamPlayerRow } from "@sideline/shared";
+import type {
+  LineupPlayer,
+  PlayerDetailResponse,
+  Reason,
+  StandingsRow,
+  TeamPlayerRow,
+  WaiverCandidate,
+} from "@sideline/shared";
 
 /** "7-3" or "7-3-1" when there are ties. */
 export function formatRecord(r: Pick<StandingsRow, "wins" | "losses" | "ties">): string {
@@ -56,4 +63,66 @@ export function groupPlayers(players: readonly TeamPlayerRow[]): TeamSections {
 /** Name shown for a player; unknown players (empty name) fall back to their id. */
 export function displayName(p: Pick<TeamPlayerRow, "name" | "playerId">): string {
   return p.name.trim() === "" ? `Player ${p.playerId}` : p.name;
+}
+
+/** One decimal, always signed ("+3.4 pts", "-1.2 pts"). Mirrors the Waivers page's own identical
+ * helper (house pattern: small formatters are duplicated per feature, not shared). */
+export function formatSignedPoints(n: number): string {
+  const abs = Math.abs(n).toFixed(1);
+  return n < 0 ? `-${abs} pts` : `+${abs} pts`;
+}
+
+/**
+ * Home's waiver-targets card (PLAN 6.4): the top `limit` candidates from `getWaivers`'s `forMyTeam`
+ * view, which is already sorted by Lineup Impact descending, so this is a plain slice.
+ */
+export function topWaiverTargets(
+  forMyTeam: readonly WaiverCandidate[],
+  limit = 3,
+): WaiverCandidate[] {
+  return forMyTeam.slice(0, limit);
+}
+
+/** One row of Home's "rising players" card: a player (roster or free agent) whose trend signal is
+ * Rising, trimmed to what the card shows. Every row is Rising by construction (see
+ * {@link risingRosterPlayers}/{@link risingFreeAgents}), so callers don't need to re-check the
+ * signal. */
+export interface RiserRow {
+  playerId: string;
+  name: string;
+  position: string | null;
+  source: "roster" | "freeAgent";
+}
+
+/** My-roster half of Home's risers card: players from `getPlayerDetail` (called once per roster
+ * player) whose TREND-4 `signal` is Rising. */
+export function risingRosterPlayers(details: readonly PlayerDetailResponse[]): RiserRow[] {
+  return details
+    .filter((d) => d.signal === "Rising")
+    .map((d) => ({ playerId: d.playerId, name: d.name, position: d.position, source: "roster" }));
+}
+
+/** Free-agent half of Home's risers card: `WaiverCandidate`s (from `getWaivers`'s `bestAvailable`
+ * view, which carries every prefiltered candidate sorted by rest-of-season value) whose own
+ * `trendSignal` is Rising. This is a genuine per-candidate signal (TREND-4, not a reconstruction
+ * from the opaque Waiver Score composite). */
+export function risingFreeAgents(candidates: readonly WaiverCandidate[]): RiserRow[] {
+  return candidates
+    .filter((c) => c.trendSignal === "Rising")
+    .map((c) => ({
+      playerId: c.playerId,
+      name: c.name,
+      position: c.position,
+      source: "freeAgent",
+    }));
+}
+
+/** Combines both halves of Home's risers card, roster players first (most actionable for the
+ * user's own team), capped to `limit` total rows. */
+export function selectRisers(
+  rosterRisers: readonly RiserRow[],
+  freeAgentRisers: readonly RiserRow[],
+  limit = 5,
+): RiserRow[] {
+  return [...rosterRisers, ...freeAgentRisers].slice(0, limit);
 }

@@ -1,22 +1,40 @@
-import type { LineupResponse } from "@sideline/shared";
-import { ChevronRight, CircleAlert, CircleCheck, Sparkles, Trophy } from "lucide-react";
+import type { LineupResponse, PlayerDetailResponse } from "@sideline/shared";
+import {
+  ChevronRight,
+  CircleAlert,
+  CircleCheck,
+  Sparkles,
+  TrendingUp,
+  Trophy,
+  UserPlus,
+} from "lucide-react";
 import Link from "next/link";
 import { DataFreshness } from "../../../../components/data-freshness";
 import { DbError } from "../../../../components/db-error";
 import { EmptyState } from "../../../../components/empty-state";
+import { PositionBadge } from "../../../../components/position-badge";
 import { ScoreboardHero } from "../../../../components/scoreboard-hero";
 import { StaleBanner } from "../../../../components/stale-banner";
+import { TrendIndicator } from "../../../../components/trend-indicator";
 import { Badge } from "../../../../components/ui/badge";
 import { buttonVariants } from "../../../../components/ui/button";
 import { Card, CardContent, CardHeader } from "../../../../components/ui/card";
 import { leagueBase, parseWeek } from "../../../../lib/client/nav";
 import { getLeagueOverview, getMyTeam, getStandings } from "../../../../lib/server/league-views";
 import { getLineup } from "../../../../lib/server/lineup";
+import { getPlayerDetail } from "../../../../lib/server/players";
+import { getWaivers } from "../../../../lib/server/waivers";
 import {
   formatPoints,
   formatRecord,
+  formatSignedPoints,
   lineupIssueLabel,
+  risingFreeAgents,
+  risingRosterPlayers,
+  selectRisers,
   selectStandingsSnippet,
+  topWaiverTargets,
+  type RiserRow,
 } from "../_components/format";
 import { readPage } from "../_components/load";
 import { NoTeamState } from "../_components/no-team";
@@ -32,24 +50,48 @@ export default async function HomePage({
   const sp = await searchParams;
   const base = leagueBase(leagueId);
   const requestedWeek = parseWeek(sp.week);
-  const read = readPage((h, now) => ({
-    overview: getLeagueOverview(h, leagueId, now),
-    team: getMyTeam(h, leagueId, now),
-    standings: getStandings(h, leagueId, now),
-    lineup: getLineup(
+  const read = readPage((h, now) => {
+    const team = getMyTeam(h, leagueId, now);
+    const waivers = getWaivers(
       h,
       leagueId,
-      requestedWeek === null ? { mode: "projected" } : { week: requestedWeek, mode: "projected" },
+      requestedWeek === null ? {} : { week: requestedWeek },
       now,
-    ),
-  }));
+    );
+    // Rising-players card, "my roster" half (REQUIREMENTS 2): one `getPlayerDetail` call per
+    // roster player. These are direct in-process function calls sharing this one `readPage`
+    // handle, not N separate HTTP requests, so looping over a ~15-20 player roster here is cheap.
+    const rosterDetails: PlayerDetailResponse[] = team.ok
+      ? team.data.players
+          .map((p) => getPlayerDetail(h, leagueId, p.playerId, now))
+          .filter((r): r is { ok: true; data: PlayerDetailResponse } => r.ok)
+          .map((r) => r.data)
+      : [];
+    return {
+      overview: getLeagueOverview(h, leagueId, now),
+      team,
+      standings: getStandings(h, leagueId, now),
+      lineup: getLineup(
+        h,
+        leagueId,
+        requestedWeek === null ? { mode: "projected" } : { week: requestedWeek, mode: "projected" },
+        now,
+      ),
+      waivers,
+      rosterDetails,
+    };
+  });
   if (!read.ok) return <DbError retryHref={base} />;
-  const { overview, team, standings, lineup } = read.value;
+  const { overview, team, standings, lineup, waivers, rosterDetails } = read.value;
   const now = read.now;
   if (!overview.ok) return <DbError retryHref={base} />;
   const week = requestedWeek ?? overview.data.currentWeek;
   const rows = standings.ok ? standings.data.rows : [];
   const freshness = overview.data.freshness;
+  const waiverTargets = waivers.ok ? topWaiverTargets(waivers.data.forMyTeam) : [];
+  const risers: RiserRow[] = waivers.ok
+    ? selectRisers(risingRosterPlayers(rosterDetails), risingFreeAgents(waivers.data.bestAvailable))
+    : [];
 
   return (
     <div className="flex flex-col gap-3" data-testid="home-page">
@@ -156,6 +198,83 @@ export default async function HomePage({
           </Link>
         </CardContent>
       </Card>
+
+      {waivers.ok ? (
+        <Card data-testid="home-waiver-targets">
+          <CardHeader>
+            <h2 className="sl-label sl-mark">Waiver targets</h2>
+          </CardHeader>
+          <CardContent>
+            {waiverTargets.length === 0 ? (
+              <EmptyState
+                icon={UserPlus}
+                title="No waiver targets right now"
+                message="Check back after the next sync or widen your search on the Waivers page."
+              />
+            ) : (
+              <ol className="flex flex-col divide-y">
+                {waiverTargets.map((c) => (
+                  <li
+                    key={c.playerId}
+                    data-testid="home-waiver-target-row"
+                    className="flex min-h-11 items-center gap-3 px-2 py-1 text-sm"
+                  >
+                    <PositionBadge position={c.position} />
+                    <span className="min-w-0 flex-1 truncate font-medium">{c.name}</span>
+                    <span className="shrink-0 font-bold tabular-nums">
+                      {formatSignedPoints(c.lineupImpact)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+            <Link
+              href={`${base}/waivers`}
+              className={`${buttonVariants({ variant: "ghost" })} mt-2 -ml-3`}
+              data-testid="home-see-waivers"
+            >
+              See all waiver targets
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {waivers.ok ? (
+        <Card data-testid="home-risers">
+          <CardHeader>
+            <h2 className="sl-label sl-mark">Rising players</h2>
+          </CardHeader>
+          <CardContent>
+            {risers.length === 0 ? (
+              <EmptyState
+                icon={TrendingUp}
+                title="Nobody is trending up"
+                message="Rising players, on your roster or available, will show up here."
+              />
+            ) : (
+              <ol className="flex flex-col divide-y">
+                {risers.map((r) => (
+                  <li key={r.playerId} data-testid="home-riser-row">
+                    <Link
+                      href={`${base}/players/${encodeURIComponent(r.playerId)}`}
+                      className="flex min-h-11 items-center gap-3 px-2 py-1 text-sm hover:bg-muted"
+                    >
+                      <PositionBadge position={r.position} />
+                      <span className="min-w-0 flex-1 truncate font-medium">{r.name}</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {r.source === "roster" ? "Your roster" : "Free agent"}
+                      </span>
+                      <TrendIndicator trend="rising" />
+                      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
