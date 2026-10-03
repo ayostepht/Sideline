@@ -193,11 +193,11 @@ export function WaiverBoard({
         </ToggleGroup>
       </div>
 
-      <details className="rounded-control border bg-card px-3 py-2 text-xs text-muted-foreground">
-        <summary className="cursor-pointer select-none font-medium text-foreground">
+      <details className="rounded-control border bg-card text-xs text-muted-foreground">
+        <summary className="flex min-h-11 cursor-pointer select-none items-center px-3 py-2 font-medium text-foreground">
           What do Waiver Score and Lineup Impact mean?
         </summary>
-        <dl className="mt-2 flex flex-col gap-1.5">
+        <dl className="mt-2 flex flex-col gap-1.5 px-3 pb-2">
           <div>
             <dt className="inline font-semibold text-foreground">Waiver Score</dt>
             <dd className="inline">
