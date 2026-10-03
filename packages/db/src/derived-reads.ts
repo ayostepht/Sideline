@@ -1,14 +1,22 @@
 /**
- * Generic content read helpers for `leagues`, `player_week_stats`, and `player_week_projections`
- * (as opposed to `sync-reads.ts`'s week-existence helpers). Used by the worker's
- * league-scored-points materialization job (SCORE-1/SCORE-3, PLAN 4.3/4.5) so it never has to
- * depend on drizzle-orm or read tables directly.
+ * Generic content read helpers for `leagues`, `player_week_stats`, `player_week_projections`,
+ * `players`, `schedule`, and `league_player_week_points` (as opposed to `sync-reads.ts`'s
+ * week-existence helpers). Used by the worker's league-scored-points and defense-vs-position
+ * materialization jobs (SCORE-1/SCORE-3, MATCH-1, PLAN 4.3/4.5) so it never has to depend on
+ * drizzle-orm or read tables directly.
  */
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { SeasonType } from "@sideline/shared";
 import type { DbHandle } from "./connection.js";
-import { leagues, playerWeekProjections, playerWeekStats } from "./schema.js";
+import {
+  leagues,
+  leaguePlayerWeekPoints,
+  players,
+  playerWeekProjections,
+  playerWeekStats,
+  schedule,
+} from "./schema.js";
 
 const statsRecordSchema = z.record(z.string(), z.number());
 
@@ -121,4 +129,66 @@ export function readPlayerWeekProjections(
       `player_week_projections.stats_json for player "${r.playerId}" week ${String(r.week)}`,
     ),
   }));
+}
+
+export interface PlayerTeamPositionRow {
+  playerId: string;
+  team: string | null;
+  position: string | null;
+}
+
+/** Every player's team and position (for defense-vs-position materialization, MATCH-1). */
+export function readPlayersTeamPosition(h: DbHandle): PlayerTeamPositionRow[] {
+  return h.db
+    .select({
+      playerId: players.playerId,
+      team: players.team,
+      position: players.position,
+    })
+    .from(players)
+    .all();
+}
+
+export interface ScheduleRow {
+  week: number;
+  home: string;
+  away: string;
+}
+
+/** Every game for a season, home and away teams by week. */
+export function readSchedule(h: DbHandle, season: number): ScheduleRow[] {
+  return h.db
+    .select({
+      week: schedule.week,
+      home: schedule.home,
+      away: schedule.away,
+    })
+    .from(schedule)
+    .where(eq(schedule.season, season))
+    .all();
+}
+
+export interface LeaguePlayerWeekPointsRow {
+  week: number;
+  playerId: string;
+  actualPts: number | null;
+}
+
+/** Every league-scored row for a league and season, actual points only. */
+export function readLeaguePlayerWeekPoints(
+  h: DbHandle,
+  leagueId: string,
+  season: number,
+): LeaguePlayerWeekPointsRow[] {
+  return h.db
+    .select({
+      week: leaguePlayerWeekPoints.week,
+      playerId: leaguePlayerWeekPoints.playerId,
+      actualPts: leaguePlayerWeekPoints.actualPts,
+    })
+    .from(leaguePlayerWeekPoints)
+    .where(
+      and(eq(leaguePlayerWeekPoints.leagueId, leagueId), eq(leaguePlayerWeekPoints.season, season)),
+    )
+    .all();
 }
