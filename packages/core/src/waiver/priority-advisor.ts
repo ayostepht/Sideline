@@ -69,13 +69,22 @@
  *   for the common case of wanting "when do waivers next clear, and (optionally) when does this
  *   specific dropped player become a free agent" in one call.
  *
- * **Timezone handling (documented simplification).** `now` and `droppedAt` are UTC instants (plain
- * `Date`, never `Date.now()` - the caller always supplies "now"). Eastern time is approximated with
- * a caller-supplied constant UTC offset (`etUtcOffsetHours`, default `-5` for EST) rather than a
- * DST-aware timezone conversion, because the NFL regular season straddles the EDT/EST changeover
- * and PLAN leaves the exact handling to the implementer. Callers who need DST correctness for a
- * specific date pass `-4` for EDT instead; this keeps the core package free of `Intl` timezone
- * dependencies while staying accurate to within the DST offset the caller chooses not to apply.
+ * **Timezone handling.** `now` and `droppedAt` are UTC instants (plain `Date`, never `Date.now()` -
+ * the caller always supplies "now"). `computeNextWaiverClear` needs the actual America/New_York
+ * wall-clock time, which is DST-aware (EDT, UTC-4, covers roughly mid-March to early November -
+ * most of the NFL regular season; EST, UTC-5, covers the rest). This module uses the same
+ * `Intl.DateTimeFormat`-based technique as `packages/providers/src/schedule.ts`'s
+ * `etOffsetMinutes`/`kickoffUtc` (compute both the EDT and EST candidate instants for a wall-clock
+ * moment, then ask `Intl.DateTimeFormat` which offset is actually in effect and pick accordingly),
+ * reimplemented locally in this module (`etWallClockAt`, `etOffsetMinutesAt`, `etWallClockToUtc`
+ * below) rather than imported, so `packages/core` does not depend on `packages/providers`
+ * (ADR-013). `Intl.DateTimeFormat` is a native JS/Node global, not an external dependency, so this
+ * does not conflict with core's "pure function" rule (CLAUDE.md section 8): called with an
+ * explicit, caller-supplied `Date` instant, it is deterministic.
+ *
+ * `etUtcOffsetHours` on {@link NextWaiverClearInput} and {@link WaiverTimingInput} is now
+ * `@deprecated` and ignored: it predates DST-aware detection and is kept only so existing callers
+ * do not break. See the deprecation notice on the field for details.
  */
 import type { Reason } from "@sideline/shared";
 import {
@@ -386,11 +395,79 @@ export function computeClaimAdvice(input: ClaimAdviceInput): ClaimAdviceResult {
 
 /** Approximate hour (Eastern time) waivers process, per ADR-002 item 7 ("about 03:00 ET"). */
 export const DEFAULT_WAIVER_CLEAR_HOUR_ET = 3;
-/** Default UTC offset used to approximate Eastern time (EST, UTC-5). See module doc. */
-export const DEFAULT_ET_UTC_OFFSET_HOURS = -5;
 
 const HOUR_MS = 3_600_000;
 const DAY_MS = 24 * HOUR_MS;
+
+const ET_TIME_ZONE = "America/New_York";
+
+/** Formats a UTC instant's America/New_York wall-clock date and time (see module doc). */
+const etPartsFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: ET_TIME_ZONE,
+  hourCycle: "h23",
+  year: "numeric",
+  month: "numeric",
+  day: "numeric",
+  hour: "numeric",
+  minute: "numeric",
+  second: "numeric",
+});
+
+interface EtWallClock {
+  year: number;
+  /** 1-12. */
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+}
+
+/** The America/New_York wall-clock date and time at a UTC instant. */
+function etWallClockAt(utcMs: number): EtWallClock {
+  const parts: Record<string, number> = {};
+  for (const part of etPartsFormatter.formatToParts(new Date(utcMs))) {
+    if (part.type !== "literal") {
+      parts[part.type] = Number(part.value);
+    }
+  }
+  return {
+    year: parts["year"] ?? 1970,
+    month: parts["month"] ?? 1,
+    day: parts["day"] ?? 1,
+    hour: parts["hour"] ?? 0,
+    minute: parts["minute"] ?? 0,
+    second: parts["second"] ?? 0,
+  };
+}
+
+/**
+ * America/New_York offset from UTC in minutes at a UTC instant (-240 EDT, -300 EST). Same
+ * technique as `packages/providers/src/schedule.ts`'s `etOffsetMinutes`, reimplemented locally
+ * (see module doc).
+ */
+function etOffsetMinutesAt(utcMs: number): number {
+  const wc = etWallClockAt(utcMs);
+  const asUtc = Date.UTC(wc.year, wc.month - 1, wc.day, wc.hour, wc.minute);
+  return Math.round((asUtc - Math.floor(utcMs / 60_000) * 60_000) / 60_000);
+}
+
+/**
+ * Resolves an America/New_York wall-clock moment to the real UTC instant it represents, trying
+ * the EDT candidate first and falling back to EST - same technique as `schedule.ts`'s
+ * `kickoffUtc` (see module doc). An ambiguous fall-back hour resolves to the first occurrence
+ * (EDT); a nonexistent spring-forward hour resolves as if the clock had already moved (EST
+ * candidate, matching `kickoffUtc`'s documented fallback behavior).
+ */
+function etWallClockToUtc(wc: EtWallClock): Date {
+  const wallAsUtc = Date.UTC(wc.year, wc.month - 1, wc.day, wc.hour, wc.minute, wc.second);
+  const edtCandidate = wallAsUtc + 4 * HOUR_MS;
+  const estCandidate = wallAsUtc + 5 * HOUR_MS;
+  if (etOffsetMinutesAt(edtCandidate) === -240) {
+    return new Date(edtCandidate);
+  }
+  return new Date(estCandidate);
+}
 
 export interface NextWaiverClearInput {
   now: Date;
@@ -399,6 +476,13 @@ export interface NextWaiverClearInput {
   /** When true (or `waiverDayOfWeek` is `null`), claims are treated as processing every day. */
   dailyWaivers?: boolean;
   clearHourEt?: number;
+  /**
+   * @deprecated No longer used. `computeNextWaiverClear` now resolves the real, DST-aware
+   * America/New_York offset for every candidate instant (see module doc), so a caller-supplied
+   * fixed offset is never needed. Kept as an accepted-but-ignored parameter only so existing
+   * call sites that still pass it do not break; it has no effect on the result. New callers
+   * should omit it. Tracked for removal once remaining call sites stop passing it (T4.9 follow-up).
+   */
   etUtcOffsetHours?: number;
 }
 
@@ -414,12 +498,24 @@ export function computeNextWaiverClear(input: NextWaiverClearInput): NextWaiverC
     waiverDayOfWeek,
     dailyWaivers = false,
     clearHourEt = DEFAULT_WAIVER_CLEAR_HOUR_ET,
-    etUtcOffsetHours = DEFAULT_ET_UTC_OFFSET_HOURS,
   } = input;
 
-  const offsetMs = etUtcOffsetHours * HOUR_MS;
-  // `etNow`'s UTC-labelled fields are read as the approximate ET wall clock (see module doc).
-  const etNow = new Date(now.getTime() + offsetMs);
+  // `etNowWc` is the real America/New_York wall clock for `now`. `etNowPseudoUtc` re-encodes those
+  // ET wall-clock fields as UTC-labelled fields (a calendar/clock value, not a real instant) so day
+  // and hour arithmetic below is plain calendar math; it is converted back to a real UTC instant
+  // via `etWallClockToUtc` only once, at the end, after the target ET moment is chosen.
+  const etNowWc = etWallClockAt(now.getTime());
+  const etNowPseudoUtc = Date.UTC(
+    etNowWc.year,
+    etNowWc.month - 1,
+    etNowWc.day,
+    etNowWc.hour,
+    etNowWc.minute,
+    etNowWc.second,
+  );
+  // Weekday of the ET calendar date, JS convention (0 = Sunday); pure calendar math, no timezone
+  // conversion needed since year/month/day already are the ET calendar date.
+  const etNowWeekday = new Date(Date.UTC(etNowWc.year, etNowWc.month - 1, etNowWc.day)).getUTCDay();
 
   const treatAsDaily = dailyWaivers || waiverDayOfWeek === null;
   const reasons: Reason[] = [];
@@ -430,26 +526,33 @@ export function computeNextWaiverClear(input: NextWaiverClearInput): NextWaiverC
     });
   }
 
-  const targetEtDay = treatAsDaily ? etNow.getUTCDay() : (waiverDayOfWeek + 1) % 7;
+  const targetEtWeekday = treatAsDaily ? etNowWeekday : (waiverDayOfWeek + 1) % 7;
   const stepMs = (treatAsDaily ? 1 : 7) * DAY_MS;
 
-  const daysUntil = (targetEtDay - etNow.getUTCDay() + 7) % 7;
-  let candidateEt = new Date(
-    Date.UTC(
-      etNow.getUTCFullYear(),
-      etNow.getUTCMonth(),
-      etNow.getUTCDate() + daysUntil,
-      clearHourEt,
-      0,
-      0,
-      0,
-    ),
+  const daysUntil = (targetEtWeekday - etNowWeekday + 7) % 7;
+  let candidatePseudoUtc = Date.UTC(
+    etNowWc.year,
+    etNowWc.month - 1,
+    etNowWc.day + daysUntil,
+    clearHourEt,
+    0,
+    0,
   );
-  if (candidateEt.getTime() <= etNow.getTime()) {
-    candidateEt = new Date(candidateEt.getTime() + stepMs);
+  if (candidatePseudoUtc <= etNowPseudoUtc) {
+    candidatePseudoUtc += stepMs;
   }
 
-  const nextClearAt = new Date(candidateEt.getTime() - offsetMs);
+  // Re-read the pseudo-UTC candidate's calendar fields (Date.UTC already normalized any
+  // month/day overflow from the arithmetic above) and resolve them to the real UTC instant.
+  const candidateWc = new Date(candidatePseudoUtc);
+  const nextClearAt = etWallClockToUtc({
+    year: candidateWc.getUTCFullYear(),
+    month: candidateWc.getUTCMonth() + 1,
+    day: candidateWc.getUTCDate(),
+    hour: candidateWc.getUTCHours(),
+    minute: candidateWc.getUTCMinutes(),
+    second: candidateWc.getUTCSeconds(),
+  });
 
   reasons.push({
     code: "WAIVER_CLEAR_SCHEDULE",
@@ -505,6 +608,7 @@ export interface WaiverTimingInput {
   dailyWaivers?: boolean;
   waiverClearDays: number | null;
   clearHourEt?: number;
+  /** @deprecated No longer used; see {@link NextWaiverClearInput.etUtcOffsetHours}. */
   etUtcOffsetHours?: number;
   /** When provided, also computes this specific player's free-agent time. */
   droppedAt?: Date;
@@ -519,22 +623,13 @@ export interface WaiverTimingResult {
 
 /** WAIVER-6d convenience wrapper: next clear time, and (optionally) one player's free-agent time. */
 export function computeWaiverTiming(input: WaiverTimingInput): WaiverTimingResult {
-  const {
-    now,
-    waiverDayOfWeek,
-    dailyWaivers,
-    waiverClearDays,
-    clearHourEt,
-    etUtcOffsetHours,
-    droppedAt,
-  } = input;
+  const { now, waiverDayOfWeek, dailyWaivers, waiverClearDays, clearHourEt, droppedAt } = input;
 
   const clear = computeNextWaiverClear({
     now,
     waiverDayOfWeek,
     ...(dailyWaivers !== undefined ? { dailyWaivers } : {}),
     ...(clearHourEt !== undefined ? { clearHourEt } : {}),
-    ...(etUtcOffsetHours !== undefined ? { etUtcOffsetHours } : {}),
   });
   const reasons = [...clear.reasons];
 

@@ -236,22 +236,22 @@ describe("computeClaimAdvice (WAIVER-6c)", () => {
 
 describe("computeNextWaiverClear and timing (WAIVER-6d)", () => {
   it("weekly, EST: now before this week's Monday 3am ET clear returns today's run", () => {
-    // 2026-01-05 is a Monday. now = 06:30Z; ET (UTC-5) = 01:30, before 03:00 ET.
-    // Expect the clear to land later the same day: 2026-01-05T08:00:00Z (03:00 ET + 5h).
+    // 2026-01-05 is a Monday. January is EST (real America/New_York offset UTC-5, confirmed via
+    // Intl.DateTimeFormat). now = 06:30Z -> ET 01:30, before 03:00 ET.
+    // Expect the clear to land later the same day: 03:00 ET + 5h = 2026-01-05T08:00:00Z.
     const result = computeNextWaiverClear({
       now: new Date("2026-01-05T06:30:00.000Z"),
       waiverDayOfWeek: 0, // Monday
-      etUtcOffsetHours: -5,
     });
     expect(result.nextClearAt.toISOString()).toBe("2026-01-05T08:00:00.000Z");
   });
 
   it("weekly, EST: now after this week's Monday 3am ET clear rolls to next Monday", () => {
-    // Same Monday, now = 09:00Z; ET = 04:00, after 03:00 ET -> next clear is the following Monday.
+    // Same Monday, now = 09:00Z; ET = 04:00, after 03:00 ET -> next clear is the following Monday,
+    // still EST: 03:00 ET + 5h = 2026-01-12T08:00:00Z.
     const result = computeNextWaiverClear({
       now: new Date("2026-01-05T09:00:00.000Z"),
       waiverDayOfWeek: 0,
-      etUtcOffsetHours: -5,
     });
     expect(result.nextClearAt.toISOString()).toBe("2026-01-12T08:00:00.000Z");
   });
@@ -260,18 +260,17 @@ describe("computeNextWaiverClear and timing (WAIVER-6d)", () => {
     const result = computeNextWaiverClear({
       now: new Date("2026-01-06T07:30:00.000Z"),
       waiverDayOfWeek: 0,
-      etUtcOffsetHours: -5,
     });
     expect(result.nextClearAt.toISOString()).toBe("2026-01-12T08:00:00.000Z");
   });
 
   it("daily waivers, EDT: now before today's 3am ET clear returns today's run", () => {
-    // now=06:00Z; ET (UTC-4) = 02:00, before 03:00 ET -> clear later today.
+    // June is EDT (real America/New_York offset UTC-4). now=06:00Z -> ET 02:00, before 03:00 ET
+    // -> clear later today: 03:00 ET + 4h = 2026-06-01T07:00:00Z.
     const result = computeNextWaiverClear({
       now: new Date("2026-06-01T06:00:00.000Z"),
       waiverDayOfWeek: 2, // ignored because dailyWaivers is true
       dailyWaivers: true,
-      etUtcOffsetHours: -4,
     });
     expect(result.nextClearAt.toISOString()).toBe("2026-06-01T07:00:00.000Z");
     expect(result.reasons.map((r) => r.code)).not.toContain("WAIVER_DAY_UNKNOWN_ASSUMED_DAILY");
@@ -282,7 +281,6 @@ describe("computeNextWaiverClear and timing (WAIVER-6d)", () => {
       now: new Date("2026-06-01T10:00:00.000Z"),
       waiverDayOfWeek: 2,
       dailyWaivers: true,
-      etUtcOffsetHours: -4,
     });
     expect(result.nextClearAt.toISOString()).toBe("2026-06-02T07:00:00.000Z");
   });
@@ -291,9 +289,42 @@ describe("computeNextWaiverClear and timing (WAIVER-6d)", () => {
     const result = computeNextWaiverClear({
       now: new Date("2026-06-01T06:00:00.000Z"),
       waiverDayOfWeek: null,
-      etUtcOffsetHours: -4,
     });
     expect(result.reasons.map((r) => r.code)).toContain("WAIVER_DAY_UNKNOWN_ASSUMED_DAILY");
+  });
+
+  it("DST regression (live bug): a weekly clear computed during EDT lands on 3am ET, not 4am ET", () => {
+    // Reproduces the bug found live against Steph's league: waiverDayOfWeek=2 (Wednesday),
+    // now=2026-10-03T20:30:28.503Z (a Saturday, confirmed EDT period: real America/New_York offset
+    // is UTC-4, not the old fixed UTC-5 approximation). ET now = 16:30:28 Saturday. Target weekday
+    // is Wednesday; days until = 4 -> candidate date 2026-10-07. 03:00 ET on 2026-10-07 is still
+    // EDT (DST doesn't end until 2026-11-01), so the real UTC instant is 03:00 + 4h = 07:00Z - one
+    // hour earlier than the old fixed-offset bug, which produced 08:00Z (a wrong 4am ET).
+    const result = computeNextWaiverClear({
+      now: new Date("2026-10-03T20:30:28.503Z"),
+      waiverDayOfWeek: 2,
+    });
+    expect(result.nextClearAt.toISOString()).toBe("2026-10-07T07:00:00.000Z");
+    expect(result.nextClearAt.toLocaleString("en-US", { timeZone: "America/New_York" })).toBe(
+      "10/7/2026, 3:00:00 AM",
+    );
+  });
+
+  it("DST changeover: a late-October EDT 'now' can land its weekly clear in EST after Nov 1", () => {
+    // now=2026-10-28T06:00:00.000Z is a Wednesday, EDT (ET 02:00). waiverDayOfWeek=6 (Sunday,
+    // Sleeper convention 0=Monday). Target weekday Sunday is 4 days out -> candidate date
+    // 2026-11-01, which is the actual 2026 DST-end Sunday (clocks fall back at 2am local, per
+    // DECISIONS.md). By 03:00 ET on 2026-11-01 the changeover has already happened, so the clear
+    // is EST: 03:00 ET + 5h = 2026-11-01T08:00:00Z, not +4h. This proves the fix resolves each
+    // candidate's own real offset rather than reusing the offset in effect at "now".
+    const result = computeNextWaiverClear({
+      now: new Date("2026-10-28T06:00:00.000Z"),
+      waiverDayOfWeek: 6,
+    });
+    expect(result.nextClearAt.toISOString()).toBe("2026-11-01T08:00:00.000Z");
+    expect(result.nextClearAt.toLocaleString("en-US", { timeZone: "America/New_York" })).toBe(
+      "11/1/2026, 3:00:00 AM",
+    );
   });
 });
 
@@ -323,7 +354,6 @@ describe("computeWaiverTiming (WAIVER-6d convenience wrapper)", () => {
       now: new Date("2026-01-05T06:30:00.000Z"),
       waiverDayOfWeek: 0,
       waiverClearDays: 2,
-      etUtcOffsetHours: -5,
       droppedAt: new Date("2026-01-04T00:00:00.000Z"),
     });
     expect(result.nextClearAt.toISOString()).toBe("2026-01-05T08:00:00.000Z");
@@ -337,7 +367,6 @@ describe("computeWaiverTiming (WAIVER-6d convenience wrapper)", () => {
       now: new Date("2026-01-05T06:30:00.000Z"),
       waiverDayOfWeek: 0,
       waiverClearDays: 2,
-      etUtcOffsetHours: -5,
     });
     expect(result.freeAgentAt).toBeNull();
   });

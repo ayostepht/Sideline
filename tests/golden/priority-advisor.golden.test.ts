@@ -205,21 +205,20 @@ describe("priority advisor golden scenarios (T4.7, WAIVER-6)", () => {
   it("WAIVER-6d: a weekly league already past this week's clear rolls forward to next Monday", () => {
     // waiverDayOfWeek = 0 (Sleeper: Monday). "now" = Wednesday 2026-01-07T12:00:00Z, well after this
     // week's Monday (2026-01-05) clear already ran - the "waivers already cleared [this week]" case.
-    // etUtcOffsetHours = -4 (EDT, deliberately different from the EST(-5) cases the co-located unit
-    // tests already cover, so this is a genuinely new data point, not a restatement).
+    // `etUtcOffsetHours` is deprecated and ignored: the real DST-aware offset is computed from the
+    // instant itself, and January is real EST (UTC-5).
     //
-    // By hand: etNow = now - 4h = 2026-01-07T08:00:00 (ET-labelled), a Wednesday (getUTCDay() = 3).
+    // By hand: etNow = now - 5h = 2026-01-07T07:00:00 (ET-labelled), a Wednesday (getUTCDay() = 3).
     // targetEtDay for Sleeper Monday (0) is JS day (0+1)%7 = 1. daysUntil = (1 - 3 + 7) % 7 = 5, so
     // the next Monday is Jan 7 + 5 = Jan 12 (matches "2026-01-05 is a Monday" from the unit tests:
     // the following Monday is the 12th). candidateEt = 2026-01-12T03:00:00 (03:00 ET clear hour),
     // which is already after etNow, so no further roll-forward is needed. nextClearAt = candidateEt
-    // - offsetMs = 03:00 + 4h = 2026-01-12T07:00:00.000Z.
+    // - offsetMs = 03:00 + 5h = 2026-01-12T08:00:00.000Z.
     const clear = computeNextWaiverClear({
       now: new Date("2026-01-07T12:00:00.000Z"),
       waiverDayOfWeek: 0,
-      etUtcOffsetHours: -4,
     });
-    expect(clear.nextClearAt.toISOString()).toBe("2026-01-12T07:00:00.000Z");
+    expect(clear.nextClearAt.toISOString()).toBe("2026-01-12T08:00:00.000Z");
     expect(clear.reasons.map((r) => r.code)).toContain("WAIVER_CLEAR_SCHEDULE");
 
     // The convenience wrapper also reports a dropped player's free-agent time independently of the
@@ -235,10 +234,9 @@ describe("priority advisor golden scenarios (T4.7, WAIVER-6)", () => {
       now: new Date("2026-01-07T12:00:00.000Z"),
       waiverDayOfWeek: 0,
       waiverClearDays: 1,
-      etUtcOffsetHours: -4,
       droppedAt: new Date("2026-01-06T00:00:00.000Z"),
     });
-    expect(timing.nextClearAt.toISOString()).toBe("2026-01-12T07:00:00.000Z");
+    expect(timing.nextClearAt.toISOString()).toBe("2026-01-12T08:00:00.000Z");
     expect(timing.freeAgentAt?.toISOString()).toBe("2026-01-07T00:00:00.000Z");
   });
 
