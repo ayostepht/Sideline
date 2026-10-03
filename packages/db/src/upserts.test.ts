@@ -26,7 +26,9 @@ import {
 import {
   replaceTrending,
   stableJson,
+  upsertDefenseVsPosition,
   upsertLeague,
+  upsertLeaguePlayerWeekPoints,
   upsertLeagueUsers,
   upsertMatchups,
   upsertNflState,
@@ -38,6 +40,8 @@ import {
   upsertSchedule,
   upsertTransactions,
   upsertUsageWeek,
+  type UpsertDefenseVsPositionRow,
+  type UpsertLeaguePlayerWeekPointsRow,
   type UpsertResult,
 } from "./upserts.js";
 
@@ -332,6 +336,60 @@ describe("upserts", () => {
 
   it("empty input counts 0", () => {
     expect(upsertPlayers(h, [], "t").rowsChanged).toBe(0);
+  });
+
+  it("leaguePlayerWeekPoints", () => {
+    const row = (id: string): UpsertLeaguePlayerWeekPointsRow => ({
+      leagueId: "L1",
+      season: 2025,
+      week: 1,
+      playerId: id,
+      actualPts: null,
+      projPts: 10.5,
+    });
+    checkIdempotent(
+      [row("1"), row("2")],
+      (r) => upsertLeaguePlayerWeekPoints(h, r),
+      (r) => [{ ...(r[0] as UpsertLeaguePlayerWeekPointsRow), actualPts: 12.4 }, ...r.slice(1)],
+    );
+    const stored = h.sqlite
+      .prepare(
+        "SELECT actual_pts AS a, proj_pts AS p FROM league_player_week_points WHERE player_id = '1'",
+      )
+      .get() as { a: number; p: number | null };
+    expect(stored.a).toBe(12.4);
+    expect(stored.p).toBe(10.5);
+    // null round-trips for a not-yet-scored row
+    expect(
+      upsertLeaguePlayerWeekPoints(h, [
+        { leagueId: "L1", season: 2025, week: 2, playerId: "3", actualPts: null, projPts: null },
+      ]).rowsChanged,
+    ).toBe(1);
+    const nullRow = h.sqlite
+      .prepare(
+        "SELECT actual_pts AS a, proj_pts AS p FROM league_player_week_points WHERE player_id = '3'",
+      )
+      .get() as { a: number | null; p: number | null };
+    expect(nullRow.a).toBeNull();
+    expect(nullRow.p).toBeNull();
+  });
+
+  it("defenseVsPosition", () => {
+    const row = (position: string): UpsertDefenseVsPositionRow => ({
+      leagueId: "L1",
+      season: 2025,
+      throughWeek: 3,
+      team: "KC",
+      position,
+      ptsAllowedPg: 15.2,
+      games: 3,
+    });
+    checkIdempotent(
+      [row("RB"), row("WR")],
+      (r) => upsertDefenseVsPosition(h, r),
+      (r) => [{ ...(r[0] as UpsertDefenseVsPositionRow), ptsAllowedPg: 18.1 }, ...r.slice(1)],
+    );
+    expect(tableCounts(h)["defense_vs_position"]).toBe(2);
   });
 });
 
