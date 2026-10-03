@@ -37,7 +37,7 @@ export function WhyBody({ summary, reasons }: WhyBodyProps) {
           {reasons.map((r, i) => {
             const imp = formatImpact(r.impact);
             const proj = formatProjectedPoints(r.projectedPoints);
-            const value = formatReasonValue(r.value);
+            const value = formatReasonValue(r.value, r.code);
             return (
               <li
                 key={`${i}-${r.code}`}

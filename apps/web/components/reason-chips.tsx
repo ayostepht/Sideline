@@ -6,7 +6,7 @@ import { formatImpact, formatProjectedPoints, formatReasonValue } from "./reason
 export function ReasonChip({ reason }: { reason: Reason }) {
   const imp = formatImpact(reason.impact);
   const proj = formatProjectedPoints(reason.projectedPoints);
-  const value = formatReasonValue(reason.value);
+  const value = formatReasonValue(reason.value, reason.code);
   const Icon = imp.sign === "up" ? ArrowUp : imp.sign === "down" ? ArrowDown : null;
   return (
     <li

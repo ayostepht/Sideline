@@ -19,4 +19,9 @@ export const MANY_REASONS: Reason[] = [
     value: 12.5,
     impact: -0.4,
   },
+  {
+    code: "ROS_ESTIMATED_FROM_PPG",
+    label: "Used season average for weeks without a projection",
+    value: 2,
+  },
 ];

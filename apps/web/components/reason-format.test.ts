@@ -41,4 +41,13 @@ describe("formatReasonValue", () => {
   it("leaves undefined as undefined", () => {
     expect(formatReasonValue(undefined)).toBeUndefined();
   });
+  it("formats ROS_ESTIMATED_FROM_PPG as a week count, never a decimal", () => {
+    expect(formatReasonValue(2, "ROS_ESTIMATED_FROM_PPG")).toBe("2 weeks");
+    expect(formatReasonValue(1, "ROS_ESTIMATED_FROM_PPG")).toBe("1 week");
+    expect(formatReasonValue(0, "ROS_ESTIMATED_FROM_PPG")).toBe("0 weeks");
+  });
+  it("leaves other reason codes' numeric formatting unchanged", () => {
+    expect(formatReasonValue(94.5945945945946, "SOME_OTHER_CODE")).toBe("94.6");
+    expect(formatReasonValue(94.5945945945946)).toBe("94.6");
+  });
 });
