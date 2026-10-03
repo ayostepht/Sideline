@@ -32,9 +32,9 @@ Batch split and dependency rationale: ADR-015.
 | T4.8b | Populate Reason field, rewrite reason-code copy to plain language | analytics-engineer | T4.8a | C | Done | 1 | f97a16e |
 | T4.5b | Waivers data function, API route, response DTOs | backend-engineer | T4.5a, T4.2b, T4.4 | D | Done | 2 | ee08fc4, 68eb1b5 |
 | T4.5c | Players list and detail data functions, API routes, response DTOs | backend-engineer | T4.5a, T4.1 | D | Done | 1 | f75d318 |
-| T4.6a | Waivers page | frontend-engineer | T4.4, T4.5b | E | Done | 1 | 64af436 |
-| T4.6b | Players explorer and player detail | frontend-engineer | T4.5c | E | Done | 1 | 1e9a764 |
-| T4.8c | Render `projectedPoints` in the Lineup "why" UI | frontend-engineer | T4.8b | E | Done | 1 | 1415d02 |
+| T4.6a | Waivers page | frontend-engineer | T4.4, T4.5b | E | Done | 2 | 64af436, 0e71028 |
+| T4.6b | Players explorer and player detail | frontend-engineer | T4.5c | E | Done | 2 | 1e9a764, 7e3a30a |
+| T4.8c | Render `projectedPoints` in the Lineup "why" UI | frontend-engineer | T4.8b | E | Done | 2 | 1415d02, 0e71028 |
 | T4.6c | Home waiver-targets and risers cards | frontend-engineer | T4.6a, T4.6b | F | Not started | 0 | |
 | T4.7 | Tests: waiver scenarios, priority advisor golden scenarios, perf, e2e | qa-engineer | T4.6a, T4.6b, T4.6c | G | Not started | 0 | |
 
@@ -77,6 +77,11 @@ Remove an item when it is done; the archive keeps history.
 - T1.5c: compute the ADR-002 fallback kickoff when gametime is missing; with nflverse off no fallback rows exist.
 - T1.4a m6/m8: nflverse recorder `--refresh`, size check, fetch timeout, zod for release JSON, write-then-swap.
 - Injectable `sleep` in `makeClient` (sturdier backoff tests; the 503 retry test takes about 4 s). apps/worker has no `test` script (devops).
+
+### Carried from Phase 4 Batch E (UX minors, not blocking)
+
+- Waivers' "Suggested drop" shows the identical player across most candidates (correct -- always the lowest ROS-value bench player, independent of position) with no inline cue it's intentional; only explained one click deep in the "Why?" sheet. Consider an inline qualifier like "Suggested drop (lowest value overall): ...".
+- Fullback-position players render with a generic "FLEX" badge (pre-existing `PositionBadge`/`normalizePosition` fallback, not introduced by Phase 4, now visible since Players surfaces the full player pool).
 
 ### Carried from Phase 4 Batch E (frontend-reported backend gaps)
 
