@@ -1,3 +1,4 @@
+import { loadConfig } from "@sideline/shared";
 import { DbError } from "../../../../components/db-error";
 import { getDb } from "../../../../lib/server/db";
 import { getLeagueChoices, getSettings } from "../../../../lib/server/identity";
@@ -31,6 +32,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ leagu
         username={data.settings.sleeperUsername}
         leagues={data.leagues}
         version={APP_VERSION}
+        loginEnabled={loadConfig(process.env).appPassword !== null}
       />
     </div>
   );

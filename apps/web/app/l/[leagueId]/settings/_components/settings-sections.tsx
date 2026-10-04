@@ -55,12 +55,15 @@ export function SettingsSections({
   username,
   leagues,
   version,
+  loginEnabled,
 }: {
   leagueId: string;
   leagueName: string;
   username: string | null;
   leagues: LeagueChoice[];
   version: string;
+  /** T6.1c: whether password login (`APP_PASSWORD`) is configured, so a log out control applies. */
+  loginEnabled: boolean;
 }) {
   const router = useRouter();
   const [acctPending, setAcctPending] = useState(false);
@@ -68,8 +71,17 @@ export function SettingsSections({
   const [target, setTarget] = useState("");
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
   const selectId = useId();
   const others = leagues.filter((l) => l.leagueId !== leagueId);
+
+  async function logout() {
+    setLoggingOut(true);
+    // DELETE /api/login always returns 200 and clears the session cookie; redirect to /login
+    // either way, since a network failure here shouldn't trap the user on this page.
+    await apiJson("/api/login", "LoginResponseSchema", { method: "DELETE", body: {} });
+    router.push("/login");
+  }
 
   async function changeUsername(name: string) {
     setAcctPending(true);
@@ -129,6 +141,18 @@ export function SettingsSections({
           label="Change username"
           hint="Changing it restarts setup so you can pick a league again."
         />
+        {loginEnabled ? (
+          <div className="mt-4 border-t border-border pt-3">
+            <Button
+              variant="outline"
+              onClick={() => void logout()}
+              disabled={loggingOut}
+              data-testid="settings-logout"
+            >
+              {loggingOut ? "Logging out..." : "Log out"}
+            </Button>
+          </div>
+        ) : null}
       </Section>
 
       <Section title="League" testId="settings-league">

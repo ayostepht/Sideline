@@ -25,3 +25,6 @@ export const PatchSettingsResponseSchema = z.object({
   sync: z.string().optional(),
   syncSince: z.string().nullable().optional(),
 });
+
+/** T6.1c: shape of both POST /api/login and DELETE /api/login success bodies. */
+export const LoginResponseSchema = z.object({ ok: z.literal(true) });
