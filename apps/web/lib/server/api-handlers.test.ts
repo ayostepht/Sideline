@@ -2,6 +2,7 @@ import {
   claimNext,
   complete,
   saveUserLeagues,
+  schema,
   setActiveLeagueId,
   setSleeperUserId,
   writeHeartbeat,
@@ -9,6 +10,7 @@ import {
 } from "@sideline/db";
 import {
   LineupResponseSchema,
+  MatchupResponseSchema,
   OnboardingStatusSchema,
   PlayerSearchResultSchema,
 } from "@sideline/shared";
@@ -19,6 +21,7 @@ import { POST as leagueRoute } from "../../app/api/onboarding/league/route";
 import { GET as statusRoute } from "../../app/api/onboarding/status/route";
 import { GET as searchRoute } from "../../app/api/l/[leagueId]/search/route";
 import { GET as lineupRoute } from "../../app/api/l/[leagueId]/lineup/route";
+import { GET as matchupRoute } from "../../app/api/l/[leagueId]/matchup/route";
 import { GET as getSettingsRoute, PATCH as patchSettingsRoute } from "../../app/api/settings/route";
 import { resetDbForTests } from "./db";
 import { seedLeague } from "./test-seed";
@@ -188,6 +191,68 @@ describe("GET /api/l/[leagueId]/lineup", () => {
     setup();
     const r = await lineup("?roster=1", "nope");
     expect(r.status).toBe(404);
+  });
+});
+
+describe("GET /api/l/[leagueId]/matchup", () => {
+  const matchup = (qs: string, leagueId = "L1") =>
+    matchupRoute(new Request(`http://localhost/api/l/${leagueId}/matchup${qs}`), {
+      params: Promise.resolve({ leagueId }),
+    });
+  it("returns a valid response for a real, paired matchup", async () => {
+    const h = setup();
+    seedLeague(h, { rosterCount: 2 });
+    h.db
+      .insert(schema.matchups)
+      .values([
+        {
+          leagueId: "L1",
+          week: 5,
+          rosterId: 1,
+          matchupId: 1,
+          startersJson: "[]",
+          playersJson: "[]",
+          playersPointsJson: "{}",
+          points: 0,
+        },
+        {
+          leagueId: "L1",
+          week: 5,
+          rosterId: 2,
+          matchupId: 1,
+          startersJson: "[]",
+          playersJson: "[]",
+          playersPointsJson: "{}",
+          points: 0,
+        },
+      ])
+      .run();
+    const r = await matchup("?roster=1");
+    expect(r.status).toBe(200);
+    expect(MatchupResponseSchema.safeParse(await r.json()).success).toBe(true);
+  });
+  it("400 for an invalid week", async () => {
+    const h = setup();
+    seedLeague(h, { rosterCount: 2 });
+    const r = await matchup("?week=0");
+    expect(r.status).toBe(400);
+  });
+  it("404 for an unknown league", async () => {
+    setup();
+    const r = await matchup("?roster=1", "nope");
+    expect(r.status).toBe(404);
+  });
+  it("404 (no_opponent) for a roster with no matchup this week", async () => {
+    const h = setup();
+    seedLeague(h, { rosterCount: 2 });
+    const r = await matchup("?roster=1");
+    expect(r.status).toBe(404);
+    expect(await json(r)).toEqual({
+      error: {
+        code: "no_opponent",
+        message: "No opponent is scheduled for this roster this week.",
+      },
+    });
   });
 });
 

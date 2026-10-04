@@ -28,3 +28,4 @@ export * from "./api/league.js";
 export * from "./api/lineup.js";
 export * from "./api/waiver.js";
 export * from "./api/players.js";
+export * from "./api/matchup.js";

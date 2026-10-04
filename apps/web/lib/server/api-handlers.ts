@@ -5,6 +5,8 @@ import {
   PlayerSearchResultSchema,
   LineupRequestSchema,
   LineupResponseSchema,
+  MatchupRequestSchema,
+  MatchupResponseSchema,
   PlayerDetailResponseSchema,
   PlayersListRequestSchema,
   PlayersListResponseSchema,
@@ -19,6 +21,7 @@ import { errorResult, type ApiResult } from "./http";
 import { getSettings } from "./identity";
 import { searchPlayers } from "./league-views";
 import { getLineup } from "./lineup";
+import { getMatchup } from "./matchup";
 import { getOnboardingStatus, selectLeague, startOnboarding } from "./onboarding";
 import { getPlayerDetail, getPlayersList } from "./players";
 import { withMigratedDb } from "./sync";
@@ -235,6 +238,49 @@ export function handleWaivers(
       return errorResult(404, "not_found", "League, week, or roster not found.");
     }
     return { status: 200, body: WaiverResponseSchema.parse(r.data) };
+  });
+}
+
+/** T5.4b: GET /api/l/[leagueId]/matchup (this week's simulated head-to-head win probability,
+ * score distribution, and swing players). */
+export function handleMatchup(
+  leagueId: string,
+  params: URLSearchParams,
+  now: Date = new Date(),
+): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(404, "not_found", "League not found.");
+  const raw: Record<string, string> = {};
+  const week = params.get("week");
+  const roster = params.get("roster");
+  if (week !== null) raw["week"] = week;
+  if (roster !== null) raw["roster"] = roster;
+  const parsed = MatchupRequestSchema.safeParse(raw);
+  if (!parsed.success) return invalid(parsed.error);
+  return withMigratedDb((h) => {
+    const r = getMatchup(
+      h,
+      idOk.data,
+      {
+        ...(parsed.data.week !== undefined ? { week: parsed.data.week } : {}),
+        ...(parsed.data.roster !== undefined ? { rosterId: parsed.data.roster } : {}),
+      },
+      now,
+    );
+    if (!r.ok) {
+      if (r.reason === "no_team") {
+        return errorResult(404, "no_team", "No roster found for the stored Sleeper user.");
+      }
+      if (r.reason === "no_opponent") {
+        return errorResult(
+          404,
+          "no_opponent",
+          "No opponent is scheduled for this roster this week.",
+        );
+      }
+      return errorResult(404, "not_found", "League, week, or roster not found.");
+    }
+    return { status: 200, body: MatchupResponseSchema.parse(r.data) };
   });
 }
 
