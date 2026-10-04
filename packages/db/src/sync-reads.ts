@@ -42,6 +42,16 @@ export function readLeaguePlayoffWeekStart(h: DbHandle, leagueId: string): numbe
   return r?.p ?? null;
 }
 
+/** New (T5.4a, PLAN 4.5): number of playoff spots, null when unknown or the league doesn't exist. */
+export function readLeaguePlayoffTeams(h: DbHandle, leagueId: string): number | null {
+  const r = h.db
+    .select({ p: leagues.playoffTeams })
+    .from(leagues)
+    .where(eq(leagues.leagueId, leagueId))
+    .get();
+  return r?.p ?? null;
+}
+
 /** storedMatchupWeeks -> readStoredMatchupWeeks. */
 export function readStoredMatchupWeeks(h: DbHandle, leagueId: string): Set<number> {
   const rows = h.db

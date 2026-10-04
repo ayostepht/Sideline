@@ -6,18 +6,20 @@
  * T4.5b/T4.5c's waivers and players data functions (PLAN 4.5, ADR-015 T4.5a) so neither has to
  * depend on drizzle-orm or read tables directly.
  */
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray } from "drizzle-orm";
 import { z } from "zod";
 import type { SeasonType } from "@sideline/shared";
 import type { DbHandle } from "./connection.js";
 import {
   leagues,
   leaguePlayerWeekPoints,
+  matchups,
   players,
   playerWeekProjections,
   playerWeekStats,
   rosters,
   schedule,
+  transactions,
   trending,
   usageWeek,
 } from "./schema.js";
@@ -60,6 +62,27 @@ function parseStringArray(json: string, context: string): string[] {
   const parsed = stringArraySchema.safeParse(value);
   if (!parsed.success) {
     throw new Error(`${context} is not a string array: ${parsed.error.message}`);
+  }
+  return parsed.data;
+}
+
+const numberArraySchema = z.array(z.number());
+
+/**
+ * Sibling to {@link parseStringArray} for JSON number-array columns (`transactions.roster_ids_json`).
+ * Same throw-on-malformed convention: `packages/db` reads surface corruption instead of hiding it.
+ */
+function parseNumberArray(json: string, context: string): number[] {
+  let value: unknown;
+  try {
+    value = JSON.parse(json);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`${context} is not valid JSON: ${message}`, { cause: err });
+  }
+  const parsed = numberArraySchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(`${context} is not a number array: ${parsed.error.message}`);
   }
   return parsed.data;
 }
@@ -455,4 +478,145 @@ export function readRosteredPlayerIds(h: DbHandle, leagueId: string): Set<string
     }
   }
   return out;
+}
+
+export interface LeagueWeeklyScoreRow {
+  week: number;
+  rosterId: number;
+  points: number;
+}
+
+/**
+ * Every stored `matchups` row for a league, every week, played or not (T5.4a; SIM-1/2's matchup
+ * simulation inputs, LEAGUE-1/2's all-play/luck inputs). Rows for weeks the worker has fetched ahead
+ * of play (`league-jobs.ts`'s future-pairings fetch) are included with their stored `points` as-is
+ * (typically 0) - distinguishing "played" from "future" by comparing against the current NFL state
+ * week is the caller's job, not this helper's.
+ */
+export function readLeagueWeeklyScores(h: DbHandle, leagueId: string): LeagueWeeklyScoreRow[] {
+  return h.db
+    .select({
+      week: matchups.week,
+      rosterId: matchups.rosterId,
+      points: matchups.points,
+    })
+    .from(matchups)
+    .where(eq(matchups.leagueId, leagueId))
+    .all();
+}
+
+export interface LeagueScheduleMatchupRow {
+  week: number;
+  rosterIdA: number;
+  rosterIdB: number;
+}
+
+/**
+ * Every `matchups` pairing for a league with `week > opts.afterWeek` (T5.4a; SIM-1/2's remaining-
+ * schedule input for season-end simulations). Pairs the two rows sharing a `(week, matchupId)` group
+ * into one row, `rosterIdA` always the lower roster id for a deterministic, testable order. Bye rows
+ * (`matchupId` null) produce no pairing. A group with anything other than exactly two rows is a data
+ * anomaly - skipped rather than thrown, since this is a defensive read helper, not a validator.
+ */
+export function readLeagueScheduleMatchups(
+  h: DbHandle,
+  leagueId: string,
+  opts: { afterWeek: number },
+): LeagueScheduleMatchupRow[] {
+  const rows = h.db
+    .select({
+      week: matchups.week,
+      rosterId: matchups.rosterId,
+      matchupId: matchups.matchupId,
+    })
+    .from(matchups)
+    .where(and(eq(matchups.leagueId, leagueId), gt(matchups.week, opts.afterWeek)))
+    .all();
+
+  const groups = new Map<string, { week: number; rosterId: number }[]>();
+  for (const r of rows) {
+    if (r.matchupId === null) continue;
+    const key = `${String(r.week)}:${String(r.matchupId)}`;
+    const arr = groups.get(key) ?? [];
+    arr.push({ week: r.week, rosterId: r.rosterId });
+    groups.set(key, arr);
+  }
+
+  const out: LeagueScheduleMatchupRow[] = [];
+  for (const group of groups.values()) {
+    if (group.length !== 2) continue;
+    const [a, b] = group as [
+      { week: number; rosterId: number },
+      { week: number; rosterId: number },
+    ];
+    out.push({
+      week: a.week,
+      rosterIdA: Math.min(a.rosterId, b.rosterId),
+      rosterIdB: Math.max(a.rosterId, b.rosterId),
+    });
+  }
+  return out;
+}
+
+export interface LeagueTransactionRow {
+  transactionId: string;
+  week: number;
+  type: string;
+  status: string;
+  rosterIds: number[];
+  adds: Record<string, number> | null;
+  drops: Record<string, number> | null;
+  waiverBid: number | null;
+  createdAt: number;
+}
+
+/**
+ * Every transaction for a league (T5.4a; LEAGUE-6's manager-tendencies input). `adds`/`drops` decode
+ * to `null` when the stored column is null (no transaction of that kind, e.g. a straight drop with
+ * no add) rather than `{}`, matching `transactions.adds_json`/`drops_json`'s own nullable schema
+ * comment. `rosterIdsJson` is decoded with {@link parseNumberArray}; `consenterIdsJson` is not
+ * decoded since it is not part of this row shape.
+ */
+export function readLeagueTransactions(h: DbHandle, leagueId: string): LeagueTransactionRow[] {
+  const rows = h.db
+    .select({
+      transactionId: transactions.transactionId,
+      week: transactions.week,
+      type: transactions.type,
+      status: transactions.status,
+      rosterIdsJson: transactions.rosterIdsJson,
+      addsJson: transactions.addsJson,
+      dropsJson: transactions.dropsJson,
+      waiverBid: transactions.waiverBid,
+      createdAt: transactions.createdAt,
+    })
+    .from(transactions)
+    .where(eq(transactions.leagueId, leagueId))
+    .all();
+  return rows.map((r) => ({
+    transactionId: r.transactionId,
+    week: r.week,
+    type: r.type,
+    status: r.status,
+    rosterIds: parseNumberArray(
+      r.rosterIdsJson,
+      `transactions.roster_ids_json for transaction "${r.transactionId}"`,
+    ),
+    adds:
+      r.addsJson === null
+        ? null
+        : parseStatsRecord(
+            r.addsJson,
+            `transactions.adds_json for transaction "${r.transactionId}"`,
+          ),
+    drops:
+      r.dropsJson === null
+        ? null
+        : parseStatsRecord(
+            r.dropsJson,
+            `transactions.drops_json for transaction "${r.transactionId}"`,
+          ),
+    waiverBid: r.waiverBid,
+    createdAt: r.createdAt,
+  }));
 }
