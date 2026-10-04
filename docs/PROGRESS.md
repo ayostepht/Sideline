@@ -32,6 +32,11 @@ Batch letters and task splits amended from PLAN.md's literal table per ADR-017 (
 | T6.5 | Whole-repo security and quality review | code-reviewer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Done (APPROVE) | 1 | `12a2a58` |
 | T6.6 | Final UX review of every screen | ux-reviewer | T6.1c, T6.3a, T6.3b, T6.3c | C | Done (APPROVE) | 1 | `f3fa2d0` |
 | T6.7 | Fix round | owning agents | T6.4, T6.5, T6.6 | D | Skipped (zero Blocker/Major in Batch C) | 0 | |
+| T6.8 | Lineup optimizer solver stability tiebreak (fix zero-benefit swap recommendations) | analytics-engineer | G6 gate, Steph's live-testing report | E | Done | 1 | `89edcde` |
+| T6.9 | Lineup page UI materiality floor (mirrors Home's `hasSwaps` guard) | frontend-engineer | G6 gate, Steph's live-testing report | E | Done | 1 | `dd94a74` |
+| T6.10 | Optimizer stability property test | qa-engineer | T6.8 | E | Done | 1 | `96a495b` |
+| T6.11 | Wire GHCR into CI Docker build (Steph approved at the G6 checkpoint) | devops-engineer | G6 gate | E | Done | 1 | `666e787` |
+| T6.12 | Dedupe the 0.05pt materiality floor into one shared module (code review Major fix) | frontend-engineer | T6.9 code review | E | Done | 1 | `31b3f72` |
 
 **Decided at Phase 6 planning (ADR-017 item 2):** T6.3c's UX polish is a curated, bounded list (desktop density, "You" markers, pluralization), not the full accumulated Minor backlog -- score-range dot contrast, `sparkline.tsx`'s latent overflow risk, the win-probability triple-display, and swing-player tap-through stay backlogged for Phase 7/P1.
 
@@ -139,7 +144,7 @@ Full detail and fully-fixed history: `docs/archive/progress-phase4.md`.
 Full detail and fully-fixed history: `docs/archive/progress-phase3.md`.
 
 - `scheduleAlreadyStored` (`apps/worker/src/jobs/data-jobs.ts`) uses a raw SQL query instead of a typed `packages/db` helper, inconsistent with its siblings `readStoredStatsWeeks`/`readStoredProjectionWeeks`.
-- Three UX Minors (deferred by Steph): Lineup's summary banner says "projected" even in Safe/Upside mode; its rounded total can disagree with its own swap rows (e.g. a signed "-0.0 pts") with no zero-delta floor like Home's `hasSwaps` guard; "this is your team" uses two different badge variants on the same Home page (`variant="accent"` vs `variant="you"`) -- standardize on `variant="you"`.
+- Two UX Minors (deferred by Steph): Lineup's summary banner says "projected" even in Safe/Upside mode; "this is your team" uses two different badge variants on the same Home page (`variant="accent"` vs `variant="you"`) -- standardize on `variant="you"`. (A third item, "no zero-delta floor like Home's `hasSwaps` guard," turned out to be a real bug, not just a display Minor -- fixed by T6.8/T6.9/T6.12, see Phase 6's task table.)
 - `packages/db`'s `computed_cache` keys only on data-input timestamps, never algorithm version, so a running instance could keep serving a pre-fix cached lineup until the next relevant sync. Related: the lineup cache (`getLineup`, T3.7) doesn't invalidate on an nflverse-only sync (ADR-013 item 19) -- zero impact today since alpha/beta is confirmed 0 by the real G3 backtest; revisit together if a future backtest ever ships non-zero alpha/beta.
 - Low-priority, pre-existing, not blocking: `matchupMultiplier`'s own clamp/avg-unavailable reasons aren't surfaced in the player DTO; a `schedule` coverage gap for a team/week silently reads as "not locked"; a player missing from `players` or a zero-eligible-player roster are handled defensively but untested; `applyAvailability` runs twice with identical inputs; `matchupGrade` has no `totalTeams === 0` guard; `defense_vs_position`'s worker hook recomputes every week from scratch (O(W^2), negligible at NFL scale); `solve.ts`'s `TIEBREAK_EPSILON` undocumented at unrealistic magnitudes; `validate.ts` reads one player-week at a time (fine for a manual script); `rescoreProjection`'s `stats` parameter has no nominal type separating a projection row from a real stats row.
 
