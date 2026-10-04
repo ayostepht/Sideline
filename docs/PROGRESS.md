@@ -29,7 +29,7 @@ Batch letters and task splits amended from PLAN.md's literal table per ADR-017 (
 | T6.3b | Preseason and offseason states (consolidate existing ad hoc preseason copy, add offseason) | frontend-engineer | G5 | B | Done | 1 | `aa4d4f4` |
 | T6.3c | League UX polish: desktop density (`lg:` tables, 5 sections), "You" markers (6 sections), manager-tendencies pluralization | frontend-engineer | G5 | B | Done | 1 | `a3f2b4a`, `de716fd`, `f9ce390` |
 | T6.4 | Full regression; fresh-install test; upgrade test; auth e2e; 60-minute live soak | qa-engineer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Dispatched | 1 | |
-| T6.5 | Whole-repo security and quality review | code-reviewer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Dispatched | 1 | |
+| T6.5 | Whole-repo security and quality review | code-reviewer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Done (APPROVE) | 1 | `12a2a58` |
 | T6.6 | Final UX review of every screen | ux-reviewer | T6.1c, T6.3a, T6.3b, T6.3c | C | Not started | 0 | |
 | T6.7 | Fix round | owning agents | T6.4, T6.5, T6.6 | D | Not started | 0 | |
 
@@ -45,6 +45,7 @@ Remove an item when it is done; the archive keeps history.
 
 ### Phase 6 (in progress)
 
+- **T6.5 security review nits (`docs/reviews/2026-10-04-p6-T6.5-security.md`):** `apps/web/proxy.ts`'s CSP carries `'unsafe-inline'` for `script-src`/`style-src` in all environments (next-themes' pre-paint script, React inline styles, zero third-party/user scripts today) -- accepted residual risk, no mitigation if an XSS primitive is ever introduced; consider a nonce-based CSP if a future dependency ever needs `dangerouslySetInnerHTML`. `favicon.ico` bypasses `proxy.ts` entirely (standard Next.js matcher exclusion) so gets no security headers -- zero practical impact, immutable static content.
 - **Batch A code review minor (`docs/reviews/2026-10-04-p6-batchA-code.md`):** `apps/web/lib/server/auth.ts`'s `constantTimeStringEqual` compares a wrong-length guess against a short placeholder instead of a same-length buffer, leaking a small timing signal about the configured password's length. Low real-world risk given the LAN/self-hosted threat model; candidate follow-up if ever revisited.
 - **Batch B UX review minor (`docs/reviews/2026-10-04-p6-batchB-ux.md`):** Power Rankings/Playoff-Odds/All-Play's desktop table rows run visibly taller/shorter than neighboring sections due to reason-chip wrapping -- internally consistent and legible, just slightly less uniform in density than Standings. No action required unless density is revisited.
 - **Login page UX nit:** card sits slightly above true vertical center at 390px on short viewports. Barely noticeable.
