@@ -42,6 +42,12 @@ Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progre
 
 ## Backlog (open items only)
 
+### G5 gate-run findings
+
+- **Matchup route not yet in `lighthouserc.json`'s Lighthouse budget check** -- same pattern as the G3->G4 Lineup gap (closed at G4). Recommend adding before G6.
+- **Route JS soft-target (170,000 B) regressions this phase**: League (178,897 B) and League/teams/[rosterId] (179,534 B) newly crossed the soft target (both well under the 204,800 B hard cap) from Phase 5's new intelligence sections added to the same route. Joins the pre-existing G4 carryovers (Lineup, Waivers, Players list, Players detail) -- 7 of 15 routes now over soft target, up from 4 at G4. Worth a dedicated look if Phase 6 adds more client code to any of these.
+- **`pnpm test:e2e` (354 tests, UI1) and `pnpm test:a11y` (350 tests, UI2) run almost entirely overlapping test sets** (confirmed: 350 of 354 UI1 tests also match UI2's `--grep` filter), roughly doubling e2e wall-clock time (G5 gate: 73.3s + 66.0s) for limited marginal coverage. Both of this gate's flaky failures happened to surface in only one of the two near-duplicate runs. Worth a maintainer look at whether UI2 should filter to a true axe-only subset. Not a correctness issue, a cost/signal-ratio one.
+
 ### Phase 5 (in progress)
 
 - **Batch A code review minors (`docs/reviews/2026-10-03-p5-batchA-code.md`):** `packages/core/src/sim/matchup.ts`'s `NO_DRAW = -1` sentinel overlaps a representable (if invalid) real `sd` value -- if `sd` is ever exactly -1, the starter silently gets treated as zero-variance instead of hitting the sampler's existing `sd <= 0` fallback; prefer a boolean `hasDraw` flag over an overloaded sign. `flattenStarter` builds an intermediate object array then copies into typed arrays -- redundant indirection, no measured perf impact (~30x margin against SIM-3's 300ms budget), lowest priority.
