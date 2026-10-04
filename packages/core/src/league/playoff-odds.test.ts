@@ -265,6 +265,93 @@ describe("simulatePlayoffOdds (LEAGUE-5)", () => {
     ).toThrow(/rosterId not present in teams/);
   });
 
+  it("throws when playoffTeams exceeds the number of teams (general Monte Carlo path, 4 teams)", () => {
+    expect(() =>
+      simulatePlayoffOdds({
+        teams: evenTeams(),
+        schedule: doubleRoundRobinSchedule(),
+        playoffTeams: 10,
+        seed: 1,
+        iterations: 50,
+      }),
+    ).toThrow(/playoffTeams \(10\) must be between 0 and the number of teams \(4\)/);
+  });
+
+  it("throws when playoffTeams exceeds the number of teams (zero-remaining-games path, 2 teams) -- the Major finding's exact repro", () => {
+    const teams: PlayoffOddsTeamInput[] = [
+      { rosterId: 1, wins: 1, ties: 0, pointsFor: 100, meanWeeklyScore: 100, sd: 15 },
+      { rosterId: 2, wins: 0, ties: 0, pointsFor: 90, meanWeeklyScore: 100, sd: 15 },
+    ];
+    expect(() =>
+      simulatePlayoffOdds({
+        teams,
+        schedule: [],
+        playoffTeams: 10,
+        seed: 1,
+      }),
+    ).toThrow(/playoffTeams \(10\) must be between 0 and the number of teams \(2\)/);
+  });
+
+  it("throws when firstRoundByeCount exceeds the number of teams (general Monte Carlo path)", () => {
+    expect(() =>
+      simulatePlayoffOdds({
+        teams: evenTeams(),
+        schedule: doubleRoundRobinSchedule(),
+        playoffTeams: 2,
+        firstRoundByeCount: 10,
+        seed: 1,
+        iterations: 50,
+      }),
+    ).toThrow(/firstRoundByeCount \(10\) must be between 0 and the number of teams \(4\)/);
+  });
+
+  it("throws when firstRoundByeCount exceeds the number of teams (zero-remaining-games path)", () => {
+    const teams: PlayoffOddsTeamInput[] = [
+      { rosterId: 1, wins: 1, ties: 0, pointsFor: 100, meanWeeklyScore: 100, sd: 15 },
+      { rosterId: 2, wins: 0, ties: 0, pointsFor: 90, meanWeeklyScore: 100, sd: 15 },
+    ];
+    expect(() =>
+      simulatePlayoffOdds({
+        teams,
+        schedule: [],
+        playoffTeams: 2,
+        firstRoundByeCount: 10,
+        seed: 1,
+      }),
+    ).toThrow(/firstRoundByeCount \(10\) must be between 0 and the number of teams \(2\)/);
+  });
+
+  it("does NOT reject firstRoundByeCount > playoffTeams (a valid combination) in either path", () => {
+    // General Monte Carlo path: firstRoundByeCount (3) > playoffTeams (2), still <= numTeams (4).
+    const monteCarlo = simulatePlayoffOdds({
+      teams: evenTeams(),
+      schedule: doubleRoundRobinSchedule(),
+      playoffTeams: 2,
+      firstRoundByeCount: 3,
+      seed: 1,
+      iterations: 500,
+    });
+    const mcSum = monteCarlo.teams.reduce((acc, t) => acc + (t.byePct as number), 0);
+    expect(Math.abs(mcSum - 3)).toBeLessThan(0.01 * 3);
+
+    // Zero-remaining-games path: same out-of-order but in-range combination.
+    const teams: PlayoffOddsTeamInput[] = [
+      { rosterId: 1, wins: 3, ties: 0, pointsFor: 300, meanWeeklyScore: 100, sd: 15 },
+      { rosterId: 2, wins: 2, ties: 0, pointsFor: 280, meanWeeklyScore: 100, sd: 15 },
+      { rosterId: 3, wins: 1, ties: 0, pointsFor: 260, meanWeeklyScore: 100, sd: 15 },
+      { rosterId: 4, wins: 0, ties: 0, pointsFor: 240, meanWeeklyScore: 100, sd: 15 },
+    ];
+    const noGames = simulatePlayoffOdds({
+      teams,
+      schedule: [],
+      playoffTeams: 1,
+      firstRoundByeCount: 3,
+      seed: 1,
+    });
+    const sum = noGames.teams.reduce((acc, t) => acc + (t.byePct as number), 0);
+    expect(sum).toBe(3);
+  });
+
   it("exact-tie draws increment ties for both teams (two teams with zero sd produce identical, always-tied scores)", () => {
     const teams: PlayoffOddsTeamInput[] = [
       { rosterId: 1, wins: 0, ties: 0, pointsFor: 0, meanWeeklyScore: 100, sd: 0 },

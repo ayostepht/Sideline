@@ -35,7 +35,15 @@
  * Because seeds are a permutation each iteration, exactly `playoffTeams` teams have seed <=
  * `playoffTeams` every single iteration, so `sum(playoffPct across all teams)` is exactly
  * `playoffTeams` (up to floating-point division error), not an approximation that only holds
- * "on average" -- same reasoning applies to `byePct` summing to `firstRoundByeCount`.
+ * "on average" -- same reasoning applies to `byePct` summing to `firstRoundByeCount`. This
+ * invariant only holds when `0 <= playoffTeams <= numTeams` and `0 <= firstRoundByeCount <=
+ * numTeams` (a seed is always in `1..numTeams`, so a bound outside that range would make the
+ * "exactly N teams have seed <= N" reasoning above meaningless). The function therefore throws
+ * if either is negative or exceeds the number of teams, in both the general Monte Carlo path and
+ * the zero-remaining-games special case below -- the same "fail loudly on an out-of-range input"
+ * convention as the schedule's unknown-rosterId check further down. `firstRoundByeCount` greater
+ * than `playoffTeams` is valid and is NOT rejected (a bye count can legitimately be less than or
+ * equal to the number of playoff teams; it just can't exceed the number of teams in the league).
  *
  * Zero remaining games (empty `schedule`) is special-cased: nothing is left to simulate, so
  * every iteration would produce an identical result. Rather than burn `iterations` identical
@@ -130,6 +138,23 @@ export function simulatePlayoffOdds(input: SimulatePlayoffOddsInput): SimulatePl
 
   const numTeams = teams.length;
   const rosterIds = teams.map((t) => t.rosterId);
+
+  // Validate playoffTeams / firstRoundByeCount are in range before either code path below runs,
+  // so the sum invariants documented above actually hold (see module doc). A caller bug (e.g. a
+  // future league-settings mapper miscomputing one of these) surfaces immediately as a thrown
+  // error instead of silently returning numbers that look plausible but violate the contract.
+  // Note firstRoundByeCount > playoffTeams is NOT rejected here: a bye count can legitimately be
+  // less than or equal to playoffTeams, it just can't exceed the number of teams.
+  if (playoffTeams < 0 || playoffTeams > numTeams) {
+    throw new Error(
+      `simulatePlayoffOdds: playoffTeams (${playoffTeams}) must be between 0 and the number of teams (${numTeams})`,
+    );
+  }
+  if (firstRoundByeCount < 0 || firstRoundByeCount > numTeams) {
+    throw new Error(
+      `simulatePlayoffOdds: firstRoundByeCount (${firstRoundByeCount}) must be between 0 and the number of teams (${numTeams})`,
+    );
+  }
 
   // Zero remaining games: nothing to simulate, every iteration would be identical (see module
   // doc). Rank the current standings once and assign all probability mass to that outcome.
