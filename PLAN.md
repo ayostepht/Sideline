@@ -146,7 +146,7 @@ Worker jobs call the Sleeper client (rate-limited, zod-validated), upsert into S
 | `TZ` | `America/New_York` | Display timezone |
 | `APP_PASSWORD` | none | Enables password login when set |
 | `SESSION_SECRET` | none | Required if `APP_PASSWORD` is set; at least 32 chars |
-| `PUID` / `PGID` | `1000` / `1000` | File ownership on `/data` (Unraid typically 99/100) |
+| `PUID` / `PGID` | `99` / `100` | File ownership on `/data` (Unraid's usual nobody/users ids) |
 | `ENABLE_NFLVERSE` | `true` | |
 | `ODDS_API_KEY` | none | Optional |
 | `SYNC_*_CRON` | see 3.1 | Per-job cadence overrides |
