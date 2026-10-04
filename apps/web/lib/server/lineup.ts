@@ -145,8 +145,11 @@ function readPlayers(h: DbHandle, ids: string[]): Map<string, LineupPlayerRow> {
   return out;
 }
 
-/** Bye week per team: the one week in 1..18 where the team is absent (only with all 18 weeks loaded). */
-function readByeWeeks(h: DbHandle, season: number): Map<string, number> {
+/** Bye week per team: the one week in 1..18 where the team is absent (only with all 18 weeks
+ * loaded). Exported for T5.4b's matchup simulation fix round: a byed starter must be forced to a
+ * fixed, zero-variance 0 rather than drawn from `weeklyStandardDeviation`'s (possibly nonzero)
+ * `sd` for a week they are mathematically guaranteed not to play (see `matchup.ts`'s `buildStarter`). */
+export function readByeWeeks(h: DbHandle, season: number): Map<string, number> {
   const rows = h.sqlite
     .prepare("SELECT week, home, away FROM schedule WHERE season = ? AND week BETWEEN 1 AND 18")
     .all(season) as { week: number; home: string; away: string }[];
@@ -295,7 +298,9 @@ const MIN_PLAYERS_FOR_POSITION_CV = 2;
  * `weeklyStandardDeviation` enough to collapse `floorAndCeiling`'s floor to 0 for most low-sample
  * players (found in T3.8a frontend QA against the fixture DB; see `lineup.test.ts`).
  */
-function readPositionCv(h: DbHandle, leagueId: string, season: number): Map<string, number> {
+/** Exported for T5.4b's matchup simulation data function, which needs the identical shrinkage
+ * prior `getLineup`'s Safe/Upside modes use (see this function's own doc comment for why). */
+export function readPositionCv(h: DbHandle, leagueId: string, season: number): Map<string, number> {
   const rows = h.sqlite
     .prepare(
       `SELECT p.position AS position, lpwp.player_id AS playerId, lpwp.actual_pts AS actualPts
@@ -336,7 +341,9 @@ function readPositionCv(h: DbHandle, leagueId: string, season: number): Map<stri
   return out;
 }
 
-function readProjections(
+/** Exported for T5.4b's matchup simulation data function, which needs this week's median
+ * projection per starter (the same lookup `getLineup`'s "projected" mode uses). */
+export function readProjections(
   h: DbHandle,
   leagueId: string,
   season: number,
@@ -357,8 +364,10 @@ function readProjections(
   return out;
 }
 
-/** Each eligible player's actual points for weeks strictly before `week` (for variance/floor-ceiling). */
-function readHistory(
+/** Each eligible player's actual points for weeks strictly before `week` (for variance/floor-ceiling).
+ * Exported for T5.4b's matchup simulation data function, which feeds the same history into
+ * `weeklyStandardDeviation` for its own starters. */
+export function readHistory(
   h: DbHandle,
   leagueId: string,
   season: number,
@@ -383,7 +392,9 @@ function readHistory(
   return out;
 }
 
-function opponentRosterIdFor(
+/** Exported for T5.4b's matchup simulation data function, which needs the identical matchup-id
+ * pairing logic to find who a roster is playing this week. */
+export function opponentRosterIdFor(
   h: DbHandle,
   leagueId: string,
   week: number,

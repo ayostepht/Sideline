@@ -8,8 +8,8 @@
 | 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
 | 2 App shell and league views | G2 (human) | `phase/2-shell` (merged) | Done, G2 PASS 2026-10-02 (Steph approved) |
 | 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
-| 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` | Done, G4 PASS 2026-10-03 (human checkpoint optional, awaiting Steph's reply, not blocking Phase 5) |
-| 5 Matchups and league intelligence | G5 | | Not started |
+| 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` (merged) | Done, G4 PASS 2026-10-03 (Steph approved) |
+| 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
 
 ## Resume point
@@ -18,11 +18,27 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 
 ## Earlier phases
 
-Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`; Phase 4 (task table, live fixes, gate-time fixes, G4 phase checks) in `docs/archive/progress-phase4.md`. Standing rules for briefs are in `docs/brief-rules.md`.
+Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`; Phase 4 (task table, live fixes, gate-time fixes, G4 phase checks) in `docs/archive/progress-phase4.md`; Phase 5 (task table, batch review trail, G5 phase checks) in `docs/archive/progress-phase5.md`. Standing rules for briefs are in `docs/brief-rules.md`.
 
 ## Backlog (open items only)
 
 Remove an item when it is done; the archive keeps history.
+
+### Carried from Phase 5
+
+Full detail and fully-fixed history: `docs/archive/progress-phase5.md`, `docs/reviews/2026-10-03-p5-batch{A,B,C2,C3,D,E}-{code,ux}.md`, `docs/reviews/2026-10-03-G5-{code,ux}.md`.
+
+- **Desktop density on League and Matchup:** 5 of League's 6 sections (power rankings, all-play/luck, positional strength, manager tendencies, playoff odds -- only Standings is exempt) and Matchup's swing-players list all stay a single-column stacked-card layout at every breakpoint including 1280px, unlike Standings' proper desktop table on the same page. PLAN 6.1 wants desktop density, not just desktop whitespace; candidate `lg:` table variants matching `standings.tsx`'s pattern.
+- **Missing "You" marker in 5 of League's 6 new sections:** only Standings marks the viewer's own team (badge + row tint); the other 5 show it as a plain, unmarked row, breaking the convention used everywhere else in the app (Standings, Home, Matchup's swing players).
+- **Score-range chart's "your" median dot** (`text-primary`, lime) measures only 1.18:1 against the white card in light mode -- same class of contrast issue the chart's line-stroke Major already fixed (now 3.35-8.95:1), but the dots were out of that fix's scope. Candidate: swap to `text-highlight`.
+- `manager-tendencies.tsx` doesn't pluralize ("1 transactions", "1 waiver claims won"). Win probability is shown three times in quick succession on Home + Matchup (banner sentence, "YOU" card, "TIE" card) with no added information -- consider one compact three-segment probability bar instead. Swing-player rows have no tap-through to player detail, unlike most other recommendation rows in the app.
+- **Pre-existing real-data gap, surfaced fixing a Phase 5 bug:** `lineup.ts`'s `isBye`/`byeWeek` logic (now also inherited by `matchup.ts`) compares a player's raw Sleeper team code against an nflverse-coded schedule without the `LAR` -> `LA` conversion ADR-006 documents elsewhere in the same file -- a Rams player's bye week may not register as a bye in Lineup or Matchup. Not introduced by Phase 5.
+- **Minor code-quality items, all documented in their source review:** `sim/matchup.ts`'s `NO_DRAW = -1` sentinel overlaps a representable real `sd` value (prefer a boolean flag); `playoff-odds.ts` has no perf smoke test for its ranking sort (manually benchmarked ~33ms for 12 teams/7 weeks, no regression guard); `roster-strength.test.ts`'s cache-invalidation test triggers the wrong (but still-correct) sync job; `matchup.ts`/`roster-strength.ts` don't recompute `freshness` on a cache hit (matches `lineup.ts`'s existing pattern); `LeagueIntelligencePlayoffOddsSchema`'s doc comment understates when `playoffOdds` is null; `league-intelligence.ts`'s `populationStandardDeviation` duplicates a `packages/core` private helper instead of it being exported; `league/_components/format.ts`'s `sortByPlayoffPctDesc` is unused dead code; two stat figures lack `tabular-nums`; a few undocumented magic-number thresholds (luck sign cutoff, heatmap tone bands).
+- **`apps/web/components/sparkline.tsx` has the same sr-only-table pattern that caused two real, fixed 390px overflow bugs this phase** -- hasn't overflowed yet only because its content stays under 390px today. Proactively wrap with `[contain:layout]` whenever this file is next touched.
+- **Matchup route not yet in `lighthouserc.json`'s Lighthouse budget check** -- same pattern as the G3->G4 Lineup gap (closed at G4). Add before G6.
+- **Route JS soft-target (170,000 B) regressions this phase:** League (178,897 B) and League/teams/[rosterId] (179,534 B) newly crossed the soft target (both well under the 204,800 B hard cap). 7 of 15 routes now over soft target, up from 4 at G4. Worth a dedicated look if Phase 6 adds more client code to any of these.
+- **`pnpm test:e2e` (354 tests, UI1) and `pnpm test:a11y` (350 tests, UI2) run almost entirely overlapping test sets** (350 of 354 shared), roughly doubling e2e wall-clock time for limited marginal coverage. Worth a maintainer look at a true axe-only UI2 filter.
+- **Informational Brier-score calibration isn't computable from the recorded fixture** (no week has both a stored pregame projection and a completed outcome). A real `./data` database would support it naturally; closing this needs either a richer recorded fixture (sleeper-data-engineer) or a one-off manual analysis outside the committed test suite (never committed, per ADR-009).
 
 ### Carried from Phase 2
 

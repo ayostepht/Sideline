@@ -4,11 +4,13 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type {
   League,
+  Matchup,
   Player,
   PlayerWeekProjection,
   PlayerWeekStats,
   Roster,
   ScheduleGame,
+  Transaction,
   TrendingEntry,
   UsageWeek,
 } from "@sideline/shared";
@@ -17,16 +19,21 @@ import {
   replaceTrending,
   upsertLeague,
   upsertLeaguePlayerWeekPoints,
+  upsertMatchups,
   upsertPlayers,
   upsertPlayerWeekProjections,
   upsertPlayerWeekStats,
   upsertRosters,
   upsertSchedule,
+  upsertTransactions,
   upsertUsageWeek,
 } from "./upserts.js";
 import {
   readLeaguePlayerWeekPoints,
   readLeagues,
+  readLeagueScheduleMatchups,
+  readLeagueTransactions,
+  readLeagueWeeklyScores,
   readLeagueWeekPositionRanks,
   readPlayers,
   readPlayersTeamPosition,
@@ -166,6 +173,43 @@ const trendingEntry = (playerId: string, lookbackHours = 24): TrendingEntry => (
   count: 10,
   lookbackHours,
   fetchedAt: "2025-09-01T00:00:00.000Z",
+});
+
+const matchup = (
+  week: number,
+  rosterId: number,
+  matchupId: number | null,
+  points: number,
+  leagueId = "L1",
+): Matchup => ({
+  leagueId,
+  week,
+  rosterId,
+  matchupId,
+  starters: [],
+  startersPoints: [],
+  players: [],
+  playersPoints: {},
+  points,
+});
+
+const transaction = (transactionId: string, overrides: Partial<Transaction> = {}): Transaction => ({
+  leagueId: "L1",
+  transactionId,
+  week: 1,
+  type: "waiver",
+  status: "complete",
+  adds: null,
+  drops: null,
+  rosterIds: [1],
+  waiverBid: null,
+  creator: "u1",
+  createdAt: 1000,
+  statusUpdatedAt: null,
+  draftPicks: [],
+  waiverBudget: [],
+  consenterIds: null,
+  ...overrides,
 });
 
 const roster = (rosterId: number, overrides: Partial<Roster> = {}): Roster => ({
@@ -585,5 +629,160 @@ describe("readRosteredPlayerIds", () => {
     );
     expect(readRosteredPlayerIds(h, "L1")).toEqual(new Set(["p1"]));
     expect(readRosteredPlayerIds(h, "L2")).toEqual(new Set(["p9"]));
+  });
+});
+
+describe("readLeagueWeeklyScores", () => {
+  it("returns [] for an empty table", () => {
+    expect(readLeagueWeeklyScores(h, "L1")).toEqual([]);
+  });
+
+  it("returns every row for the league, including a future row with points 0, for no other league", () => {
+    upsertMatchups(h, [
+      matchup(1, 1, 1, 100),
+      matchup(1, 2, 1, 90),
+      matchup(16, 1, 5, 0), // future, stored ahead of play (ADR-006 future-pairings fetch)
+      matchup(1, 9, 1, 50, "L2"),
+    ]);
+    const rows = readLeagueWeeklyScores(h, "L1").sort(
+      (a, b) => a.week - b.week || a.rosterId - b.rosterId,
+    );
+    expect(rows).toEqual([
+      { week: 1, rosterId: 1, points: 100 },
+      { week: 1, rosterId: 2, points: 90 },
+      { week: 16, rosterId: 1, points: 0 },
+    ]);
+  });
+});
+
+describe("readLeagueScheduleMatchups", () => {
+  it("returns [] for an empty table", () => {
+    expect(readLeagueScheduleMatchups(h, "L1", { afterWeek: 0 })).toEqual([]);
+  });
+
+  it("pairs the two rows sharing a matchupId with rosterIdA always the lower id", () => {
+    upsertMatchups(h, [
+      matchup(5, 1, 10, 100),
+      matchup(5, 2, 10, 90),
+      matchup(5, 4, 11, 80),
+      matchup(5, 3, 11, 70),
+    ]);
+    const rows = readLeagueScheduleMatchups(h, "L1", { afterWeek: 0 }).sort(
+      (a, b) => a.rosterIdA - b.rosterIdA,
+    );
+    expect(rows).toEqual([
+      { week: 5, rosterIdA: 1, rosterIdB: 2 },
+      { week: 5, rosterIdA: 3, rosterIdB: 4 },
+    ]);
+  });
+
+  it("produces no pairing for a bye row (null matchupId)", () => {
+    upsertMatchups(h, [matchup(5, 1, null, 0)]);
+    expect(readLeagueScheduleMatchups(h, "L1", { afterWeek: 0 })).toEqual([]);
+  });
+
+  it("excludes weeks at or before afterWeek", () => {
+    upsertMatchups(h, [
+      matchup(4, 1, 1, 100),
+      matchup(4, 2, 1, 90),
+      matchup(5, 3, 2, 80),
+      matchup(5, 4, 2, 70),
+    ]);
+    expect(readLeagueScheduleMatchups(h, "L1", { afterWeek: 4 })).toEqual([
+      { week: 5, rosterIdA: 3, rosterIdB: 4 },
+    ]);
+  });
+
+  it("skips a malformed group instead of throwing (fewer than 2 rows sharing a matchupId)", () => {
+    upsertMatchups(h, [matchup(5, 1, 10, 100), matchup(5, 2, 20, 90)]);
+    expect(readLeagueScheduleMatchups(h, "L1", { afterWeek: 0 })).toEqual([]);
+  });
+
+  it("excludes other leagues", () => {
+    upsertMatchups(h, [matchup(5, 1, 10, 100, "L2"), matchup(5, 2, 10, 90, "L2")]);
+    expect(readLeagueScheduleMatchups(h, "L1", { afterWeek: 0 })).toEqual([]);
+  });
+});
+
+describe("readLeagueTransactions", () => {
+  it("returns [] for an empty table", () => {
+    expect(readLeagueTransactions(h, "L1")).toEqual([]);
+  });
+
+  it("decodes a waiver claim (one add, one drop) correctly", () => {
+    upsertTransactions(h, [
+      transaction("t1", {
+        type: "waiver",
+        status: "complete",
+        adds: { p1: 1 },
+        drops: { p2: 1 },
+        rosterIds: [1],
+        waiverBid: 12,
+        createdAt: 5000,
+      }),
+    ]);
+    expect(readLeagueTransactions(h, "L1")).toEqual([
+      {
+        transactionId: "t1",
+        week: 1,
+        type: "waiver",
+        status: "complete",
+        rosterIds: [1],
+        adds: { p1: 1 },
+        drops: { p2: 1 },
+        waiverBid: 12,
+        createdAt: 5000,
+      },
+    ]);
+  });
+
+  it("decodes a trade row with multiple rosterIds and a null adds/drops as null, not {}", () => {
+    upsertTransactions(h, [
+      transaction("t2", {
+        type: "trade",
+        status: "complete",
+        adds: null,
+        drops: null,
+        rosterIds: [1, 2, 3],
+        consenterIds: [1, 2, 3],
+      }),
+    ]);
+    const rows = readLeagueTransactions(h, "L1");
+    expect(rows).toEqual([
+      {
+        transactionId: "t2",
+        week: 1,
+        type: "trade",
+        status: "complete",
+        rosterIds: [1, 2, 3],
+        adds: null,
+        drops: null,
+        waiverBid: null,
+        createdAt: 1000,
+      },
+    ]);
+    expect(rows[0]?.adds).toBeNull();
+    expect(rows[0]?.drops).toBeNull();
+  });
+
+  it("excludes other leagues", () => {
+    upsertTransactions(h, [transaction("t3", { leagueId: "L2" })]);
+    expect(readLeagueTransactions(h, "L1")).toEqual([]);
+  });
+
+  it("throws naming the transaction id on corrupt roster_ids_json", () => {
+    upsertTransactions(h, [transaction("t1")]);
+    h.sqlite
+      .prepare("UPDATE transactions SET roster_ids_json = ? WHERE transaction_id = 't1'")
+      .run("not json");
+    expect(() => readLeagueTransactions(h, "L1")).toThrow(/t1/);
+  });
+
+  it("throws naming the transaction id when roster_ids_json is valid JSON but not a number array", () => {
+    upsertTransactions(h, [transaction("t1")]);
+    h.sqlite
+      .prepare("UPDATE transactions SET roster_ids_json = ? WHERE transaction_id = 't1'")
+      .run('["a","b"]');
+    expect(() => readLeagueTransactions(h, "L1")).toThrow(/t1/);
   });
 });

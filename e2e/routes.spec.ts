@@ -17,9 +17,13 @@ for (const route of existingRoutes) {
         if (overlayRoutes.has(route)) {
           // Scan the overlay itself, not the page behind it.
           await expect(page.getByRole("dialog")).toBeVisible();
-          // Contrast is computed from live colors: let the open animation finish first.
-          await settleAnimations(page);
         }
+        // Contrast is computed from live colors: let any finite animation/transition finish
+        // first, not just on overlay routes. Found by the G5 gate: a lazily-hydrated client-only
+        // toggle (Settings theme switch) can still be mid color-transition into its "on" state
+        // right after navigation, which axe can catch on WebKit (mobile-iphone) as a transient
+        // contrast violation that is not present once the toggle settles.
+        await settleAnimations(page);
         await expectNoSeriousA11yViolations(page, { theme });
       });
     }

@@ -32,6 +32,7 @@ import { readUserLeagues, saveUserLeagues } from "./user-leagues.js";
 import { claimNext, enqueueRequest, enqueueWithParams, getRequest } from "./sync-bookkeeping.js";
 import {
   readKickoffsByTeam,
+  readLeaguePlayoffTeams,
   readLeaguePlayoffWeekStart,
   readNflState,
   readNflStateFetchedAt,
@@ -249,6 +250,37 @@ describe("worker read helpers", () => {
     };
     upsertLeague(h, league, "t");
     expect(readLeaguePlayoffWeekStart(h, "L1")).toBe(15);
+  });
+  it("league playoff teams: stored value, null when unset, null when the league doesn't exist", () => {
+    expect(readLeaguePlayoffTeams(h, "L1")).toBeNull();
+    const league: League = {
+      leagueId: "L1",
+      season: 2025,
+      name: "L",
+      status: "in_season",
+      previousLeagueId: null,
+      totalRosters: 10,
+      rosterPositions: ["QB"],
+      scoringSettings: {},
+      playoffWeekStart: 15,
+      playoffTeams: 6,
+      tradeDeadline: null,
+      waiverType: 2,
+      waiverMode: "faab",
+      waiverDayOfWeek: 2,
+      waiverClearDays: 1,
+      dailyWaivers: false,
+      waiverBudget: 100,
+      divisions: null,
+      reserveSlots: 1,
+      taxiSlots: 0,
+      leagueAverageMatch: false,
+      settings: {},
+    };
+    upsertLeague(h, league, "t");
+    expect(readLeaguePlayoffTeams(h, "L1")).toBe(6);
+    upsertLeague(h, { ...league, leagueId: "L2", playoffTeams: null }, "t");
+    expect(readLeaguePlayoffTeams(h, "L2")).toBeNull();
   });
   it("stored weeks (matchups, stats sleeper only, projections)", () => {
     const m = (week: number, leagueId = "L1"): Matchup => ({
