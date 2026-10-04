@@ -22,7 +22,7 @@ Batch letters and dependencies amended from PLAN.md's literal table per ADR-016 
 
 | ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|---|
-| T5.1 | Matchup Monte Carlo and swing players (SIM-1 to SIM-3), `packages/core/src/sim/` | analytics-engineer | G4 | A | Done, M1 fix in flight | 1 | `605c13f` |
+| T5.1 | Matchup Monte Carlo and swing players (SIM-1 to SIM-3), `packages/core/src/sim/` | analytics-engineer | G4 | A | Done | 1 | `605c13f`, `d321cab` |
 | T5.2 | All-play, luck, power score, positional heatmap, manager tendencies (LEAGUE-1 to 4, 6), `packages/core/src/league/` | analytics-engineer | G4 | A | Done | 1 | `15f19b9` |
 | T5.3 | Playoff odds (LEAGUE-5) | analytics-engineer | T5.1 | B | Not started | 0 | |
 | T5.4 | Data functions and APIs for matchup and league intelligence; `computed_cache` wiring and invalidation | backend-engineer | T5.1, T5.2, T5.3 | C | Not started | 0 | |

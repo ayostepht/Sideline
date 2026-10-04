@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-03. **Phase 5 planning done (ADR-016), Batch A dispatched.** Branch `phase/5-matchups` created off `main` (`30175bd`). `pnpm verify` baseline confirmed green before starting: 120 files, 1208 unit tests, 0 lint warnings. Phase 5 task table (T5.1-T5.6, batches A-E) is in `docs/PROGRESS.md`; the batch/dependency shape differs from PLAN.md's literal table (T5.3 gets its own Batch B, T5.4 moves to Batch C and depends on T5.3 too) per ADR-016 -- read it before touching T5.3 or T5.4. Decided (ADR-016 item 5): `getPlayerDetail` perf and the missing `upsertUsageWeek` wiring stay backlog, not a dedicated Phase 5 task -- neither blocks any Phase 5 requirement. **In flight now:** Batch A, two analytics-engineer subagents dispatched in parallel -- T5.1 (SIM-1 to 3, Monte Carlo matchup win probability and swing players, new `packages/core/src/sim/`, owns the new seeded-RNG utility) and T5.2 (LEAGUE-1,2,3,4,6: all-play, luck, power score, heatmap, manager tendencies, new `packages/core/src/league/`). Next after both land: Level 1 verify each, code-reviewer on the Batch A diff, commit, then Batch B (T5.3 playoff odds, reusing T5.1's RNG).
+Last updated: 2026-10-03. **Phase 5 Batch A done, reviewed, and fixed. Batch B (T5.3) dispatched.** Branch `phase/5-matchups` off `main` (`30175bd`). Baseline before starting: 120 files, 1208 unit tests. T5.1 (`packages/core/src/sim/`, SIM-1 to 3: seeded RNG, Monte Carlo matchup win probability, swing players) and T5.2 (`packages/core/src/league/`, LEAGUE-1,2,3,4,6: all-play, luck, power score, heatmap, manager tendencies) both landed (`605c13f`, `15f19b9`). `code-reviewer` found one Major (T5.1's `actualPointsSoFar` silently defaulting to 0 for finished/in-progress starters with no Reason) -- fixed same-session via a discriminated union on `SimStarter.status` (`d321cab`); two Minor/nit findings logged to PROGRESS.md backlog, not blocking. Review saved: `docs/reviews/2026-10-03-p5-batchA-code.md`. Current `pnpm verify`: 128 files, 1272 tests, all green. Phase 5 task table and ADR-016's batch/dependency amendments are in `docs/PROGRESS.md` and `docs/DECISIONS.md` -- read ADR-016 before touching T5.3 or T5.4 (T5.4's dependency and batch differ from PLAN.md's literal table). Decided (ADR-016 item 5): `getPlayerDetail` perf and the missing `upsertUsageWeek` wiring stay backlog. **In flight now:** Batch B, T5.3 (LEAGUE-5 playoff odds, analytics-engineer, depends on T5.1 -- reuses its RNG/sampler by import, not a second implementation).
 
 ## 1. Resume in five steps
 
@@ -29,14 +29,15 @@ Last updated: 2026-10-03. **Phase 5 planning done (ADR-016), Batch A dispatched.
 
 ## 3. In flight
 
-- Batch A: T5.1 (analytics-engineer, `packages/core/src/sim/`) and T5.2 (analytics-engineer, `packages/core/src/league/`), dispatched in parallel 2026-10-03 on branch `phase/5-matchups`. Agents die with the session -- if resuming mid-batch, check for uncommitted files in those two directories, verify and commit, or discard and re-dispatch.
+- Batch B: T5.3 (analytics-engineer, LEAGUE-5 playoff odds), dispatched 2026-10-03 on branch `phase/5-matchups`, depends on T5.1 (done). Agents die with the session -- if resuming mid-task, check for uncommitted files under `packages/core/src/league/` (playoff-odds files) or `packages/core/src/sim/`, verify and commit, or discard and re-dispatch.
 
 ## 4. Next steps (in order)
 
-1. When both T5.1 and T5.2 report back: run Level 1 verification on each (CLAUDE.md section 4) against their acceptance criteria, `pnpm verify`, `git diff --stat` scoped to their owned paths.
-2. Run `code-reviewer` on the Batch A diff (`git diff main...HEAD`). Fix any Blocker/Major findings before Batch B.
-3. Commit (one commit per task, conventional format with the task id), update `docs/PROGRESS.md`'s Phase 5 task table, update this file.
-4. Dispatch Batch B (T5.3, playoff odds, analytics-engineer, depends on T5.1 -- reuse its RNG/sampler, don't rebuild one). Then continue Batches C-E per `docs/PROGRESS.md`'s Phase 5 task table and ADR-016.
+1. When T5.3 reports back: run Level 1 verification (CLAUDE.md section 4) against its acceptance criteria, `pnpm verify`, `git diff --stat` scoped to its owned paths.
+2. Commit (conventional format with the task id), update `docs/PROGRESS.md`'s Phase 5 task table, update this file.
+3. Run `code-reviewer` on the Batch B diff (`git diff main...HEAD`, since Batch A's commits are already reviewed). Fix any Blocker/Major findings before Batch C.
+4. Dispatch Batch C (T5.4, data functions and APIs, backend-engineer, depends on T5.1+T5.2+T5.3 per ADR-016 -- wider than PLAN.md's literal table).
+5. Continue Batches D (T5.5, frontend) and E (T5.6, qa + G5 gate) per `docs/PROGRESS.md`'s Phase 5 task table and ADR-016.
 
 ## 5. Briefs
 
