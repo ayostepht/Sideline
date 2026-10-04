@@ -45,7 +45,13 @@ import {
 } from "@sideline/shared";
 import { z } from "zod";
 import { getStandings } from "./league-views.js";
-import { opponentRosterIdFor, readHistory, readPositionCv, readProjections } from "./lineup.js";
+import {
+  opponentRosterIdFor,
+  readByeWeeks,
+  readHistory,
+  readPositionCv,
+  readProjections,
+} from "./lineup.js";
 
 export type Lookup<T> =
   { ok: true; data: T } | { ok: false; reason: "not_found" | "no_team" | "no_opponent" };
@@ -148,7 +154,15 @@ function deriveSeed(leagueId: string, week: number, rosterId: number): number {
 }
 
 /** Builds one starter's simulation input: mean/sd from PROJ-2, finished/not_started from whether
- * a stats row exists for this exact week (see module doc comment). */
+ * a stats row exists for this exact week (see module doc comment).
+ *
+ * A starter whose NFL team is on a bye for the requested week is forced to `finished` with
+ * `actualPointsSoFar: 0` ahead of the stats-row check: they have no stats row (never will, for
+ * this week), so without this they'd fall through to `not_started` carrying whatever nonzero `sd`
+ * their pre-bye weekly history produces - a truncated-normal draw with a nonzero spread for a
+ * player mathematically guaranteed to score exactly 0. Mirrors `lineup.ts`'s
+ * `readByeWeeks`/`applyAvailability` convention (code-reviewer Major finding, fix round after
+ * T5.4b). */
 function buildStarter(
   playerId: string,
   projections: Map<string, number>,
@@ -156,7 +170,11 @@ function buildStarter(
   positionCv: Map<string, number>,
   positionOf: Map<string, string | null>,
   actuals: Map<string, number>,
+  isBye: boolean,
 ): SimStarter {
+  if (isBye) {
+    return { playerId, mean: 0, sd: 0, status: "finished", actualPointsSoFar: 0 };
+  }
   const proj = projections.get(playerId) ?? 0;
   const weeklyPoints = history.get(playerId) ?? [];
   const position = positionOf.get(playerId) ?? null;
@@ -231,10 +249,15 @@ export function getMatchup(
   const actuals = readWeekActuals(h, leagueId, league.season, week, allIds);
   const players = readPlayers(h, allIds);
   const positionOf = new Map(players.map((p) => [p.playerId, p.position] as const));
+  const teamOf = new Map(players.map((p) => [p.playerId, p.team] as const));
   const nameOf = new Map(players.map((p) => [p.playerId, p.fullName] as const));
+  const byes = readByeWeeks(h, league.season);
 
-  const toStarter = (playerId: string): SimStarter =>
-    buildStarter(playerId, projections, history, positionCv, positionOf, actuals);
+  const toStarter = (playerId: string): SimStarter => {
+    const team = teamOf.get(playerId) ?? null;
+    const isBye = team !== null && byes.get(team) === week;
+    return buildStarter(playerId, projections, history, positionCv, positionOf, actuals, isBye);
+  };
 
   const teamA: SimTeam = { rosterId: String(rosterId), starters: myStarters.map(toStarter) };
   const teamB: SimTeam = {

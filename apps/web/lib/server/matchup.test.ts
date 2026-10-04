@@ -139,6 +139,65 @@ describe("getMatchup", () => {
     for (const s of rosterOneSwings) expect(s.varianceContribution).toBe(0);
   });
 
+  it("a starter whose NFL team is on a bye this week contributes exactly 0, not a nonzero draw (Major fix round)", () => {
+    const h = setup({ rosterCount: 2 });
+    pairMatchup(h, 5, 1, 2);
+    // Full 18-week schedule so readByeWeeks's "all 18 weeks loaded" guard is satisfied. Two
+    // filler teams (T90/T91) play every week so every week number 1-18 is present at all; T01
+    // (p1's team, below) plays T99 every week except week 5, making week 5 T01's bye.
+    for (let w = 1; w <= 18; w += 1) {
+      h.db
+        .insert(schema.schedule)
+        .values({
+          season: 2026,
+          week: w,
+          gameId: `filler-${w}`,
+          gameType: "REG",
+          home: "T90",
+          away: "T91",
+        })
+        .run();
+      if (w !== 5) {
+        h.db
+          .insert(schema.schedule)
+          .values({
+            season: 2026,
+            week: w,
+            gameId: `bye-${w}`,
+            gameType: "REG",
+            home: "T01",
+            away: "T99",
+          })
+          .run();
+      }
+    }
+    // p1 (roster 1's starter) is on team T01, byed in week 5. p1 also has pre-bye weekly history
+    // with real spread, so a pre-fix caller would compute a nonzero sd for them despite the bye.
+    h.sqlite.prepare(`UPDATE players SET team = 'T01' WHERE player_id = 'p1'`).run();
+    insertPoints(h, [
+      { playerId: "p1", week: 1, actualPts: 2 },
+      { playerId: "p1", week: 2, actualPts: 20 },
+      { playerId: "p1", week: 3, actualPts: 2 },
+      // p1 has no week-5 points at all (no stats row, as expected for a byed player this week).
+      // Roster 1's other starters (p2-p5) are finished this week with a fixed total, so roster
+      // 1's whole score is deterministic if and only if p1 truly contributes 0.
+      ...Array.from({ length: 4 }, (_, i) => ({ playerId: `p${i + 2}`, week: 5, actualPts: 10 })),
+      // Opponent (p9-p13) not_started, with real variance from history.
+      ...Array.from({ length: 5 }, (_, i) => ({ playerId: `p${i + 9}`, week: 5, projPts: 8 + i })),
+      { playerId: "p9", week: 1, actualPts: 2 },
+      { playerId: "p9", week: 2, actualPts: 20 },
+      { playerId: "p9", week: 3, actualPts: 2 },
+    ]);
+    const data = ok(getMatchup(h, "L1", { rosterId: 1 }, SEED_NOW));
+    // p1 contributes 0 and p2-p5 contribute a fixed 40 total, every simulated iteration.
+    expect(data.team.p10).toBe(40);
+    expect(data.team.p50).toBe(40);
+    expect(data.team.p90).toBe(40);
+    const p1Swing = data.swingPlayers.find((s) => s.playerId === "p1");
+    expect(p1Swing).toBeDefined();
+    expect(p1Swing?.varianceContribution).toBe(0);
+  });
+
   it("returns a clean no_opponent failure for a roster with no matchup this week (bye), not a thrown error", () => {
     const h = setup({ rosterCount: 2 });
     // No matchups rows inserted at all.

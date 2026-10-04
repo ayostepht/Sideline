@@ -145,8 +145,11 @@ function readPlayers(h: DbHandle, ids: string[]): Map<string, LineupPlayerRow> {
   return out;
 }
 
-/** Bye week per team: the one week in 1..18 where the team is absent (only with all 18 weeks loaded). */
-function readByeWeeks(h: DbHandle, season: number): Map<string, number> {
+/** Bye week per team: the one week in 1..18 where the team is absent (only with all 18 weeks
+ * loaded). Exported for T5.4b's matchup simulation fix round: a byed starter must be forced to a
+ * fixed, zero-variance 0 rather than drawn from `weeklyStandardDeviation`'s (possibly nonzero)
+ * `sd` for a week they are mathematically guaranteed not to play (see `matchup.ts`'s `buildStarter`). */
+export function readByeWeeks(h: DbHandle, season: number): Map<string, number> {
   const rows = h.sqlite
     .prepare("SELECT week, home, away FROM schedule WHERE season = ? AND week BETWEEN 1 AND 18")
     .all(season) as { week: number; home: string; away: string }[];
