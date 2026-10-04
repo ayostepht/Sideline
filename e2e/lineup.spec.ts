@@ -102,7 +102,9 @@ test.describe("Lineup (LINEUP-5/6/9)", () => {
     await page.goto(`${L}/lineup`);
     const swaps = page.getByTestId("lineup-swaps");
     await expect(swaps).toBeVisible();
-    expect(await swaps.getByTestId("lineup-swap-row").count()).toBeGreaterThan(0);
+    // Retrying poll, not a one-shot count: swap rows can populate a tick after the
+    // container itself, and did on mobile-iphone during the G5 gate (flaky, not a real bug).
+    await expect.poll(async () => swaps.getByTestId("lineup-swap-row").count()).toBeGreaterThan(0);
     // LINEUP-1/LINEUP-6: the issues banner and the "no issues" message are mutually exclusive;
     // exactly one renders regardless of which this fixture's week currently has.
     const bannerCount = await page.getByTestId("lineup-issues-banner").count();
