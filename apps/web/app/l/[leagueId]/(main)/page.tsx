@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader } from "../../../../components/ui/card";
 import { leagueBase, parseWeek } from "../../../../lib/client/nav";
 import { getLeagueOverview, getMyTeam, getStandings } from "../../../../lib/server/league-views";
 import { getLineup } from "../../../../lib/server/lineup";
+import { getMatchup } from "../../../../lib/server/matchup";
 import { getPlayerDetail } from "../../../../lib/server/players";
 import { getWaivers } from "../../../../lib/server/waivers";
 import {
@@ -79,10 +80,11 @@ export default async function HomePage({
       ),
       waivers,
       rosterDetails,
+      matchup: getMatchup(h, leagueId, requestedWeek === null ? {} : { week: requestedWeek }, now),
     };
   });
   if (!read.ok) return <DbError retryHref={base} />;
-  const { overview, team, standings, lineup, waivers, rosterDetails } = read.value;
+  const { overview, team, standings, lineup, waivers, rosterDetails, matchup } = read.value;
   const now = read.now;
   if (!overview.ok) return <DbError retryHref={base} />;
   const week = requestedWeek ?? overview.data.currentWeek;
@@ -155,6 +157,36 @@ export default async function HomePage({
           <NoTeamState leagueId={leagueId} />
         </Card>
       )}
+
+      {matchup.ok ? (
+        <Card data-testid="home-matchup">
+          <CardHeader>
+            <h2 className="sl-label sl-mark">This week's matchup</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold tabular-nums" data-testid="home-matchup-win-pct">
+                {Math.round(matchup.data.winProbability * 100)}%
+              </span>
+              <span className="text-sm text-muted-foreground">to win</span>
+            </div>
+            <p className="mt-1 truncate text-sm text-muted-foreground">
+              vs {matchup.data.opponent.teamName}
+              {Math.round(matchup.data.tieProbability * 100) > 0
+                ? ` · ${Math.round(matchup.data.tieProbability * 100)}% tie chance`
+                : ""}
+            </p>
+            <Link
+              href={`${base}/matchup`}
+              className={`${buttonVariants({ variant: "ghost" })} mt-2 -ml-3`}
+              data-testid="home-see-matchup"
+            >
+              See full matchup
+              <ChevronRight className="size-4" aria-hidden />
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card data-testid="home-standings">
         <CardHeader>
