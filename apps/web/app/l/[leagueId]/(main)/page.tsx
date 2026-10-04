@@ -39,6 +39,7 @@ import {
 } from "../_components/format";
 import { readPage } from "../_components/load";
 import { NoTeamState } from "../_components/no-team";
+import { SeasonStateNotice } from "../_components/season-state-notice";
 
 export default async function HomePage({
   params,
@@ -103,14 +104,12 @@ export default async function HomePage({
         <DataFreshness freshness={freshness} now={now} className="mt-1" />
       </div>
       <StaleBanner freshness={freshness} now={now} />
-      {week === null ? (
-        <p
-          className="rounded-card border bg-card px-3 py-2 text-sm text-muted-foreground"
-          data-testid="home-preseason"
-        >
-          The season has not started. Weekly details like byes and matchups begin once it does.
-        </p>
-      ) : null}
+      <SeasonStateNotice
+        status={overview.data.status}
+        testid="home"
+        preseasonMessage="The season has not started. Weekly details like byes and matchups begin once it does."
+        offseasonMessage="The season is over. Weekly details like byes and matchups will be back when the new season starts."
+      />
 
       {team.ok ? (
         <Card data-testid="home-team-card">

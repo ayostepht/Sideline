@@ -8,6 +8,7 @@ import { leagueBase, parseWeek } from "../../../../../lib/client/nav";
 import { getLeagueIntelligence } from "../../../../../lib/server/league-intelligence";
 import { getLeagueOverview, getStandings } from "../../../../../lib/server/league-views";
 import { readPage } from "../../_components/load";
+import { SeasonStateNotice, seasonStateFor } from "../../_components/season-state-notice";
 import { StandingsList } from "../../_components/standings";
 import { AllPlayLuckList } from "../_components/all-play-luck";
 import { ManagerTendenciesList } from "../_components/manager-tendencies";
@@ -40,6 +41,24 @@ export default async function LeaguePage({
   const { overview, standings, intelligence } = read.value;
   const week = parseWeek(sp.week) ?? overview.data.currentWeek;
   const rows = standings.data.rows;
+
+  // Preseason: no season data exists yet, so there is nothing below worth showing. Offseason
+  // keeps the final season's standings and sections visible (a banner only, see below) since
+  // that retrospective is still useful once the season has ended.
+  if (seasonStateFor(overview.data.status) === "preseason") {
+    return (
+      <div className="flex flex-col gap-3" data-testid="league-page">
+        <h1 className="text-2xl font-semibold tracking-tight">League</h1>
+        <SeasonStateNotice
+          status={overview.data.status}
+          testid="league"
+          preseasonMessage="The season has not started. Standings and team insights begin once the first NFL week opens."
+          offseasonMessage="The season is over. Standings and team insights will be back when the new season starts."
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-3" data-testid="league-page">
       <div>
@@ -47,6 +66,12 @@ export default async function LeaguePage({
         <DataFreshness freshness={standings.data.freshness} now={read.now} className="mt-1" />
       </div>
       <StaleBanner freshness={standings.data.freshness} now={read.now} />
+      <SeasonStateNotice
+        status={overview.data.status}
+        testid="league"
+        preseasonMessage="The season has not started. Standings and team insights begin once the first NFL week opens."
+        offseasonMessage="The season is over. Standings and team insights will be back when the new season starts."
+      />
       {rows.length === 0 ? (
         <EmptyState
           icon={Trophy}

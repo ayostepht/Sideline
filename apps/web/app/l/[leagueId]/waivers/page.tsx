@@ -1,12 +1,15 @@
+import { UserPlus } from "lucide-react";
 import { notFound } from "next/navigation";
 import { DataFreshness } from "../../../../components/data-freshness";
 import { DbError } from "../../../../components/db-error";
+import { EmptyState } from "../../../../components/empty-state";
 import { StaleBanner } from "../../../../components/stale-banner";
 import { leagueBase, parseWeek } from "../../../../lib/client/nav";
 import { getLeagueOverview, getMyTeam } from "../../../../lib/server/league-views";
 import { getWaivers } from "../../../../lib/server/waivers";
 import { readPage } from "../_components/load";
 import { NoTeamState } from "../_components/no-team";
+import { SeasonStateNotice, seasonStateFor } from "../_components/season-state-notice";
 import { dropPlayerMap, parsePositions, parseView } from "./_components/format";
 import { PriorityAdvisorSection } from "./_components/priority-advisor-section";
 import { WaiversSummaryBanner } from "./_components/summary-banner";
@@ -49,6 +52,21 @@ export default async function WaiversPage({
   if (!overview.ok && overview.reason === "not_found") notFound();
   if (!overview.ok) return <DbError retryHref={`${base}/waivers`} />;
 
+  const seasonState = seasonStateFor(overview.data.status);
+  if (seasonState !== null) {
+    return (
+      <div className="flex flex-col gap-3" data-testid="waivers-page">
+        <h1 className="text-2xl font-semibold tracking-tight">Waivers</h1>
+        <SeasonStateNotice
+          status={overview.data.status}
+          testid="waivers"
+          preseasonMessage="The season has not started. Waiver recommendations begin once the first NFL week opens."
+          offseasonMessage="The season is over. Waiver recommendations will be back when the new season starts."
+        />
+      </div>
+    );
+  }
+
   if (!waivers.ok) {
     if (waivers.reason === "no_team") {
       return (
@@ -61,12 +79,11 @@ export default async function WaiversPage({
     return (
       <div className="flex flex-col gap-3" data-testid="waivers-page">
         <h1 className="text-2xl font-semibold tracking-tight">Waivers</h1>
-        <p
-          className="rounded-card border bg-card px-3 py-2 text-sm text-muted-foreground"
-          data-testid="waivers-preseason"
-        >
-          The season has not started. Waiver recommendations begin once the first NFL week opens.
-        </p>
+        <EmptyState
+          icon={UserPlus}
+          title="No waiver data yet"
+          message="Check back after the next sync."
+        />
       </div>
     );
   }

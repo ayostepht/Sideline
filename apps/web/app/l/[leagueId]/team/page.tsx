@@ -39,6 +39,7 @@ export default async function MyTeamPage({
       highlight={null}
       heading="My Team"
       totalRosters={read.value.overview.data.totalRosters}
+      seasonStatus={read.value.overview.data.status}
     />
   );
 }

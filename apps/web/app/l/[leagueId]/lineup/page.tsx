@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { DataFreshness } from "../../../../components/data-freshness";
 import { DbError } from "../../../../components/db-error";
+import { EmptyState } from "../../../../components/empty-state";
 import { StaleBanner } from "../../../../components/stale-banner";
 import { Badge } from "../../../../components/ui/badge";
 import { leagueBase, parseWeek } from "../../../../lib/client/nav";
@@ -8,6 +9,7 @@ import { getLeagueOverview, getStandings } from "../../../../lib/server/league-v
 import { getLineup } from "../../../../lib/server/lineup";
 import { readPage } from "../_components/load";
 import { NoTeamState } from "../_components/no-team";
+import { SeasonStateNotice, seasonStateFor } from "../_components/season-state-notice";
 import {
   isMineRoster,
   parseMode,
@@ -61,6 +63,21 @@ export default async function LineupPage({
   if (!overview.ok && overview.reason === "not_found") notFound();
   if (!overview.ok) return <DbError retryHref={`${base}/lineup`} />;
 
+  const seasonState = seasonStateFor(overview.data.status);
+  if (seasonState !== null) {
+    return (
+      <div className="flex flex-col gap-3" data-testid="lineup-page">
+        <h1 className="text-2xl font-semibold tracking-tight">Lineup</h1>
+        <SeasonStateNotice
+          status={overview.data.status}
+          testid="lineup"
+          preseasonMessage="The season has not started. Lineup advice begins once the first NFL week opens."
+          offseasonMessage="The season is over. Lineup advice will be back when the new season starts."
+        />
+      </div>
+    );
+  }
+
   if (!lineup.ok) {
     if (rosterId !== undefined && standings.ok && !rosterExists(standings.data.rows, rosterId)) {
       notFound();
@@ -76,12 +93,7 @@ export default async function LineupPage({
     return (
       <div className="flex flex-col gap-3" data-testid="lineup-page">
         <h1 className="text-2xl font-semibold tracking-tight">Lineup</h1>
-        <p
-          className="rounded-card border bg-card px-3 py-2 text-sm text-muted-foreground"
-          data-testid="lineup-preseason"
-        >
-          The season has not started. Lineup advice begins once the first NFL week opens.
-        </p>
+        <EmptyState title="No lineup data yet" message="Check back after the next sync." />
       </div>
     );
   }

@@ -9,6 +9,7 @@ import { getLeagueOverview } from "../../../../lib/server/league-views";
 import { getMatchup } from "../../../../lib/server/matchup";
 import { readPage } from "../_components/load";
 import { NoTeamState } from "../_components/no-team";
+import { SeasonStateNotice, seasonStateFor } from "../_components/season-state-notice";
 import { ScoreRange } from "./_components/score-range";
 import { SwingPlayersList } from "./_components/swing-players";
 import { WinProbability } from "./_components/win-probability";
@@ -36,17 +37,31 @@ export default async function MatchupPage({
   if (!overview.ok && overview.reason === "not_found") notFound();
   if (!overview.ok) return <DbError retryHref={retryHref} />;
 
+  const seasonState = seasonStateFor(overview.data.status);
+  if (seasonState !== null) {
+    return (
+      <div className="flex flex-col gap-3" data-testid="matchup-page">
+        <h1 className="text-2xl font-semibold tracking-tight">Matchup</h1>
+        <SeasonStateNotice
+          status={overview.data.status}
+          testid="matchup"
+          preseasonMessage="The season has not started. Matchup analysis begins once the first NFL week opens."
+          offseasonMessage="The season is over. Matchup analysis will be back when the new season starts."
+        />
+      </div>
+    );
+  }
+
   if (!matchup.ok) {
     if (matchup.reason === "not_found") {
       return (
         <div className="flex flex-col gap-3" data-testid="matchup-page">
           <h1 className="text-2xl font-semibold tracking-tight">Matchup</h1>
-          <p
-            className="rounded-card border bg-card px-3 py-2 text-sm text-muted-foreground"
-            data-testid="matchup-preseason"
-          >
-            The season has not started. Matchup analysis begins once the first NFL week opens.
-          </p>
+          <EmptyState
+            icon={Swords}
+            title="No matchup data yet"
+            message="Check back after the next sync."
+          />
         </div>
       );
     }

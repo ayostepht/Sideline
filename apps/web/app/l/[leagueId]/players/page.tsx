@@ -6,6 +6,7 @@ import { leagueBase } from "../../../../lib/client/nav";
 import { getLeagueOverview } from "../../../../lib/server/league-views";
 import { getPlayersList } from "../../../../lib/server/players";
 import { readPage } from "../_components/load";
+import { SeasonStateNotice } from "../_components/season-state-notice";
 import {
   parsePageParam,
   parsePositionParam,
@@ -62,14 +63,12 @@ export default async function PlayersPage({
         <DataFreshness freshness={data.freshness} now={now} className="mt-1" />
       </div>
       <StaleBanner freshness={data.freshness} now={now} />
-      {overview.data.currentWeek === null ? (
-        <p
-          className="rounded-card border bg-card px-3 py-2 text-sm text-muted-foreground"
-          data-testid="players-preseason"
-        >
-          The season has not started. Scoring and trends fill in once the first week is played.
-        </p>
-      ) : null}
+      <SeasonStateNotice
+        status={overview.data.status}
+        testid="players"
+        preseasonMessage="The season has not started. Scoring and trends fill in once the first week is played."
+        offseasonMessage="The season is over. Scoring and trends reflect the final week played."
+      />
       <PlayersExplorer
         leagueId={leagueId}
         initialData={data}

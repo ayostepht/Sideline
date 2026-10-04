@@ -39,6 +39,7 @@ export default async function TeamDetailPage({
         heading={team.roster.teamName}
         backHref={`${leagueBase(leagueId)}/league`}
         totalRosters={read.value.overview.data.totalRosters}
+        seasonStatus={read.value.overview.data.status}
       />
     </>
   );

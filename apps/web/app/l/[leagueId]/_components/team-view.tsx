@@ -9,6 +9,7 @@ import { StaleBanner } from "../../../../components/stale-banner";
 import { Badge } from "../../../../components/ui/badge";
 import { displayName, formatPoints, formatRecord, groupPlayers, isOnBye } from "./format";
 import { ScrollToTarget } from "./scroll-to";
+import { SeasonStateNotice } from "./season-state-notice";
 
 function Section({
   id,
@@ -39,6 +40,7 @@ export function TeamView({
   heading,
   backHref,
   totalRosters,
+  seasonStatus,
 }: {
   team: TeamDetail;
   week: number | null;
@@ -50,6 +52,8 @@ export function TeamView({
   backHref?: string;
   /** League size, for the Rank stat's "of N". Omitted when the caller has not fetched it. */
   totalRosters?: number;
+  /** LeagueOverview.status, drives the preseason/offseason notice. */
+  seasonStatus: string;
 }) {
   const { roster } = team;
   const g = groupPlayers(team.players);
@@ -140,11 +144,12 @@ export function TeamView({
         <DataFreshness freshness={team.freshness} now={now} className="mt-2" />
       </div>
       <StaleBanner freshness={team.freshness} now={now} />
-      {week === null ? (
-        <p className="text-sm text-muted-foreground" data-testid="team-preseason">
-          Weekly details like bye weeks start once the season does.
-        </p>
-      ) : null}
+      <SeasonStateNotice
+        status={seasonStatus}
+        testid="team"
+        preseasonMessage="The season has not started. Weekly details like bye weeks begin once it does."
+        offseasonMessage="The season is over. Weekly details like bye weeks will be back when the new season starts."
+      />
       {empty}
       {g.starters.length > 0 || team.emptySlots.length > 0 ? (
         <Section id="starters" title="Starters" count={g.starters.length + team.emptySlots.length}>
