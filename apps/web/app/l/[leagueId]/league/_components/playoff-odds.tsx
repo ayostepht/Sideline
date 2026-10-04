@@ -23,7 +23,7 @@ function SeedChances({ team }: { team: TeamWithOdds }) {
   if (team.playoffOdds.seedDistribution.length === 0) return null;
   return (
     <details className="text-sm">
-      <summary className="min-h-11 cursor-pointer select-none py-1 font-medium text-link">
+      <summary className="min-h-11 cursor-pointer select-none py-1 font-medium text-foreground underline underline-offset-4">
         Seed chances
       </summary>
       <table className="mt-1 w-full max-w-xs text-sm" data-testid="playoff-odds-seeds">
