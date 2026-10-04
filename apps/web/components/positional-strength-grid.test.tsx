@@ -70,4 +70,27 @@ describe("PositionalStrengthGrid", () => {
     const html = renderToStaticMarkup(<PositionalStrengthGrid teams={[]} entries={[]} />);
     expect(html).toContain("No positional data yet");
   });
+
+  it("renders a card per team (hidden at lg and up) with every position, not just a scrollable table", () => {
+    const entries = [
+      entry({ rosterId: 1, position: "QB", value: 120, delta: 20, ratio: 1.2 }),
+      entry({ rosterId: 1, position: "TE", value: 40, delta: -5, ratio: 0.8 }),
+    ];
+    const html = renderToStaticMarkup(<PositionalStrengthGrid teams={[alpha]} entries={entries} />);
+    expect(html).toContain('data-testid="positional-strength-grid-cards"');
+    expect(html).toContain("lg:hidden");
+    // Cards render every position's value without requiring a scroll: both QB and TE values
+    // appear even though only one is in the "first screen" of the old scrollable table.
+    expect(html).toContain("120.0");
+    expect(html).toContain("40.0");
+  });
+
+  it("marks the desktop table wrapper as a focusable, labeled region (scrollable-region-focusable fix)", () => {
+    const html = renderToStaticMarkup(
+      <PositionalStrengthGrid teams={teams} entries={[entry({})]} />,
+    );
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('role="region"');
+    expect(html).toContain("scroll right for more positions");
+  });
 });

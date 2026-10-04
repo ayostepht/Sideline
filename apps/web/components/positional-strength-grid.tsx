@@ -11,6 +11,15 @@ import { PositionBadge } from "./position-badge";
  * (WCAG: a table IS the accessible form, no separate summary needed). Color intensity is a
  * secondary cue only -- every cell always shows its numeric delta and a direction icon too, so a
  * colorblind user or a grayscale screenshot still gets the full signal (CLAUDE.md section 8).
+ *
+ * UX fix round (post-d05ad4b): a real axe run (`pnpm test:a11y`) flagged the horizontally
+ * scrollable `<table>` wrapper as a `scrollable-region-focusable` serious violation at 390px on
+ * mobile-iphone and mobile-pixel, because at that width TE/K/DEF/FLEX sit past the fold with no
+ * keyboard path and no visible scroll affordance. Rather than bolt a scroll hint onto the table,
+ * this follows the house convention already used by `players-list.tsx` and `waiver-board.tsx`
+ * (table, `StandingsList`): hide the `<table>` below `lg` and render one card per team instead, so
+ * every position is visible without any scrolling at all at narrow widths. The table (unchanged
+ * markup) still ships at `lg` and up, where every column already fits.
  */
 
 export interface PositionalStrengthGridTeam {
@@ -97,11 +106,22 @@ export function PositionalStrengthGrid({ teams, entries, className }: Positional
           <span className="inline-block size-3 rounded-sm bg-negative-soft" /> Below median
         </li>
       </ul>
+      <PositionalStrengthCards teams={teams} positions={positions} cellMap={cellMap} />
+
       {/* [contain:layout] stops the table's intrinsic width (wider than the viewport at 390px)
           from leaking into the document's scrollable area: without it Chromium still grows
           document.documentElement.scrollWidth even though overflow-x-auto visually clips and
-          scrolls the table correctly on its own. */}
-      <div className="overflow-x-auto rounded-card border [contain:layout]">
+          scrolls the table correctly on its own. Hidden below `lg`: see the module doc, this is
+          the house "table on desktop, cards on mobile" convention, which sidesteps the
+          scrollable-region-focusable axe violation entirely instead of patching around it.
+          `tabIndex`/`role`/`aria-label` stay on the wrapper anyway as defense in depth, in case a
+          very wide roster (extra IDP slots) still overflows at `lg`. */}
+      <div
+        className="hidden overflow-x-auto rounded-card border [contain:layout] lg:block"
+        tabIndex={0}
+        role="region"
+        aria-label="Positional strength table, scroll right for more positions"
+      >
         <table className="w-full text-sm" data-testid="positional-strength-grid">
           <caption className="sr-only">
             Positional strength: each team&apos;s projected points at each position versus the
@@ -164,5 +184,71 @@ export function PositionalStrengthGrid({ teams, entries, className }: Positional
         </table>
       </div>
     </div>
+  );
+}
+
+/** One card per team, below `lg`: every position renders in a wrapping grid, so nothing needs
+ * scrolling to be reached (see the module doc for why this replaced a scrollable table here). */
+function PositionalStrengthCards({
+  teams,
+  positions,
+  cellMap,
+}: {
+  teams: readonly PositionalStrengthGridTeam[];
+  positions: readonly string[];
+  cellMap: ReadonlyMap<string, LeagueIntelligenceHeatmapEntry>;
+}) {
+  return (
+    <ol
+      className="flex flex-col gap-2 lg:hidden"
+      data-testid="positional-strength-grid-cards"
+      aria-label="Positional strength by team"
+    >
+      {teams.map((team) => (
+        <li
+          key={team.rosterId}
+          className="rounded-card border bg-card p-3"
+          data-testid="positional-strength-grid-row"
+        >
+          <p className="mb-2 truncate text-sm font-bold" title={team.teamName}>
+            {team.teamName}
+          </p>
+          <div className="grid grid-cols-3 gap-1.5 min-[480px]:grid-cols-4">
+            {positions.map((p) => {
+              const entry = cellMap.get(`${team.rosterId}:${p}`);
+              if (entry === undefined) {
+                return (
+                  <div
+                    key={p}
+                    className="flex flex-col items-center gap-1 rounded-control px-1.5 py-1.5 text-muted-foreground"
+                  >
+                    <PositionBadge position={p} />
+                    <span aria-hidden>-</span>
+                    <span className="sr-only">No data</span>
+                  </div>
+                );
+              }
+              const tone = toneFor(entry);
+              const Icon = tone === "neutral" ? Minus : entry.delta > 0 ? ArrowUp : ArrowDown;
+              return (
+                <div
+                  key={p}
+                  className={`flex flex-col items-center gap-1 rounded-control px-1.5 py-1.5 tabular-nums ${TONE_BG[tone]}`}
+                  data-testid="positional-strength-grid-cell"
+                >
+                  <PositionBadge position={p} />
+                  <span className="font-bold">{entry.value.toFixed(1)}</span>
+                  <span className={`inline-flex items-center gap-0.5 text-xs ${TONE_TEXT[tone]}`}>
+                    <Icon className="size-3" aria-hidden />
+                    <span className="sr-only">vs league median</span>
+                    {formatDelta(entry.delta)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }
