@@ -5,6 +5,7 @@ import {
   clearedSessionCookie,
   constantTimeStringEqual,
   isRateLimited,
+  rateLimiterSizeForTests,
   resetRateLimiterForTests,
   signSession,
   verifySession,
@@ -122,5 +123,38 @@ describe("isRateLimited", () => {
     // once per attempt regardless of outcome, so the limiter itself has no notion of success.
     for (let i = 0; i < 5; i += 1) isRateLimited("9.9.9.9", now);
     expect(isRateLimited("9.9.9.9", now)).toBe(true);
+  });
+
+  it("bounds its memory under a sustained flood of distinct (e.g. spoofed) IPs: map size stays proportional to one window of traffic, not all-time traffic", () => {
+    const start = new Date("2026-01-01T00:00:00.000Z");
+    const ipsPerWindow = 200;
+    const windows = 25; // far more than one window's worth of distinct keys, if unbounded
+
+    for (let w = 0; w < windows; w += 1) {
+      const windowNow = new Date(start.getTime() + w * 61_000); // > RATE_LIMIT_WINDOW_MS apart
+      for (let i = 0; i < ipsPerWindow; i += 1) {
+        isRateLimited(`10.0.${w}.${i}`, windowNow);
+      }
+      // After each window, the map holds at most this window's distinct keys: the sweep on the
+      // next window's first call drops everything from the prior window before adding new keys.
+      expect(rateLimiterSizeForTests()).toBeLessThanOrEqual(ipsPerWindow);
+    }
+
+    // Total distinct keys ever seen across all windows would be ipsPerWindow * windows (5000) if
+    // the map were unbounded; it must stay bounded by a single window's worth instead.
+    expect(rateLimiterSizeForTests()).toBeLessThanOrEqual(ipsPerWindow);
+    expect(rateLimiterSizeForTests()).toBeLessThan(ipsPerWindow * windows);
+  });
+
+  it("still tracks a real IP correctly while many distinct fake IPs cycle through other windows", () => {
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    for (let i = 0; i < 5; i += 1) expect(isRateLimited("8.8.8.8", now)).toBe(false);
+    expect(isRateLimited("8.8.8.8", now)).toBe(true);
+
+    // A flood of unrelated fake IPs in the same window does not reset or evict the real IP's
+    // entry early: the sweep only drops entries whose own window has fully elapsed, and this
+    // window has not elapsed yet.
+    for (let i = 0; i < 50; i += 1) isRateLimited(`192.0.2.${i}`, now);
+    expect(isRateLimited("8.8.8.8", now)).toBe(true);
   });
 });

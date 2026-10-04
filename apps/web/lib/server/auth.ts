@@ -87,12 +87,30 @@ export function clearedSessionCookie(secure: boolean): string {
  * process, so module-scoped state is sufficient; it is not shared across restarts or replicas.
  * Counts every attempt (the window resets only once it has fully elapsed), so a correct password
  * cannot be used to dodge the limiter.
+ *
+ * `clientIp` (see `http.ts`) trusts the last `X-Forwarded-For` entry, which assumes exactly one
+ * trusted reverse proxy. If that assumption is ever violated (no proxy, or a misconfigured one,
+ * both plausible for a self-hosted operator who exposes port 3000 directly), an attacker can key
+ * this map with a unique fake "IP" on every request. A periodic sweep (below) bounds the map's
+ * size to "distinct keys seen within the last window" rather than "distinct keys seen ever", so
+ * a sustained flood of fake IPs cannot grow this map without bound across process lifetime. This
+ * is defense in depth, not a substitute for a correctly configured reverse proxy.
  */
 const attempts = new Map<string, { count: number; windowStart: number }>();
+
+/** Drops every entry whose window has fully elapsed; it will never be read again by its key. */
+function pruneExpired(nowMs: number): void {
+  for (const [key, entry] of attempts) {
+    if (nowMs - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
+      attempts.delete(key);
+    }
+  }
+}
 
 /** Records one login attempt for `ip` and returns true when it is over the limit. */
 export function isRateLimited(ip: string, now: Date): boolean {
   const nowMs = now.getTime();
+  pruneExpired(nowMs);
   const entry = attempts.get(ip);
   if (entry === undefined || nowMs - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
     attempts.set(ip, { count: 1, windowStart: nowMs });
@@ -105,4 +123,9 @@ export function isRateLimited(ip: string, now: Date): boolean {
 /** Test helper: clears all rate limiter state. */
 export function resetRateLimiterForTests(): void {
   attempts.clear();
+}
+
+/** Test helper: current number of tracked keys, to prove the map's memory is bounded. */
+export function rateLimiterSizeForTests(): number {
+  return attempts.size;
 }
