@@ -82,3 +82,79 @@ describe("ManagerTendenciesList / FAAB league", () => {
     expect(html).toContain("$100");
   });
 });
+
+describe("ManagerTendenciesList / pluralization (T6.3c)", () => {
+  it("uses the singular form for a count of exactly 1", () => {
+    const teams = [
+      team({
+        managerTendencies: {
+          transactionCount: 1,
+          waiverClaimsWon: 1,
+          tradeCount: 1,
+          faabSpent: null,
+          faabRemaining: null,
+          faabAverageWinningBid: null,
+          faabMaxWinningBid: null,
+          reasons: [],
+        },
+      }),
+    ];
+    const html = renderToStaticMarkup(<ManagerTendenciesList teams={teams} />);
+    // Count and noun render in separate sibling spans (e.g. `<b>1</b> <span>transaction</span>`),
+    // so assert on the exact noun text rather than a "1 transaction" contiguous string.
+    expect(html).toContain(">transaction<");
+    expect(html).not.toContain(">transactions<");
+    expect(html).toContain(">trade<");
+    expect(html).not.toContain(">trades<");
+    expect(html).toContain(">waiver claim won<");
+    expect(html).not.toContain(">waiver claims won<");
+  });
+
+  it("uses the plural form for counts other than 1, including zero", () => {
+    const teams = [
+      team({
+        managerTendencies: {
+          transactionCount: 0,
+          waiverClaimsWon: 2,
+          tradeCount: 3,
+          faabSpent: null,
+          faabRemaining: null,
+          faabAverageWinningBid: null,
+          faabMaxWinningBid: null,
+          reasons: [],
+        },
+      }),
+    ];
+    const html = renderToStaticMarkup(<ManagerTendenciesList teams={teams} />);
+    expect(html).toContain(">transactions<");
+    expect(html).toContain(">trades<");
+    expect(html).toContain(">waiver claims won<");
+  });
+});
+
+describe("ManagerTendenciesList / desktop table and You marker (T6.3c)", () => {
+  it("shows a denser table at lg and up alongside the mobile card list", () => {
+    const html = renderToStaticMarkup(<ManagerTendenciesList teams={[team({})]} />);
+    expect(html).toContain('data-testid="manager-tendencies-table"');
+    expect(html).toContain("lg:hidden");
+    expect(html).toContain("lg:block");
+  });
+
+  it("marks the viewer's own team with a You badge in both the card and table rows", () => {
+    const teams = [
+      team({ rosterId: 1, teamName: "Mine" }),
+      team({ rosterId: 2, teamName: "Other" }),
+    ];
+    const html = renderToStaticMarkup(<ManagerTendenciesList teams={teams} myRosterId={1} />);
+    const occurrences = html.split('data-testid="manager-tendencies-you"').length - 1;
+    expect(occurrences).toBe(2);
+    const mineOccurrences = html.split('data-mine="true"').length - 1;
+    expect(mineOccurrences).toBe(2);
+  });
+
+  it("marks no team when myRosterId is omitted", () => {
+    const html = renderToStaticMarkup(<ManagerTendenciesList teams={[team({})]} />);
+    expect(html).not.toContain('data-testid="manager-tendencies-you"');
+    expect(html).not.toContain('data-mine="true"');
+  });
+});

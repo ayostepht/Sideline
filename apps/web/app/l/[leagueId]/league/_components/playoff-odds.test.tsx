@@ -91,6 +91,33 @@ describe("PlayoffOddsSection / with odds", () => {
     expect(html).toContain("40%");
   });
 
+  it("shows a denser table at lg and up alongside the mobile card list (T6.3c)", () => {
+    const html = renderToStaticMarkup(<PlayoffOddsSection teams={[withOdds()]} playoffTeams={6} />);
+    expect(html).toContain('data-testid="playoff-odds-table"');
+    expect(html).toContain("lg:hidden");
+    expect(html).toContain("lg:block");
+  });
+
+  it("marks the viewer's own team with a You badge in both the card and table rows (T6.3c)", () => {
+    const teams = [
+      withOdds({ rosterId: 1, teamName: "Mine" }),
+      withOdds({ rosterId: 2, teamName: "Other" }),
+    ];
+    const html = renderToStaticMarkup(
+      <PlayoffOddsSection teams={teams} playoffTeams={6} myRosterId={1} />,
+    );
+    const occurrences = html.split('data-testid="playoff-odds-you"').length - 1;
+    expect(occurrences).toBe(2);
+    const mineOccurrences = html.split('data-mine="true"').length - 1;
+    expect(mineOccurrences).toBe(2);
+  });
+
+  it("marks no team when myRosterId is omitted", () => {
+    const html = renderToStaticMarkup(<PlayoffOddsSection teams={[withOdds()]} playoffTeams={6} />);
+    expect(html).not.toContain('data-testid="playoff-odds-you"');
+    expect(html).not.toContain('data-mine="true"');
+  });
+
   it("shows the season-level reasons once, not per team", () => {
     const teams = [
       withOdds({

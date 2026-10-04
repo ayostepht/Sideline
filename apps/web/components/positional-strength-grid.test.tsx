@@ -93,4 +93,21 @@ describe("PositionalStrengthGrid", () => {
     expect(html).toContain('role="region"');
     expect(html).toContain("scroll right for more positions");
   });
+
+  it("marks the viewer's own team with a You badge in both the card and table views (T6.3c)", () => {
+    const html = renderToStaticMarkup(
+      <PositionalStrengthGrid teams={teams} entries={[entry({})]} myRosterId={2} />,
+    );
+    const occurrences = html.split('data-testid="positional-strength-grid-you"').length - 1;
+    expect(occurrences).toBe(2); // one in the card list, one in the table
+    expect(html).toContain('data-mine="true"');
+  });
+
+  it("marks no team when myRosterId is not provided or does not match any team", () => {
+    const html = renderToStaticMarkup(
+      <PositionalStrengthGrid teams={teams} entries={[entry({})]} />,
+    );
+    expect(html).not.toContain('data-testid="positional-strength-grid-you"');
+    expect(html).not.toContain('data-mine="true"');
+  });
 });

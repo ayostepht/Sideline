@@ -2,6 +2,15 @@ import type { LeagueIntelligenceHeatmapEntry } from "@sideline/shared";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import { POSITION_KEYS } from "./position";
 import { PositionBadge } from "./position-badge";
+import { Badge } from "./ui/badge";
+
+function YouBadge() {
+  return (
+    <Badge variant="you" data-testid="positional-strength-grid-you">
+      You
+    </Badge>
+  );
+}
 
 /**
  * LEAGUE-4 (T5.5b): positional strength heatmap, one row per team and one column per roster
@@ -30,6 +39,9 @@ export interface PositionalStrengthGridTeam {
 export interface PositionalStrengthGridProps {
   teams: readonly PositionalStrengthGridTeam[];
   entries: readonly LeagueIntelligenceHeatmapEntry[];
+  /** The signed-in user's roster id in this league, if known; marks that team's row with the
+   * same "You" badge-plus-tint treatment `standings.tsx` uses (T6.3c). */
+  myRosterId?: number | null;
   className?: string;
 }
 
@@ -77,10 +89,16 @@ function orderedPositions(entries: readonly LeagueIntelligenceHeatmapEntry[]): s
   return [...known, ...unknown];
 }
 
-export function PositionalStrengthGrid({ teams, entries, className }: PositionalStrengthGridProps) {
+export function PositionalStrengthGrid({
+  teams,
+  entries,
+  myRosterId = null,
+  className,
+}: PositionalStrengthGridProps) {
   const positions = orderedPositions(entries);
   const cellMap = new Map<string, LeagueIntelligenceHeatmapEntry>();
   for (const e of entries) cellMap.set(`${e.rosterId}:${e.position}`, e);
+  const isMine = (rosterId: number) => myRosterId !== null && rosterId === myRosterId;
 
   if (teams.length === 0 || positions.length === 0) {
     return (
@@ -106,7 +124,12 @@ export function PositionalStrengthGrid({ teams, entries, className }: Positional
           <span className="inline-block size-3 rounded-sm bg-negative-soft" /> Below median
         </li>
       </ul>
-      <PositionalStrengthCards teams={teams} positions={positions} cellMap={cellMap} />
+      <PositionalStrengthCards
+        teams={teams}
+        positions={positions}
+        cellMap={cellMap}
+        isMine={isMine}
+      />
 
       {/* [contain:layout] stops the table's intrinsic width (wider than the viewport at 390px)
           from leaking into the document's scrollable area: without it Chromium still grows
@@ -140,46 +163,60 @@ export function PositionalStrengthGrid({ teams, entries, className }: Positional
             </tr>
           </thead>
           <tbody className="divide-y">
-            {teams.map((team) => (
-              <tr key={team.rosterId} data-testid="positional-strength-grid-row">
-                <th
-                  scope="row"
-                  className="sticky left-0 z-10 max-w-[9rem] truncate bg-card px-3 py-1.5 text-left font-bold"
-                  title={team.teamName}
+            {teams.map((team) => {
+              const mine = isMine(team.rosterId);
+              return (
+                <tr
+                  key={team.rosterId}
+                  data-testid="positional-strength-grid-row"
+                  data-mine={mine ? "true" : undefined}
+                  className={mine ? "bg-accent-soft hover:bg-accent-soft" : "hover:bg-muted"}
                 >
-                  {team.teamName}
-                </th>
-                {positions.map((p) => {
-                  const entry = cellMap.get(`${team.rosterId}:${p}`);
-                  if (entry === undefined) {
+                  <th
+                    scope="row"
+                    className={`sticky left-0 z-10 max-w-[9rem] px-3 py-1.5 text-left font-bold ${
+                      mine ? "bg-accent-soft shadow-[inset_3px_0_0_var(--highlight)]" : "bg-card"
+                    }`}
+                  >
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 truncate" title={team.teamName}>
+                        {team.teamName}
+                      </span>
+                      {mine ? <YouBadge /> : null}
+                    </span>
+                  </th>
+                  {positions.map((p) => {
+                    const entry = cellMap.get(`${team.rosterId}:${p}`);
+                    if (entry === undefined) {
+                      return (
+                        <td key={p} className="px-2 py-1.5 text-center text-muted-foreground">
+                          <span aria-hidden>-</span>
+                          <span className="sr-only">No data</span>
+                        </td>
+                      );
+                    }
+                    const tone = toneFor(entry);
+                    const Icon = tone === "neutral" ? Minus : entry.delta > 0 ? ArrowUp : ArrowDown;
                     return (
-                      <td key={p} className="px-2 py-1.5 text-center text-muted-foreground">
-                        <span aria-hidden>-</span>
-                        <span className="sr-only">No data</span>
+                      <td
+                        key={p}
+                        className={`px-2 py-1.5 text-center tabular-nums ${TONE_BG[tone]}`}
+                        data-testid="positional-strength-grid-cell"
+                      >
+                        <span className="block font-bold">{entry.value.toFixed(1)}</span>
+                        <span
+                          className={`inline-flex items-center gap-0.5 text-xs ${TONE_TEXT[tone]}`}
+                        >
+                          <Icon className="size-3" aria-hidden />
+                          <span className="sr-only">vs league median</span>
+                          {formatDelta(entry.delta)}
+                        </span>
                       </td>
                     );
-                  }
-                  const tone = toneFor(entry);
-                  const Icon = tone === "neutral" ? Minus : entry.delta > 0 ? ArrowUp : ArrowDown;
-                  return (
-                    <td
-                      key={p}
-                      className={`px-2 py-1.5 text-center tabular-nums ${TONE_BG[tone]}`}
-                      data-testid="positional-strength-grid-cell"
-                    >
-                      <span className="block font-bold">{entry.value.toFixed(1)}</span>
-                      <span
-                        className={`inline-flex items-center gap-0.5 text-xs ${TONE_TEXT[tone]}`}
-                      >
-                        <Icon className="size-3" aria-hidden />
-                        <span className="sr-only">vs league median</span>
-                        {formatDelta(entry.delta)}
-                      </span>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -193,10 +230,12 @@ function PositionalStrengthCards({
   teams,
   positions,
   cellMap,
+  isMine,
 }: {
   teams: readonly PositionalStrengthGridTeam[];
   positions: readonly string[];
   cellMap: ReadonlyMap<string, LeagueIntelligenceHeatmapEntry>;
+  isMine: (rosterId: number) => boolean;
 }) {
   return (
     <ol
@@ -204,51 +243,60 @@ function PositionalStrengthCards({
       data-testid="positional-strength-grid-cards"
       aria-label="Positional strength by team"
     >
-      {teams.map((team) => (
-        <li
-          key={team.rosterId}
-          className="rounded-card border bg-card p-3"
-          data-testid="positional-strength-grid-row"
-        >
-          <p className="mb-2 truncate text-sm font-bold" title={team.teamName}>
-            {team.teamName}
-          </p>
-          <div className="grid grid-cols-3 gap-1.5 min-[480px]:grid-cols-4">
-            {positions.map((p) => {
-              const entry = cellMap.get(`${team.rosterId}:${p}`);
-              if (entry === undefined) {
+      {teams.map((team) => {
+        const mine = isMine(team.rosterId);
+        return (
+          <li
+            key={team.rosterId}
+            className={`rounded-card border bg-card p-3 ${
+              mine ? "bg-accent-soft shadow-[inset_3px_0_0_var(--highlight)]" : ""
+            }`}
+            data-testid="positional-strength-grid-row"
+            data-mine={mine ? "true" : undefined}
+          >
+            <p className="mb-2 flex min-w-0 items-center gap-2 text-sm font-bold">
+              <span className="min-w-0 truncate" title={team.teamName}>
+                {team.teamName}
+              </span>
+              {mine ? <YouBadge /> : null}
+            </p>
+            <div className="grid grid-cols-3 gap-1.5 min-[480px]:grid-cols-4">
+              {positions.map((p) => {
+                const entry = cellMap.get(`${team.rosterId}:${p}`);
+                if (entry === undefined) {
+                  return (
+                    <div
+                      key={p}
+                      className="flex flex-col items-center gap-1 rounded-control px-1.5 py-1.5 text-muted-foreground"
+                    >
+                      <PositionBadge position={p} />
+                      <span aria-hidden>-</span>
+                      <span className="sr-only">No data</span>
+                    </div>
+                  );
+                }
+                const tone = toneFor(entry);
+                const Icon = tone === "neutral" ? Minus : entry.delta > 0 ? ArrowUp : ArrowDown;
                 return (
                   <div
                     key={p}
-                    className="flex flex-col items-center gap-1 rounded-control px-1.5 py-1.5 text-muted-foreground"
+                    className={`flex flex-col items-center gap-1 rounded-control px-1.5 py-1.5 tabular-nums ${TONE_BG[tone]}`}
+                    data-testid="positional-strength-grid-cell"
                   >
                     <PositionBadge position={p} />
-                    <span aria-hidden>-</span>
-                    <span className="sr-only">No data</span>
+                    <span className="font-bold">{entry.value.toFixed(1)}</span>
+                    <span className={`inline-flex items-center gap-0.5 text-xs ${TONE_TEXT[tone]}`}>
+                      <Icon className="size-3" aria-hidden />
+                      <span className="sr-only">vs league median</span>
+                      {formatDelta(entry.delta)}
+                    </span>
                   </div>
                 );
-              }
-              const tone = toneFor(entry);
-              const Icon = tone === "neutral" ? Minus : entry.delta > 0 ? ArrowUp : ArrowDown;
-              return (
-                <div
-                  key={p}
-                  className={`flex flex-col items-center gap-1 rounded-control px-1.5 py-1.5 tabular-nums ${TONE_BG[tone]}`}
-                  data-testid="positional-strength-grid-cell"
-                >
-                  <PositionBadge position={p} />
-                  <span className="font-bold">{entry.value.toFixed(1)}</span>
-                  <span className={`inline-flex items-center gap-0.5 text-xs ${TONE_TEXT[tone]}`}>
-                    <Icon className="size-3" aria-hidden />
-                    <span className="sr-only">vs league median</span>
-                    {formatDelta(entry.delta)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </li>
-      ))}
+              })}
+            </div>
+          </li>
+        );
+      })}
     </ol>
   );
 }

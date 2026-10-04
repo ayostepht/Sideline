@@ -98,4 +98,29 @@ describe("PowerRankingsList", () => {
     const html = renderToStaticMarkup(<PowerRankingsList teams={teams} />);
     expect(html).toContain('data-testid="why-trigger"');
   });
+
+  it("shows a denser table at lg and up alongside the mobile card list (T6.3c)", () => {
+    const html = renderToStaticMarkup(<PowerRankingsList teams={[team({})]} />);
+    expect(html).toContain('data-testid="power-rankings-table"');
+    expect(html).toContain("lg:hidden");
+    expect(html).toContain("lg:block");
+  });
+
+  it("marks the viewer's own team with a You badge in both the card and table rows (T6.3c)", () => {
+    const teams = [
+      team({ rosterId: 1, teamName: "Mine" }),
+      team({ rosterId: 2, teamName: "Other" }),
+    ];
+    const html = renderToStaticMarkup(<PowerRankingsList teams={teams} myRosterId={1} />);
+    const occurrences = html.split('data-testid="power-rankings-you"').length - 1;
+    expect(occurrences).toBe(2);
+    const mineOccurrences = html.split('data-mine="true"').length - 1;
+    expect(mineOccurrences).toBe(2);
+  });
+
+  it("marks no team when myRosterId is omitted", () => {
+    const html = renderToStaticMarkup(<PowerRankingsList teams={[team({})]} />);
+    expect(html).not.toContain('data-testid="power-rankings-you"');
+    expect(html).not.toContain('data-mine="true"');
+  });
 });
