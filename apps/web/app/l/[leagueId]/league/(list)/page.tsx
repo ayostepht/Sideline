@@ -2,11 +2,17 @@ import { Trophy } from "lucide-react";
 import { DataFreshness } from "../../../../../components/data-freshness";
 import { DbError } from "../../../../../components/db-error";
 import { EmptyState } from "../../../../../components/empty-state";
+import { PositionalStrengthGrid } from "../../../../../components/positional-strength-grid";
 import { StaleBanner } from "../../../../../components/stale-banner";
 import { leagueBase, parseWeek } from "../../../../../lib/client/nav";
+import { getLeagueIntelligence } from "../../../../../lib/server/league-intelligence";
 import { getLeagueOverview, getStandings } from "../../../../../lib/server/league-views";
 import { readPage } from "../../_components/load";
 import { StandingsList } from "../../_components/standings";
+import { AllPlayLuckList } from "../_components/all-play-luck";
+import { ManagerTendenciesList } from "../_components/manager-tendencies";
+import { PlayoffOddsSection } from "../_components/playoff-odds";
+import { PowerRankingsList } from "../_components/power-rankings";
 
 export default async function LeaguePage({
   params,
@@ -21,11 +27,17 @@ export default async function LeaguePage({
   const read = readPage((h, now) => ({
     overview: getLeagueOverview(h, leagueId, now),
     standings: getStandings(h, leagueId, now),
+    intelligence: getLeagueIntelligence(h, leagueId, now),
   }));
-  if (!read.ok || !read.value.overview.ok || !read.value.standings.ok) {
+  if (
+    !read.ok ||
+    !read.value.overview.ok ||
+    !read.value.standings.ok ||
+    !read.value.intelligence.ok
+  ) {
     return <DbError retryHref={retryHref} />;
   }
-  const { overview, standings } = read.value;
+  const { overview, standings, intelligence } = read.value;
   const week = parseWeek(sp.week) ?? overview.data.currentWeek;
   const rows = standings.data.rows;
   return (
@@ -48,6 +60,47 @@ export default async function LeaguePage({
               Standings
             </h2>
             <StandingsList rows={rows} leagueId={leagueId} week={week} />
+          </section>
+
+          <section aria-labelledby="league-power-h" className="flex flex-col gap-1">
+            <h2 id="league-power-h" className="sl-label sl-mark">
+              Power rankings
+            </h2>
+            <PowerRankingsList teams={intelligence.data.teams} />
+          </section>
+
+          <section aria-labelledby="league-allplay-h" className="flex flex-col gap-1">
+            <h2 id="league-allplay-h" className="sl-label sl-mark">
+              All-play record and luck
+            </h2>
+            <AllPlayLuckList teams={intelligence.data.teams} />
+          </section>
+
+          <section aria-labelledby="league-heatmap-h" className="flex flex-col gap-1">
+            <h2 id="league-heatmap-h" className="sl-label sl-mark">
+              Positional strength
+            </h2>
+            <PositionalStrengthGrid
+              teams={intelligence.data.teams}
+              entries={intelligence.data.positionalHeatmap}
+            />
+          </section>
+
+          <section aria-labelledby="league-manager-h" className="flex flex-col gap-1">
+            <h2 id="league-manager-h" className="sl-label sl-mark">
+              Manager tendencies
+            </h2>
+            <ManagerTendenciesList teams={intelligence.data.teams} />
+          </section>
+
+          <section aria-labelledby="league-playoffs-h" className="flex flex-col gap-1">
+            <h2 id="league-playoffs-h" className="sl-label sl-mark">
+              Playoff odds
+            </h2>
+            <PlayoffOddsSection
+              teams={intelligence.data.teams}
+              playoffTeams={intelligence.data.playoffTeams}
+            />
           </section>
         </>
       )}
