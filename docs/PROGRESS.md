@@ -10,7 +10,7 @@
 | 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` (merged) | Done, G4 PASS 2026-10-03 (Steph approved) |
 | 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
-| 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` | In progress, Batch A dispatched 2026-10-04 |
+| 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` | In progress, Batch C dispatched 2026-10-04 (Batches A, B done) |
 
 ## Resume point
 
