@@ -22,8 +22,8 @@ Batch letters and dependencies amended from PLAN.md's literal table per ADR-016 
 
 | ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|---|
-| T5.1 | Matchup Monte Carlo and swing players (SIM-1 to SIM-3), `packages/core/src/sim/` | analytics-engineer | G4 | A | Dispatched | 1 | |
-| T5.2 | All-play, luck, power score, positional heatmap, manager tendencies (LEAGUE-1 to 4, 6), `packages/core/src/league/` | analytics-engineer | G4 | A | Dispatched | 1 | |
+| T5.1 | Matchup Monte Carlo and swing players (SIM-1 to SIM-3), `packages/core/src/sim/` | analytics-engineer | G4 | A | Done, M1 fix in flight | 1 | `605c13f` |
+| T5.2 | All-play, luck, power score, positional heatmap, manager tendencies (LEAGUE-1 to 4, 6), `packages/core/src/league/` | analytics-engineer | G4 | A | Done | 1 | `15f19b9` |
 | T5.3 | Playoff odds (LEAGUE-5) | analytics-engineer | T5.1 | B | Not started | 0 | |
 | T5.4 | Data functions and APIs for matchup and league intelligence; `computed_cache` wiring and invalidation | backend-engineer | T5.1, T5.2, T5.3 | C | Not started | 0 | |
 | T5.5 | Matchup page; League intelligence sections; Home win probability | frontend-engineer | T5.3, T5.4 | D | Not started | 0 | |
@@ -36,6 +36,11 @@ Batch letters and dependencies amended from PLAN.md's literal table per ADR-016 
 Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`; Phase 4 (task table, live fixes, gate-time fixes, G4 phase checks) in `docs/archive/progress-phase4.md`. Standing rules for briefs are in `docs/brief-rules.md`.
 
 ## Backlog (open items only)
+
+### Phase 5 (in progress)
+
+- **G4 code review Batch A minors (`docs/reviews/2026-10-03-p5-batchA-code.md`):** `packages/core/src/sim/matchup.ts`'s `NO_DRAW = -1` sentinel overlaps a representable (if invalid) real `sd` value -- if `sd` is ever exactly -1, the starter silently gets treated as zero-variance instead of hitting the sampler's existing `sd <= 0` fallback; prefer a boolean `hasDraw` flag over an overloaded sign. `flattenStarter` builds an intermediate object array then copies into typed arrays -- redundant indirection, no measured perf impact (~30x margin against SIM-3's 300ms budget), lowest priority.
+
 
 Remove an item when it is done; the archive keeps history.
 
