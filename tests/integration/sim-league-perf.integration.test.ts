@@ -31,8 +31,8 @@ import { getRosterStrength } from "../../apps/web/lib/server/roster-strength.js"
  * - `getLeagueIntelligence` is the heaviest: it calls `getRosterStrength` once (10 optimizer
  *   solves) PLUS one `simulatePlayoffOdds` Monte Carlo run of 10,000 iterations (one run for the
  *   whole league, not per team -- see `playoff-odds.ts`), plus all-play/luck/heatmap/manager-
- *   tendencies aggregation across every team. Measured p95 cold is about 45-50 ms. 300 ms (PLAN
- *   6.6's existing budget) gives about 6x headroom, which is tighter than the other two but
+ *   tendencies aggregation across every team. Measured p95 cold is about 45-57 ms. 300 ms (PLAN
+ *   6.6's existing budget) gives about 5x headroom, which is tighter than the other two but
  *   appropriate given this function does strictly more real work than either on its own; a larger
  *   league (more rosters, more weeks of history) would cost proportionally more here than for the
  *   other two, so this budget intentionally has less slack to keep the test meaningful as a guard
