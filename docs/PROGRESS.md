@@ -24,7 +24,7 @@ Batch letters and task splits amended from PLAN.md's literal table per ADR-017 (
 |---|---|---|---|---|---|---|---|
 | T6.1 | Auth (HOST-8: session cookie, login/logout API routes, rate limiter, constant-time compare) + security headers (both via `apps/web/middleware.ts`) + structured logging (`pino`, matching the worker's existing convention) | backend-engineer | G5 | A | Dispatched | 1 | |
 | T6.2 | Docker final: PUID/PGID default fix, Unraid template, `docs/self-hosting.md` + README rewrite | devops-engineer | G5 | A | Done | 1 | `6c2b9f3`, `89d703c` |
-| T6.3a | PWA manifest, icons, favicon; theme-color/toggle conflict fix | frontend-engineer | G5 | A | Dispatched | 1 | |
+| T6.3a | PWA manifest, icons, favicon; theme-color/toggle conflict fix | frontend-engineer | G5 | A | Done | 1 | `0ed301f` |
 | T6.1c | Login page (`apps/web/app/login/page.tsx`), ownership split from T6.1 (non-API page) | frontend-engineer | T6.1 | B | Not started | 0 | |
 | T6.3b | Preseason and offseason states (consolidate existing ad hoc preseason copy, add offseason) | frontend-engineer | G5 | B | Not started | 0 | |
 | T6.3c | League UX polish: desktop density (`lg:` tables, 5 sections), "You" markers (6 sections), manager-tendencies pluralization | frontend-engineer | G5 | B | Not started | 0 | |
