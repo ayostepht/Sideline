@@ -5,6 +5,7 @@ import { DbError } from "../../../../components/db-error";
 import { EmptyState } from "../../../../components/empty-state";
 import { StaleBanner } from "../../../../components/stale-banner";
 import { leagueBase, parseWeek } from "../../../../lib/client/nav";
+import { getLeagueOverview } from "../../../../lib/server/league-views";
 import { getMatchup } from "../../../../lib/server/matchup";
 import { readPage } from "../_components/load";
 import { NoTeamState } from "../_components/no-team";
@@ -25,13 +26,30 @@ export default async function MatchupPage({
   const retryHref = `${base}/matchup`;
   const week = parseWeek(sp.week);
 
-  const read = readPage((h, now) => getMatchup(h, leagueId, week !== null ? { week } : {}, now));
+  const read = readPage((h, now) => ({
+    overview: getLeagueOverview(h, leagueId, now),
+    matchup: getMatchup(h, leagueId, week !== null ? { week } : {}, now),
+  }));
   if (!read.ok) return <DbError retryHref={retryHref} />;
-  const matchup = read.value;
+  const { overview, matchup } = read.value;
   const now = read.now;
+  if (!overview.ok && overview.reason === "not_found") notFound();
+  if (!overview.ok) return <DbError retryHref={retryHref} />;
 
   if (!matchup.ok) {
-    if (matchup.reason === "not_found") notFound();
+    if (matchup.reason === "not_found") {
+      return (
+        <div className="flex flex-col gap-3" data-testid="matchup-page">
+          <h1 className="text-2xl font-semibold tracking-tight">Matchup</h1>
+          <p
+            className="rounded-card border bg-card px-3 py-2 text-sm text-muted-foreground"
+            data-testid="matchup-preseason"
+          >
+            The season has not started. Matchup analysis begins once the first NFL week opens.
+          </p>
+        </div>
+      );
+    }
     if (matchup.reason === "no_team") {
       return (
         <div className="flex flex-col gap-3" data-testid="matchup-page">
