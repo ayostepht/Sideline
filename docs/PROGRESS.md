@@ -39,7 +39,8 @@ Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progre
 
 ### Phase 5 (in progress)
 
-- **G4 code review Batch A minors (`docs/reviews/2026-10-03-p5-batchA-code.md`):** `packages/core/src/sim/matchup.ts`'s `NO_DRAW = -1` sentinel overlaps a representable (if invalid) real `sd` value -- if `sd` is ever exactly -1, the starter silently gets treated as zero-variance instead of hitting the sampler's existing `sd <= 0` fallback; prefer a boolean `hasDraw` flag over an overloaded sign. `flattenStarter` builds an intermediate object array then copies into typed arrays -- redundant indirection, no measured perf impact (~30x margin against SIM-3's 300ms budget), lowest priority.
+- **Batch A code review minors (`docs/reviews/2026-10-03-p5-batchA-code.md`):** `packages/core/src/sim/matchup.ts`'s `NO_DRAW = -1` sentinel overlaps a representable (if invalid) real `sd` value -- if `sd` is ever exactly -1, the starter silently gets treated as zero-variance instead of hitting the sampler's existing `sd <= 0` fallback; prefer a boolean `hasDraw` flag over an overloaded sign. `flattenStarter` builds an intermediate object array then copies into typed arrays -- redundant indirection, no measured perf impact (~30x margin against SIM-3's 300ms budget), lowest priority.
+- **Batch B code review minors (`docs/reviews/2026-10-03-p5-batchB-code.md`):** `packages/core/src/league/playoff-odds.ts` has no perf smoke test for its per-iteration ranking sort (unlike `sim/matchup.perf.test.ts`'s SIM-3 test) -- reviewer manually benchmarked a realistic 12-team/7-week/10,000-iteration run at ~33ms, not a bottleneck today but no regression guard exists; `seeds.get(t.rosterId) as number` (line ~146) is a provably-safe `Map.get` cast with no comment explaining why, unlike the file's other array-index casts which do have one.
 
 
 Remove an item when it is done; the archive keeps history.
