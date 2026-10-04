@@ -323,6 +323,55 @@ describe("recommendLineup (LINEUP-3..LINEUP-6)", () => {
     ]);
   });
 
+  it("reports no swaps for a 3-way tied WR/FLEX lineup (T6.8 bug fix: Steph's reported scenario)", () => {
+    // Reproduces the exact reported shape: 2 WR slots + 1 FLEX slot, 3 WR-eligible players tied
+    // in value, already started in a particular arrangement. Before the stability fix, the
+    // solver's only tiebreak (ascending playerId) could return a different-but-equal-value
+    // permutation than the current lineup, producing a chain of "swaps" that netted to zero
+    // benefit. Values are exactly tied, so any permutation is equally optimal; the fix means the
+    // one matching today's actual lineup is reported, i.e. no swaps and zero point delta.
+    const slots = [slot("WR", ["WR"]), slot("WR", ["WR"]), slot("FLEX", ["RB", "WR", "TE"])];
+    const players = [
+      player({
+        playerId: "nico-collins",
+        fantasyPositions: ["WR"],
+        rawValue: 15,
+        kickoffUtc: BEFORE_KICKOFF,
+      }),
+      player({
+        playerId: "jameson-williams",
+        fantasyPositions: ["WR"],
+        rawValue: 15,
+        kickoffUtc: BEFORE_KICKOFF,
+      }),
+      player({
+        playerId: "dontayvion-wicks",
+        fantasyPositions: ["WR"],
+        rawValue: 15,
+        kickoffUtc: BEFORE_KICKOFF,
+      }),
+    ];
+    // Today's actual lineup, deliberately not the playerId-ascending order the solver would
+    // otherwise default to.
+    const currentAssignment = ["dontayvion-wicks", "nico-collins", "jameson-williams"];
+
+    const result = recommendLineup({
+      slots,
+      slotWarnings: [],
+      players,
+      currentAssignment,
+      now: NOW,
+    });
+
+    expect(result.swaps).toEqual([]);
+    expect(result.pointDelta).toBeCloseTo(0, 9);
+    expect(result.optimalAssignment).toEqual([
+      { slotType: "WR", playerId: "dontayvion-wicks" },
+      { slotType: "WR", playerId: "nico-collins" },
+      { slotType: "FLEX", playerId: "jameson-williams" },
+    ]);
+  });
+
   it("echoes the current assignment normalized and parallel to slots", () => {
     const slots = [slot("RB", ["RB"]), slot("WR", ["WR"])];
     const players = [player({ playerId: "RB1", fantasyPositions: ["RB"], rawValue: 5 })];

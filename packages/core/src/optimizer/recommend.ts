@@ -7,6 +7,13 @@
  * LINEUP-5 (Projected/Safe/Upside modes) needs no code here: `rawValue` on each
  * {@link RecommendLineupPlayer} is whatever quantity the caller already chose (median, floor, or
  * ceiling); this module is mode-agnostic by construction.
+ *
+ * LINEUP-6 solver stability fix: today's current lineup is passed to
+ * {@link solveOptimalAssignment} as its optional `currentAssignment` stability hint (see
+ * `recommendLineup`'s step d below and `solve.ts`'s "Solution stability" doc paragraph), so that
+ * when several eligible players are tied in value across interchangeable slots (e.g. three
+ * WR-eligible players tied in value across two WR slots and a FLEX slot), `swaps` and `pointDelta`
+ * reflect only genuine improvements and never a meaningless chain of equally-valued swaps.
  */
 import type { Reason } from "@sideline/shared";
 import { applyAvailability } from "./availability.js";
@@ -82,7 +89,13 @@ interface Processed {
  * removed from the solver; (c) every locked player (starting or benched) is excluded from the
  * solver entirely - their fate is already fully determined by (b), and leaving a locked current
  * starter in the pool would let the solver also assign them into a second, non-locked slot,
- * duplicating them in the output; (d) solve the remaining slots/players exactly;
+ * duplicating them in the output; (d) solve the remaining slots/players exactly, passing each
+ * solver slot's current incumbent through to {@link solveOptimalAssignment}'s optional
+ * `currentAssignment` stability hint (see that module's "Solution stability" doc paragraph) so
+ * that when several players are tied in value across interchangeable slots (e.g. WR/FLEX overlap),
+ * the solver reports the player's actual current lineup rather than a different-but-equal-value
+ * permutation - without this, step f below could report a chain of "swaps" that nets to exactly
+ * zero `pointDelta`, which is confusing and not a real recommendation;
  * (e)-(i) assemble the echo of today's lineup, the swap list, the point delta, per-player reasons,
  * and the issues list (unknown slot types, empty slots, inactive current starters).
  */
@@ -160,10 +173,18 @@ export function recommendLineup(input: RecommendLineupInput): RecommendLineupRes
     solverValues[player.playerId] = processedById.get(player.playerId)?.adjustedValue ?? 0;
   }
 
+  // Current incumbent for each solver slot (locked slots are pinned above, not passed to the
+  // solver at all), so the solver's stability bonus (see solve.ts) prefers reporting today's
+  // actual lineup over an equally-valued permutation of it.
+  const solverCurrentAssignment: Array<string | null> = solverSlotOriginalIndex.map(
+    (originalIndex) => at(currentPlayerIdBySlot, originalIndex),
+  );
+
   const solveResult = solveOptimalAssignment({
     slots: solverSlots,
     players: solverPlayers,
     values: solverValues,
+    currentAssignment: solverCurrentAssignment,
   });
 
   const optimalAssignment: SlotAssignment[] = slots.map((slot, i) => {

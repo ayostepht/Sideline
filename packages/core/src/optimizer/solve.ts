@@ -35,6 +35,30 @@
  * worthless player over leaving it empty whenever no better option exists - silently recommending
  * a player the system has itself determined is unavailable. The epsilon is excluded from the
  * reported `totalValue`, which is always the exact sum of real player values.
+ *
+ * ## Solution stability (optional `currentAssignment`)
+ * Because the `playerId`-ascending tiebreak above only orders *individual* (slot, player) edges,
+ * it does nothing to prevent a different-but-equal-*total*-value permutation from being chosen
+ * when several interchangeable players (e.g. three WR-eligible players tied in value across two
+ * WR slots and a FLEX slot that all accept WR) can be arranged multiple equally-optimal ways. A
+ * caller that diffs the result against a real current lineup (see `recommend.ts`) would then
+ * report a chain of "swaps" that nets to exactly zero benefit - confusing and not a real
+ * recommendation.
+ *
+ * `AssignmentInput.currentAssignment`, when supplied, gives each slot's current incumbent player
+ * id (or `null`), parallel to `slots` by index. When a (slot, player) edge's player is that slot's
+ * incumbent, it receives `STABILITY_BONUS_EPSILON` - strictly larger than the largest possible
+ * `playerId` tiebreak (`numPlayers * TIEBREAK_EPSILON`, comfortably true for any realistic roster
+ * or player-pool size) so it is the *primary* tiebreak whenever both apply, but still many orders
+ * of magnitude smaller than any realistic point value, so (exactly like `TIEBREAK_EPSILON`) it can
+ * never change which *value* is optimal, only which equally-valued assignment is reported. The
+ * same positive/non-positive sign-flip logic as the main tiebreak applies, so a stability bonus
+ * never makes the solver prefer keeping a zero/negative-value incumbent over leaving the slot
+ * empty or picking a genuinely positive-value alternative.
+ *
+ * This parameter is optional and additive: every existing call site (e.g. `waiver/lineup-impact.ts`,
+ * which has no notion of a "current" lineup) simply never passes it, and omitting it leaves
+ * behavior byte-for-byte identical to before this parameter existed.
  */
 import { isPlayerEligibleForSlot, type SlotSpec } from "./eligibility.js";
 
@@ -48,6 +72,12 @@ export interface AssignmentInput {
   players: readonly AssignmentPlayer[];
   /** Player value under the caller's selected mode. A player with no entry is treated as 0. */
   values: Readonly<Record<string, number>>;
+  /**
+   * Optional solution-stability hint: slot `i`'s current incumbent player id, or `null` for no
+   * incumbent, parallel to `slots` by index. See the module doc's "Solution stability" paragraph.
+   * Omitted (the default) leaves behavior unchanged from before this parameter existed.
+   */
+  currentAssignment?: ReadonlyArray<string | null>;
 }
 
 export interface SlotAssignment {
@@ -62,6 +92,15 @@ export interface AssignmentResult {
 
 /** Tie-break bonus magnitude; far smaller than any realistic fantasy point difference. */
 const TIEBREAK_EPSILON = 1e-9;
+
+/**
+ * Current-incumbent stability bonus magnitude (see the module doc's "Solution stability"
+ * paragraph). Must stay strictly larger than the largest possible `playerId` tiebreak,
+ * `numPlayers * TIEBREAK_EPSILON`, so it is the primary tiebreak whenever both apply; true here
+ * with ~14 orders of magnitude of headroom for any realistic roster or player-pool size (well
+ * under 1e5 players). Still ~5-6 orders of magnitude smaller than any realistic point value.
+ */
+const STABILITY_BONUS_EPSILON = 1e-4;
 
 /**
  * Reads `arr[index]`, asserting the index is in bounds. `noUncheckedIndexedAccess` types every
@@ -85,7 +124,7 @@ function at<T>(arr: readonly T[], index: number): T {
  * Works for any slots/players/values the caller supplies (LINEUP-9: no team is hardcoded).
  */
 export function solveOptimalAssignment(input: AssignmentInput): AssignmentResult {
-  const { slots, players, values } = input;
+  const { slots, players, values, currentAssignment } = input;
   const numSlots = slots.length;
   const numPlayers = players.length;
 
@@ -116,16 +155,23 @@ export function solveOptimalAssignment(input: AssignmentInput): AssignmentResult
     const row = new Array<number>(n).fill(0);
     if (i < numSlots) {
       const slot = at(slots, i);
+      const incumbentPlayerId = currentAssignment?.[i] ?? null;
       for (let j = 0; j < numPlayers; j++) {
         const player = at(players, j);
         if (isPlayerEligibleForSlot(player.fantasyPositions, slot.eligiblePositions)) {
           const rank = rankByPlayerId.get(player.playerId) ?? 0;
           const tiebreak = (numPlayers - rank) * TIEBREAK_EPSILON;
+          const stabilityBonus =
+            incumbentPlayerId !== null && player.playerId === incumbentPlayerId
+              ? STABILITY_BONUS_EPSILON
+              : 0;
+          const epsilon = tiebreak + stabilityBonus;
           const rawValue = at(rawValues, j);
           // Bonus for a genuinely useful (positive) value; penalty for non-positive, so a
-          // worthless/unavailable player never beats leaving the slot empty (weight 0). See the
-          // module doc's tiebreak paragraph.
-          row[j] = rawValue > 0 ? rawValue + tiebreak : rawValue - tiebreak;
+          // worthless/unavailable player never beats leaving the slot empty (weight 0), and a
+          // stability bonus never keeps a zero/negative-value incumbent over a better option. See
+          // the module doc's tiebreak and "Solution stability" paragraphs.
+          row[j] = rawValue > 0 ? rawValue + epsilon : rawValue - epsilon;
         } else {
           row[j] = sentinel;
         }
