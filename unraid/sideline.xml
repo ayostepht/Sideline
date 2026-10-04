@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<!--
+  Sideline Unraid Community Applications template.
+
+  PLACEHOLDER NOTICE: <Repository> and <Registry> below point at a placeholder
+  "sideline/sideline" image. Sideline is not yet published to any container registry
+  (Docker Hub, GHCR, or otherwise), that choice, and the credentials/publish step it needs
+  in CI, is Steph's call and is intentionally not made here. Before this template is submitted
+  to Community Applications or used for a real install, update <Repository> (and <Registry> if
+  the registry is not Docker Hub) to the real image location, for example:
+    ghcr.io/<owner>/sideline:1.0.0   with  <Registry>https://ghcr.io</Registry>
+  Until then, operators can still use this template with a locally built image: build with
+  `docker compose build` (see docs/self-hosting.md), tag it to match <Repository>, and the
+  template will run it.
+-->
+<Container version="2">
+  <Name>Sideline</Name>
+  <Repository>sideline/sideline:latest</Repository>
+  <Registry>https://hub.docker.com/r/sideline/sideline</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/sideline/sideline/issues</Support>
+  <Project>https://github.com/sideline/sideline</Project>
+  <Overview>Sideline is a self-hosted fantasy football analyzer for Sleeper leagues. It reads your league from Sleeper's public API (no login needed) and shows lineup optimization, waiver targets, FAAB suggestions, trends, and matchup views, all computed under your league's exact scoring rules. Runs as a single container with a web server and a background sync worker; data is stored in SQLite under the /data path you map below. See https://github.com/sideline/sideline/blob/main/docs/self-hosting.md for the full install and configuration guide.</Overview>
+  <Category>Tools: Sports:</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/sideline/sideline/main/unraid/icon.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="WebUI Port" Target="3000" Default="3000" Mode="tcp" Description="Port the web app listens on. Map it to a different host port if 3000 is already in use." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/sideline" Mode="rw" Description="SQLite database, caches, and automatic pre-migration backups (keeps the 5 most recent)." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/sideline</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User id that should own files under /data. Unraid's usual 'nobody' id is 99." Type="Variable" Display="always" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group id that should own files under /data. Unraid's usual 'users' group id is 100." Type="Variable" Display="always" Required="false" Mask="false">100</Config>
+  <Config Name="TZ" Target="TZ" Default="America/New_York" Mode="" Description="Display timezone, an IANA name such as America/New_York." Type="Variable" Display="always" Required="false" Mask="false">America/New_York</Config>
+  <Config Name="APP_PASSWORD" Target="APP_PASSWORD" Default="" Mode="" Description="Set this to turn on password login for the web app. Leave empty for no password." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="SESSION_SECRET" Target="SESSION_SECRET" Default="" Mode="" Description="Required when APP_PASSWORD is set. At least 32 characters. Generate one with: openssl rand -hex 32" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="SLEEPER_USERNAME" Target="SLEEPER_USERNAME" Default="" Mode="" Description="Your Sleeper username. Optional; the app's onboarding screen can set it instead." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="DEFAULT_LEAGUE_ID" Target="DEFAULT_LEAGUE_ID" Default="" Mode="" Description="Sleeper league id to open by default. Optional." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="ENABLE_NFLVERSE" Target="ENABLE_NFLVERSE" Default="true" Mode="" Description="Pull supplementary nflverse player data. true or false." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="ODDS_API_KEY" Target="ODDS_API_KEY" Default="" Mode="" Description="Optional API key for betting odds. Leave empty to disable that feature." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="LOG_LEVEL" Target="LOG_LEVEL" Default="info" Mode="" Description="Log verbosity: fatal, error, warn, info, debug, or trace." Type="Variable" Display="advanced" Required="false" Mask="false">info</Config>
+  <Config Name="SYNC_STATE_CRON" Target="SYNC_STATE_CRON" Default="" Mode="" Description="Cron override for the state sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_LEAGUE_CRON" Target="SYNC_LEAGUE_CRON" Default="" Mode="" Description="Cron override for the league sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_USERS_CRON" Target="SYNC_USERS_CRON" Default="" Mode="" Description="Cron override for the users sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_ROSTERS_CRON" Target="SYNC_ROSTERS_CRON" Default="" Mode="" Description="Cron override for the rosters sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_MATCHUPS_CRON" Target="SYNC_MATCHUPS_CRON" Default="" Mode="" Description="Cron override for the matchups sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_TRANSACTIONS_CRON" Target="SYNC_TRANSACTIONS_CRON" Default="" Mode="" Description="Cron override for the transactions sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_PLAYERS_CRON" Target="SYNC_PLAYERS_CRON" Default="" Mode="" Description="Cron override for the players sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_TRENDING_CRON" Target="SYNC_TRENDING_CRON" Default="" Mode="" Description="Cron override for the trending sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_STATS_CRON" Target="SYNC_STATS_CRON" Default="" Mode="" Description="Cron override for the stats sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_PROJECTIONS_CRON" Target="SYNC_PROJECTIONS_CRON" Default="" Mode="" Description="Cron override for the projections sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="SYNC_NFLVERSE_CRON" Target="SYNC_NFLVERSE_CRON" Default="" Mode="" Description="Cron override for the nflverse sync job. Leave empty for the built-in default." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+</Container>
