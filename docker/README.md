@@ -64,8 +64,8 @@ worker) run as the configured non-root `PUID`/`PGID`; confirm with `docker top <
 
 These are read directly by `docker-entrypoint.sh` (shell, default-substitution), independent of
 `packages/shared`'s `loadConfig` (which also validates `PUID`/`PGID` for display purposes inside
-the app, defaulting to 1000/1000 there; see Task Report DECISIONS for why the two defaults differ
-on purpose).
+the app). Both now default to 99/100, matching this table (T6.2 fixed a prior mismatch where
+`loadConfig` defaulted to 1000/1000).
 
 ## Volume contract
 
