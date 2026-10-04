@@ -6,6 +6,9 @@ import { DATA, L } from "./helpers/data";
  */
 export const existingRoutes: readonly string[] = [
   "/",
+  // T6.1c (HOST-8): the optional APP_PASSWORD login gate's page. Public even when auth is on
+  // (`proxy.ts`'s `PUBLIC_PATHS`), so it always answers 200 regardless of auth state.
+  "/login",
   // Phase 2 pages for the seeded league (ADR-009 item 4).
   L, // Home
   `${L}/team`,

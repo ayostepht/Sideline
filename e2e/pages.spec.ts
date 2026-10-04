@@ -77,11 +77,17 @@ test.describe("League (PLAN 6.4 League)", () => {
       desktop ? '[data-testid="standings-row"]' : '[data-testid="standings-card"]',
     );
     await expect(rows).toHaveCount(DATA.teamCount);
+    // Scoped to Standings specifically: T6.3c (plus the same-batch integration fix, de716fd)
+    // correctly extended the "You" marker to all six League sections, so the page overall can
+    // now have up to six visible `[data-mine="true"]` elements, one per section. That is the
+    // intended, correct behavior, not a regression; this assertion's "exactly one" guarantee
+    // still holds within Standings, which is what it is meant to verify.
+    const standings = page.getByTestId("standings-table").or(page.getByTestId("standings-cards"));
     await expect(
-      page.locator('[data-mine="true"]:visible'),
-      "exactly one visible row is marked mine",
+      standings.locator('[data-mine="true"]:visible'),
+      "exactly one visible Standings row is marked mine",
     ).toHaveCount(1);
-    await expect(page.locator('[data-testid="standings-you"]:visible')).toHaveCount(1);
+    await expect(standings.locator('[data-testid="standings-you"]:visible')).toHaveCount(1);
   });
 
   test("LEAGUE-3: every team in Standings links to its own team page", async ({ page }) => {
