@@ -41,6 +41,7 @@ export default async function LeaguePage({
   const { overview, standings, intelligence } = read.value;
   const week = parseWeek(sp.week) ?? overview.data.currentWeek;
   const rows = standings.data.rows;
+  const myRosterId = rows.find((r) => r.isMine)?.rosterId ?? null;
 
   // Preseason: no season data exists yet, so there is nothing below worth showing. Offseason
   // keeps the final season's standings and sections visible (a banner only, see below) since
@@ -91,14 +92,14 @@ export default async function LeaguePage({
             <h2 id="league-power-h" className="sl-label sl-mark">
               Power rankings
             </h2>
-            <PowerRankingsList teams={intelligence.data.teams} />
+            <PowerRankingsList teams={intelligence.data.teams} myRosterId={myRosterId} />
           </section>
 
           <section aria-labelledby="league-allplay-h" className="flex flex-col gap-1">
             <h2 id="league-allplay-h" className="sl-label sl-mark">
               All-play record and luck
             </h2>
-            <AllPlayLuckList teams={intelligence.data.teams} />
+            <AllPlayLuckList teams={intelligence.data.teams} myRosterId={myRosterId} />
           </section>
 
           <section aria-labelledby="league-heatmap-h" className="flex flex-col gap-1">
@@ -108,6 +109,7 @@ export default async function LeaguePage({
             <PositionalStrengthGrid
               teams={intelligence.data.teams}
               entries={intelligence.data.positionalHeatmap}
+              myRosterId={myRosterId}
             />
           </section>
 
@@ -115,7 +117,7 @@ export default async function LeaguePage({
             <h2 id="league-manager-h" className="sl-label sl-mark">
               Manager tendencies
             </h2>
-            <ManagerTendenciesList teams={intelligence.data.teams} />
+            <ManagerTendenciesList teams={intelligence.data.teams} myRosterId={myRosterId} />
           </section>
 
           <section aria-labelledby="league-playoffs-h" className="flex flex-col gap-1">
@@ -125,6 +127,7 @@ export default async function LeaguePage({
             <PlayoffOddsSection
               teams={intelligence.data.teams}
               playoffTeams={intelligence.data.playoffTeams}
+              myRosterId={myRosterId}
             />
           </section>
         </>
