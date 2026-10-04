@@ -29,7 +29,9 @@ Batch letters and dependencies amended from PLAN.md's literal table per ADR-016 
 | T5.4b | Matchup data function, response DTO, API route, `computed_cache` wiring | backend-engineer | T5.4a | C2 | Done | 1 | `76b68e5`, `c83fa45` |
 | T5.4d | ROS-optimal-lineup roster strength per team (total and per-position), `apps/web/lib/server/roster-strength.ts` | backend-engineer | T5.4a | C2 | Done | 1 | `3ef1dad` |
 | T5.4c | League intelligence data function, response DTO, API route, `computed_cache` wiring | backend-engineer | T5.4a, T5.4d | C3 | Done | 1 | `59b4338`, `a9efed0` |
-| T5.5 | Matchup page; League intelligence sections; Home win probability | frontend-engineer | T5.3, T5.4 | D | Not started | 0 | |
+| T5.5a | Matchup page (`matchup/page.tsx`, replaces the stub) | frontend-engineer | T5.4b | D | Dispatched | 1 | |
+| T5.5b | League intelligence sections (`league/(list)/page.tsx`, appended) | frontend-engineer | T5.4c | D | Dispatched | 1 | |
+| T5.5c | Home win-probability card (`(main)/page.tsx`) | frontend-engineer | T5.4b | D | Dispatched | 1 | |
 | T5.6 | Tests: seeded determinism; symmetry; playoff odds sum to `playoff_teams` x 100% within 0.5%; perf; e2e matchup and league | qa-engineer | T5.5 | E | Not started | 0 | |
 
 **Decided at Phase 5 planning (not a dedicated task, per ADR-016 item 5):** `getPlayerDetail`'s perf cost and the missing `upsertUsageWeek` wiring stay in the backlog below — neither blocks any Phase 5 requirement.
