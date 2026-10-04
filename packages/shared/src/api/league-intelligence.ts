@@ -56,11 +56,15 @@ export type LeagueIntelligenceSeedProbability = z.infer<
 
 /** LEAGUE-5: Monte Carlo playoff odds. `byePct` is null when the league models no first-round bye
  * (this codebase has no bye-count data source yet, see the data function's doc; always null today).
- * `seedDistribution` sums to 1 across every seed. */
+ * `seedDistribution` sums to 1 across every seed. `reasons` is a season-level signal (identical
+ * across every team in a given response, e.g. `LEAGUE_PLAYOFF_ODDS_NO_REMAINING_GAMES` when there
+ * are no games left to simulate), not a per-team one; see `simulatePlayoffOdds`'s own doc comment
+ * in `@sideline/core`. */
 export const LeagueIntelligencePlayoffOddsSchema = z.strictObject({
   playoffPct: z.number(),
   byePct: z.number().nullable(),
   seedDistribution: z.array(LeagueIntelligenceSeedProbabilitySchema),
+  reasons: z.array(ReasonSchema),
 });
 export type LeagueIntelligencePlayoffOdds = z.infer<typeof LeagueIntelligencePlayoffOddsSchema>;
 

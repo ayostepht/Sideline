@@ -222,6 +222,26 @@ describe("getLeagueIntelligence", () => {
     for (const t of data.teams) expect(t.playoffOdds?.byePct ?? null).toBeNull();
   });
 
+  it("surfaces LEAGUE_PLAYOFF_ODDS_NO_REMAINING_GAMES on every team's playoffOdds.reasons when there's no remaining schedule", () => {
+    const h = setup({ rosterCount: 4 });
+    setPlayoffTeams(h, 2);
+    // No `schedule: true` seed option, so no rows land in the matchups table with a matchupId -
+    // `readLeagueScheduleMatchups` returns [], hitting `simulatePlayoffOdds`'s zero-remaining-games
+    // branch, which sets a season-level reason (see playoff-odds.ts's own doc comment).
+    const data = ok(getLeagueIntelligence(h, "L1", SEED_NOW));
+    expect(data.teams.length).toBeGreaterThan(0);
+    for (const t of data.teams) {
+      expect(t.playoffOdds).not.toBeNull();
+      expect(t.playoffOdds?.reasons).toEqual([
+        {
+          code: "LEAGUE_PLAYOFF_ODDS_NO_REMAINING_GAMES",
+          label: "No remaining games to simulate; odds are based on the current standings alone",
+          value: 0,
+        },
+      ]);
+    }
+  });
+
   it("returns null playoffOdds for every team when playoffTeams is unknown", () => {
     const h = setup({ rosterCount: 4 });
     // Test-seed never sets playoff_teams; it stays null.

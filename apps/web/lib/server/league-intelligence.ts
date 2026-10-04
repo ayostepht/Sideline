@@ -10,7 +10,8 @@
  * than the current NFL state week (`readNflState(h)?.week`, defaulting to 1, clamped to
  * `1..DEFAULT_SEASON_WEEKS` - mirrors `roster-strength.ts`'s own `currentWeek` derivation exactly,
  * so both modules agree on "how many weeks remain"). This matches this codebase's existing
- * partial-week-exclusion convention (ADR-000 item 9). All-play (LEAGUE-1), luck (LEAGUE-2), the
+ * "read weeks from the current week through `playoff_week_start - 1`" convention (ADR-002 item 5).
+ * All-play (LEAGUE-1), luck (LEAGUE-2), the
  * recent-points-for and weekly-standard-deviation inputs below, and the playoff odds "remaining
  * schedule" window are all built from this one cutoff.
  *
@@ -88,6 +89,7 @@ import {
   SYNC_CADENCE_MS,
   WaiverModeSchema,
   type LeagueIntelligenceResponse,
+  type Reason,
 } from "@sideline/shared";
 import { getRosterStrength } from "./roster-strength.js";
 import { getStandings } from "./league-views.js";
@@ -257,6 +259,9 @@ export function getLeagueIntelligence(
     number,
     { playoffPct: number; byePct: number | null; seedDistribution: Map<number, number> }
   > | null = null;
+  // Season-level signal from `simulatePlayoffOdds` (e.g. the zero-remaining-games case), identical
+  // for every team in a given call -- not per-team. See `LeagueIntelligencePlayoffOddsSchema`'s doc.
+  let playoffOddsReasons: Reason[] = [];
   if (playoffTeamsSetting !== null && playoffTeamsSetting >= 0 && playoffTeamsSetting <= numTeams) {
     const playoffWeekStart = readLeaguePlayoffWeekStart(h, leagueId);
     const regularSeasonEnd =
@@ -290,6 +295,7 @@ export function getLeagueIntelligence(
       seed: deriveSeed(leagueId),
     });
     playoffOddsByRoster = new Map(sim.teams.map((t) => [t.rosterId, t] as const));
+    playoffOddsReasons = sim.reasons;
   }
 
   // ---- Manager tendencies (LEAGUE-6) ----
@@ -380,6 +386,7 @@ export function getLeagueIntelligence(
               seedDistribution: [...playoffOddsRaw.seedDistribution.entries()]
                 .map(([seed, probability]) => ({ seed, probability }))
                 .sort((a, b) => a.seed - b.seed),
+              reasons: playoffOddsReasons,
             },
       managerTendencies: managerTendenciesResult,
     };
