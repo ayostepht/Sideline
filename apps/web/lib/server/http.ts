@@ -1,3 +1,6 @@
+import type { Logger } from "pino";
+import { getLogger } from "./logger";
+
 export interface ApiResult {
   status: number;
   body: unknown;
@@ -58,12 +61,68 @@ export function guardMutation(request: Request): ApiResult | null {
   return null;
 }
 
-/** Runs the guard, then reads the body and calls `handler`. Nothing is read or written if blocked. */
+/**
+ * Best-effort client IP behind a reverse proxy (HOST-7: this app trusts `X-Forwarded-*` from
+ * exactly one hop, Nginx Proxy Manager). Takes the LAST non-empty entry of `X-Forwarded-For`,
+ * not the first: a client can send its own `X-Forwarded-For` with any fake value prepended, but
+ * the trusted proxy in front of this app always APPENDS the real client IP as the last entry
+ * (standard nginx/NPM behavior), so only the last entry is attacker-controlled-free. Taking the
+ * first entry would let a client spoof a fresh "IP" per request and evade or hijack the login
+ * rate limiter in ./auth. Falls back to `X-Real-Ip`, then a constant bucket for direct/local
+ * connections (the Fetch `Request` API exposes no raw socket address in this runtime).
+ */
+export function clientIp(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor !== null) {
+    const entries = forwardedFor
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e) => e !== "");
+    const last = entries.at(-1);
+    if (last !== undefined) return last;
+  }
+  const realIp = request.headers.get("x-real-ip")?.trim();
+  if (realIp !== undefined && realIp !== "") return realIp;
+  return "direct";
+}
+
+/** True when the request reached us over HTTPS, trusting `X-Forwarded-Proto` (HOST-7). */
+export function isHttpsRequest(request: Request): boolean {
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  if (forwardedProto !== null) {
+    return forwardedProto.split(",")[0]?.trim().toLowerCase() === "https";
+  }
+  return new URL(request.url).protocol === "https:";
+}
+
+/**
+ * Runs the guard, then reads the body and calls `handler`. Nothing is read or written if
+ * blocked. Logs method, path, status, and duration for every call (never the body or any
+ * cookie), and logs then rethrows on a thrown error.
+ */
 export async function guardedWrite(
   request: Request,
   handler: (rawBody: string) => ApiResult,
+  log: Logger = getLogger(),
 ): Promise<Response> {
-  const blocked = guardMutation(request);
-  if (blocked) return toResponse(blocked);
-  return toResponse(handler(await request.text()));
+  const start = Date.now();
+  const method = request.method;
+  const path = new URL(request.url).pathname;
+  try {
+    const blocked = guardMutation(request);
+    const result = blocked ?? handler(await request.text());
+    log.info({ method, path, status: result.status, durationMs: Date.now() - start }, "request");
+    return toResponse(result);
+  } catch (err) {
+    log.error(
+      {
+        method,
+        path,
+        durationMs: Date.now() - start,
+        err: err instanceof Error ? err.message : String(err),
+      },
+      "request failed",
+    );
+    throw err;
+  }
 }

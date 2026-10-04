@@ -1,10 +1,12 @@
+import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import { getActiveLeagueId } from "@sideline/db";
 import { PATCH as patchSettings } from "../../app/api/settings/route";
 import { POST as startOnboarding } from "../../app/api/onboarding/route";
 import { POST as selectLeague } from "../../app/api/onboarding/league/route";
 import { POST as syncRun } from "../../app/api/sync/run/route";
-import { guardMutation } from "./http";
+import { clientIp, guardMutation, guardedWrite, isHttpsRequest } from "./http";
+import { getLogger } from "./logger";
 import { useTempDb, type TempDb } from "./test-utils";
 
 let tmp: TempDb | null = null;
@@ -95,4 +97,102 @@ describe("mutating routes are guarded and do not write", () => {
       expect(h.sqlite.prepare("select count(*) as n from sync_requests").get()).toEqual({ n: 0 });
     });
   }
+});
+
+describe("clientIp", () => {
+  it("uses the LAST X-Forwarded-For entry, the one the trusted proxy appended", () => {
+    const r = new Request(URL_, { headers: { "x-forwarded-for": "9.9.9.9, 1.1.1.1" } });
+    expect(clientIp(r)).toBe("1.1.1.1");
+  });
+  it("is not fooled by a spoofed first entry: same real last entry means same client", () => {
+    const a = clientIp(new Request(URL_, { headers: { "x-forwarded-for": "1.1.1.1, 5.5.5.5" } }));
+    const b = clientIp(new Request(URL_, { headers: { "x-forwarded-for": "2.2.2.2, 5.5.5.5" } }));
+    expect(a).toBe(b);
+    expect(a).toBe("5.5.5.5");
+  });
+  it("handles a single-entry header", () => {
+    expect(clientIp(new Request(URL_, { headers: { "x-forwarded-for": "3.3.3.3" } }))).toBe(
+      "3.3.3.3",
+    );
+  });
+  it("falls back to X-Real-Ip, then a constant bucket, including for an empty or malformed header", () => {
+    expect(clientIp(new Request(URL_, { headers: { "x-real-ip": "8.8.8.8" } }))).toBe("8.8.8.8");
+    expect(clientIp(new Request(URL_))).toBe("direct");
+    expect(
+      clientIp(new Request(URL_, { headers: { "x-forwarded-for": "", "x-real-ip": "8.8.8.8" } })),
+    ).toBe("8.8.8.8");
+    expect(clientIp(new Request(URL_, { headers: { "x-forwarded-for": " , , " } }))).toBe("direct");
+  });
+});
+
+describe("isHttpsRequest", () => {
+  it("trusts X-Forwarded-Proto over the request's own protocol", () => {
+    expect(isHttpsRequest(new Request(URL_, { headers: { "x-forwarded-proto": "https" } }))).toBe(
+      true,
+    );
+    expect(isHttpsRequest(new Request(URL_, { headers: { "x-forwarded-proto": "http" } }))).toBe(
+      false,
+    );
+  });
+  it("falls back to the request URL's protocol when the header is absent", () => {
+    expect(isHttpsRequest(new Request("https://app.local/x"))).toBe(true);
+    expect(isHttpsRequest(new Request("http://app.local/x"))).toBe(false);
+  });
+});
+
+describe("guardedWrite", () => {
+  function captureLogger(): { log: ReturnType<typeof getLogger>; lines: () => unknown[] } {
+    const chunks: string[] = [];
+    const stream = new Writable({
+      write(chunk: Buffer, _enc: string, cb: () => void) {
+        chunks.push(String(chunk));
+        cb();
+      },
+    });
+    return {
+      log: getLogger({}, stream),
+      lines: (): unknown[] =>
+        chunks
+          .flatMap((c) => c.trim().split("\n"))
+          .filter(Boolean)
+          .map((l): unknown => JSON.parse(l) as unknown),
+    };
+  }
+
+  it("logs a structured success line with method, path, status, and duration", async () => {
+    const { log, lines } = captureLogger();
+    const ok = (): { status: number; body: unknown } => ({ status: 200, body: { ok: true } });
+    await guardedWrite(
+      new Request(URL_, { method: "POST", headers: JSON_CT, body: '{"secret":"shh"}' }),
+      ok,
+      log,
+    );
+    const [line] = lines() as {
+      method: string;
+      path: string;
+      status: number;
+      durationMs: number;
+    }[];
+    expect(line).toMatchObject({ method: "POST", path: "/api/onboarding/league", status: 200 });
+    expect(typeof line?.durationMs).toBe("number");
+    expect(JSON.stringify(line)).not.toContain("shh");
+  });
+
+  it("logs a structured error line and rethrows when the handler throws, without the raw body", async () => {
+    const { log, lines } = captureLogger();
+    const boom = (): never => {
+      throw new Error("boom");
+    };
+    await expect(
+      guardedWrite(
+        new Request(URL_, { method: "POST", headers: JSON_CT, body: '{"password":"shh"}' }),
+        boom,
+        log,
+      ),
+    ).rejects.toThrow("boom");
+    const [line] = lines() as { method: string; path: string; err: string }[];
+    expect(line?.method).toBe("POST");
+    expect(line?.err).toBe("boom");
+    expect(JSON.stringify(line)).not.toContain("shh");
+  });
 });

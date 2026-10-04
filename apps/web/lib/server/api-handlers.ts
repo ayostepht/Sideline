@@ -16,9 +16,17 @@ import {
   AppSettingsSchema,
   WaiverRequestSchema,
   WaiverResponseSchema,
+  loadConfig,
 } from "@sideline/shared";
 import { z } from "zod";
-import { errorResult, type ApiResult } from "./http";
+import {
+  buildSessionCookie,
+  clearedSessionCookie,
+  constantTimeStringEqual,
+  isRateLimited,
+  signSession,
+} from "./auth";
+import { clientIp, errorResult, isHttpsRequest, type ApiResult } from "./http";
 import { getSettings } from "./identity";
 import { getLeagueIntelligence } from "./league-intelligence";
 import { searchPlayers } from "./league-views";
@@ -323,6 +331,47 @@ export function handlePlayersList(
     if (!r.ok) return errorResult(404, "not_found", "League not found.");
     return { status: 200, body: PlayersListResponseSchema.parse(r.data) };
   });
+}
+
+/** T6.1: POST /api/login body. */
+const LoginRequestSchema = z.strictObject({ password: z.string().min(1).max(256) });
+
+/**
+ * T6.1 (HOST-8): POST /api/login. Rate-limited 5/min/IP; the limiter counts every attempt
+ * (right or wrong password, malformed body) so a scripted brute-force cannot dodge it by
+ * spacing out correct-looking requests. Returns the same generic error whether the password
+ * was wrong or the rate limit was hit, so neither failure mode is distinguishable from the
+ * response. On success, sets a signed HTTP-only session cookie good for 30 days.
+ */
+export function handleLogin(request: Request, rawBody: string, now: Date = new Date()): ApiResult {
+  const config = loadConfig(process.env);
+  if (config.appPassword === null || config.sessionSecret === null) {
+    return errorResult(503, "login_disabled", "Password login is not enabled.");
+  }
+  const limited = isRateLimited(clientIp(request), now);
+  const body = parseBody(rawBody);
+  const parsed = body.ok ? LoginRequestSchema.safeParse(body.json) : null;
+  const candidate = parsed?.success === true ? parsed.data.password : "";
+  // Always run the constant-time compare, even when already rate-limited or the body was
+  // invalid, so the three failure paths take comparable time and none is distinguishable.
+  const passwordOk = constantTimeStringEqual(candidate, config.appPassword);
+  if (limited || !passwordOk) {
+    return errorResult(401, "invalid_login", "Incorrect password.");
+  }
+  const cookie = buildSessionCookie(
+    signSession(config.sessionSecret, now),
+    isHttpsRequest(request),
+  );
+  return { status: 200, body: { ok: true }, headers: { "Set-Cookie": cookie } };
+}
+
+/** T6.1 (HOST-8): DELETE /api/login (logout). Always succeeds; clears the session cookie. */
+export function handleLogout(request: Request): ApiResult {
+  return {
+    status: 200,
+    body: { ok: true },
+    headers: { "Set-Cookie": clearedSessionCookie(isHttpsRequest(request)) },
+  };
 }
 
 /** T4.5c: GET /api/l/[leagueId]/players/[playerId] (player detail). */

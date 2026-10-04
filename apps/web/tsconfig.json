@@ -10,7 +10,8 @@
   "include": [
     "next-env.d.ts",
     "*.config.ts",
-    "middleware.ts",
+    "proxy.ts",
+    "proxy.test.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
     "lib/**/*.ts",
