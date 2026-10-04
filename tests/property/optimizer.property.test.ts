@@ -290,6 +290,12 @@ describe("optimizer property tests (T3.6)", () => {
    * current" must never produce a swap back to some other, differently-tie-broken permutation:
    * that would be exactly T6.8's "chain of swaps that nets to zero benefit" bug.
    */
+  // Explicit timeout (vitest default is 5000ms): this property calls recommendLineup twice per
+  // run (vs. once for the invariant test above) plus an O(slots^2) swappable-pair search, so it
+  // runs measurably heavier per iteration; under V8 coverage instrumentation (pnpm test:coverage,
+  // U2a) that pushed it over the default timeout even though the uninstrumented run finishes in
+  // well under 1s. Matches this config's existing convention for CPU-heavy test categories
+  // (vitest.config.ts's integration/contract projects, testTimeout: 30_000).
   it("LINEUP-6: an already-optimal lineup is a stable fixed point, even swapped among interchangeable slots", () => {
     fc.assert(
       fc.property(fc.gen(), (g) => {
@@ -368,5 +374,5 @@ describe("optimizer property tests (T3.6)", () => {
       }),
       { numRuns: NUM_RUNS },
     );
-  });
+  }, 30_000);
 });

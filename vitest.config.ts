@@ -59,7 +59,10 @@ export default defineConfig({
             "**/node_modules/**",
             "**/dist/**",
             "**/.next/**",
-            ...(coverageRequested ? ["**/*.perf.test.ts"] : []),
+            // No literal dot before "perf": matches both `foo.perf.test.ts` and a bare
+            // `perf.test.ts` (e.g. apps/web/lib/server/perf.test.ts), which "**/*.perf.test.ts"
+            // misses since `*` can't also consume the leading dot it's followed by.
+            ...(coverageRequested ? ["**/*perf.test.ts"] : []),
           ],
         },
       })),
