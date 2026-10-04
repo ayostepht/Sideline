@@ -163,9 +163,9 @@ test.describe("States (PLAN 6.5, ADR-009 item 2)", () => {
   test("STATE-2: lineup, matchup, waivers and players all render inside the shell", async ({
     page,
   }) => {
-    // Lineup (T3.9), Waivers (T4.6a) and Players (T4.6b) are real pages, not stubs, as of this
-    // phase; Matchup remains the only section stub. All four still owe a 200 and an h1 inside
-    // the app shell, which is all this test checks.
+    // Lineup (T3.9), Waivers (T4.6a), Players (T4.6b) and Matchup (T5.5a) are all real pages now,
+    // not stubs. All four still owe a 200 and an h1 inside the app shell, which is all this test
+    // checks.
     for (const seg of ["lineup", "matchup", "waivers", "players"]) {
       const res = await page.goto(`${L}/${seg}`);
       expect(res?.ok(), seg).toBe(true);
@@ -173,23 +173,12 @@ test.describe("States (PLAN 6.5, ADR-009 item 2)", () => {
     }
   });
 
-  test("STATE-3: the placeholder page links to Home and My Team and the links navigate", async ({
-    page,
-  }) => {
-    // Lineup stopped being a stub in Phase 3 Batch H (T3.9); Waivers (T4.6a) and Players (T4.6b)
-    // stopped being stubs in this phase. Matchup is the only section stub left (G4 gate prep:
-    // this test previously still asserted `stub-page`/`stub-link-*` for waivers and players too,
-    // which started failing deterministically on every project the moment those pages shipped).
-    for (const seg of ["matchup"]) {
-      await page.goto(`${L}/${seg}`);
-      await expect(page.getByTestId("stub-page"), seg).toBeVisible();
-      await page.getByTestId("stub-link-home").click();
-      await expect(page, seg).toHaveURL(new RegExp(`${L}$`));
-      await expect(page.getByTestId("home-page"), seg).toBeVisible();
-      await page.goto(`${L}/${seg}`);
-      await page.getByTestId("stub-link-team").click();
-      await expect(page, seg).toHaveURL(new RegExp(`${L}/team$`));
-      await expect(page.getByTestId("team-view"), seg).toBeVisible();
-    }
-  });
+  // STATE-3 ("the placeholder page links to Home and My Team") is retired as of T5.6 (Phase 5):
+  // Matchup (T5.5a) was the last section still using `StubPage`
+  // (`apps/web/components/shell/stub-page.tsx`), and no route in the league shell renders it any
+  // longer (confirmed: zero imports of `StubPage` under `apps/web/app`). There is currently no
+  // stub page anywhere in the product for this test to exercise; it is deleted rather than kept
+  // skipped or pointed at a route that no longer behaves the way it asserts (CLAUDE.md section 4:
+  // never `.skip` a test instead of fixing the real cause). See the T5.6 task report for the
+  // `StubPage` dead-code follow-up this discovery produced.
 });
