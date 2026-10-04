@@ -32,7 +32,7 @@ Batch letters and dependencies amended from PLAN.md's literal table per ADR-016 
 | T5.5a | Matchup page (`matchup/page.tsx`, replaces the stub) | frontend-engineer | T5.4b | D | Done | 1 | `698c0fd`, `9d40b23`, `311da63` |
 | T5.5b | League intelligence sections (`league/(list)/page.tsx`, appended) | frontend-engineer | T5.4c | D | Done | 1 | `d05ad4b`, `200513f` |
 | T5.5c | Home win-probability card (`(main)/page.tsx`) | frontend-engineer | T5.4b | D | Done | 1 | `9ed83e3` |
-| T5.6 | Tests: seeded determinism; symmetry; playoff odds sum to `playoff_teams` x 100% within 0.5%; perf; e2e matchup and league | qa-engineer | T5.5 | E | Not started | 0 | |
+| T5.6 | Tests: seeded determinism; symmetry; playoff odds sum to `playoff_teams` x 100% within 0.5%; perf; e2e matchup and league | qa-engineer | T5.5 | E | Done | 1 | `1b8cdc8`, `41599d0` |
 
 **Decided at Phase 5 planning (not a dedicated task, per ADR-016 item 5):** `getPlayerDetail`'s perf cost and the missing `upsertUsageWeek` wiring stay in the backlog below — neither blocks any Phase 5 requirement.
 
