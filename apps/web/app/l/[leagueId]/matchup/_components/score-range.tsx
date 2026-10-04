@@ -52,7 +52,7 @@ export function ScoreRange({ teams, label, className }: ScoreRangeProps) {
                 strokeWidth={6}
                 strokeLinecap="round"
                 stroke="currentColor"
-                className={team.highlight ? "text-accent-soft" : "text-muted"}
+                className={team.highlight ? "text-highlight" : "text-muted-foreground"}
               />
               <circle
                 cx={bar.x50}

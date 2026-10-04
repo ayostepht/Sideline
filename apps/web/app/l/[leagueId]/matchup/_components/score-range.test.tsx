@@ -29,4 +29,19 @@ describe("ScoreRange", () => {
     expect(html).toContain("Sideline Squad");
     expect(html).toContain("Rival Rosters");
   });
+
+  it("draws the range line in a high-contrast foreground color, not a background-fill token", () => {
+    // Regression for a UX review finding: `text-muted`/`text-accent-soft` are background-fill
+    // tokens that read at ~1.1-1.5:1 against the card background as a thin stroke, well under
+    // the WCAG 3:1 non-text-contrast minimum. `text-muted-foreground` and `text-highlight` both
+    // clear 3:1 against `--card` in light and dark (measured: 6.9:1 / 3.77:1 light, 8.95:1 /
+    // 3.35:1 dark).
+    const html = renderToStaticMarkup(<ScoreRange teams={teams} label="Projected score range" />);
+    const lines = [...html.matchAll(/<line[^>]*class="([^"]*)"[^>]*>/g)].map((m) => m[1] ?? "");
+    expect(lines).toHaveLength(2);
+    expect(lines.some((cls) => cls.includes("text-highlight"))).toBe(true);
+    expect(lines.some((cls) => cls.includes("text-muted-foreground"))).toBe(true);
+    expect(lines.some((cls) => cls.includes("text-accent-soft"))).toBe(false);
+    expect(lines.some((cls) => cls.split(/\s+/).includes("text-muted"))).toBe(false);
+  });
 });
