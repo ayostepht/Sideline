@@ -1,22 +1,28 @@
 import type { LineupPlayer, LineupSwap } from "@sideline/shared";
 import { ArrowRight } from "lucide-react";
 import { cn } from "../../../../../lib/client/cn";
-import { formatSignedPoints, playerById, swapDelta } from "./format";
+import { formatSignedPoints, hasMaterialSwaps, playerById, swapDelta } from "./format";
 
 function nameOrEmpty(players: readonly LineupPlayer[], id: string | null): string {
   if (id === null) return "Empty slot";
   return playerById(players, id)?.name ?? `Player ${id}`;
 }
 
-/** The swaps to make (LINEUP-6): current starter out, optimal starter in, per slot. */
+/**
+ * The swaps to make (LINEUP-6): current starter out, optimal starter in, per slot. Hidden below
+ * the same materiality floor as the summary banner's headline (`hasMaterialSwaps`), so the detail
+ * list never appears underneath an "already optimal" headline.
+ */
 export function SwapList({
   swaps,
   players,
+  pointDelta,
 }: {
   swaps: readonly LineupSwap[];
   players: readonly LineupPlayer[];
+  pointDelta: number;
 }) {
-  if (swaps.length === 0) return null;
+  if (!hasMaterialSwaps(pointDelta, swaps.length)) return null;
   return (
     <section aria-labelledby="lineup-swaps-h" data-testid="lineup-swaps">
       <h2 id="lineup-swaps-h" className="sl-label sl-mark mb-1">

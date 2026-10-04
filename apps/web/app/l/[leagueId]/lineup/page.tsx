@@ -163,7 +163,7 @@ export default async function LineupPage({
           testid="lineup-optimal"
         />
       </div>
-      <SwapList swaps={data.swaps} players={data.players} />
+      <SwapList swaps={data.swaps} players={data.players} pointDelta={data.pointDelta} />
       {mine ? <OpenInSleeperButton leagueId={leagueId} /> : null}
     </div>
   );

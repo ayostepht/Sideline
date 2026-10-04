@@ -4,6 +4,7 @@ import {
   buildLineupHref,
   formatSignedPoints,
   formatValue,
+  hasMaterialSwaps,
   isMineRoster,
   lineupSummary,
   parseMode,
@@ -125,6 +126,21 @@ describe("swapDelta", () => {
   });
 });
 
+describe("hasMaterialSwaps", () => {
+  it("is false with no swaps regardless of delta", () => {
+    expect(hasMaterialSwaps(0, 0)).toBe(false);
+    expect(hasMaterialSwaps(3.4, 0)).toBe(false);
+  });
+  it("is false below the 0.05pt floor even with swaps present", () => {
+    expect(hasMaterialSwaps(0, 3)).toBe(false);
+    expect(hasMaterialSwaps(0.02, 3)).toBe(false);
+  });
+  it("is true at or above the floor with at least one swap", () => {
+    expect(hasMaterialSwaps(0.05, 1)).toBe(true);
+    expect(hasMaterialSwaps(3.4, 2)).toBe(true);
+  });
+});
+
 describe("lineupSummary", () => {
   it("reports already optimal when there are no swaps", () => {
     expect(lineupSummary(0, 0)).toBe("Your lineup is already optimal");
@@ -132,6 +148,13 @@ describe("lineupSummary", () => {
   it("pluralizes and signs the delta", () => {
     expect(lineupSummary(3.4, 1)).toBe("1 swap available, projected +3.4 pts");
     expect(lineupSummary(3.4, 2)).toBe("2 swaps available, projected +3.4 pts");
+  });
+  it("reports already optimal below the materiality floor even with swaps present", () => {
+    expect(lineupSummary(0, 3)).toBe("Your lineup is already optimal");
+    expect(lineupSummary(0.02, 3)).toBe("Your lineup is already optimal");
+  });
+  it("still reports swaps right at the floor", () => {
+    expect(lineupSummary(0.05, 1)).toBe("1 swap available, projected +0.1 pts");
   });
 });
 

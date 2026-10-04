@@ -66,9 +66,19 @@ export function swapDelta(players: readonly LineupPlayer[], swap: LineupSwap): n
   return (inPlayer?.value ?? 0) - (outPlayer?.value ?? 0);
 }
 
+/**
+ * Whether a recommendation is worth presenting as actionable: there must be at least one swap
+ * AND the projected gain must be worth a tenth of a point or more. Below that floor, a nonzero
+ * delta is a tiebreak artifact (equal-value players) or float noise, not a real gain -- the same
+ * floor Home's `hasSwaps` guard uses (`(main)/page.tsx`), so both pages agree on what counts.
+ */
+export function hasMaterialSwaps(pointDelta: number, swapCount: number): boolean {
+  return swapCount > 0 && pointDelta >= 0.05;
+}
+
 /** The plain-language headline for the lineup summary banner (LINEUP-6, insight-first). */
 export function lineupSummary(pointDelta: number, swapCount: number): string {
-  if (swapCount === 0) return "Your lineup is already optimal";
+  if (!hasMaterialSwaps(pointDelta, swapCount)) return "Your lineup is already optimal";
   const n = swapCount === 1 ? "1 swap" : `${swapCount} swaps`;
   return `${n} available, projected ${formatSignedPoints(pointDelta)}`;
 }
