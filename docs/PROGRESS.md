@@ -18,19 +18,19 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 
 ## Phase 6 task table
 
-Batch letters and task splits amended from PLAN.md's literal table per ADR-017 (T6.1 splits into T6.1a/b; T6.3 splits into T6.3a/b/c).
+Batch letters and task splits amended from PLAN.md's literal table per ADR-017 (T6.1 stays one task but its login page splits out as T6.1c, frontend ownership; T6.3 splits into T6.3a/b/c).
 
 | ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|---|
-| T6.1a | Auth (HOST-8: session cookie, login route, rate limiter, constant-time compare) + security headers, both via `apps/web/middleware.ts` | backend-engineer | G5 | A | Dispatched | 1 | |
+| T6.1 | Auth (HOST-8: session cookie, login/logout API routes, rate limiter, constant-time compare) + security headers (both via `apps/web/middleware.ts`) + structured logging (`pino`, matching the worker's existing convention) | backend-engineer | G5 | A | Dispatched | 1 | |
 | T6.2 | Docker final: PUID/PGID default fix, Unraid template, `docs/self-hosting.md` + README rewrite | devops-engineer | G5 | A | Dispatched | 1 | |
 | T6.3a | PWA manifest, icons, favicon; theme-color/toggle conflict fix | frontend-engineer | G5 | A | Dispatched | 1 | |
-| T6.1b | Structured logging for the web API layer (`pino`, matching the worker's existing convention) | backend-engineer | G5 | B | Not started | 0 | |
+| T6.1c | Login page (`apps/web/app/login/page.tsx`), ownership split from T6.1 (non-API page) | frontend-engineer | T6.1 | B | Not started | 0 | |
 | T6.3b | Preseason and offseason states (consolidate existing ad hoc preseason copy, add offseason) | frontend-engineer | G5 | B | Not started | 0 | |
 | T6.3c | League UX polish: desktop density (`lg:` tables, 5 sections), "You" markers (6 sections), manager-tendencies pluralization | frontend-engineer | G5 | B | Not started | 0 | |
-| T6.4 | Full regression; fresh-install test; upgrade test; auth e2e; 60-minute live soak | qa-engineer | T6.1a, T6.1b, T6.2, T6.3a, T6.3b, T6.3c | C | Not started | 0 | |
-| T6.5 | Whole-repo security and quality review | code-reviewer | T6.1a, T6.1b, T6.2, T6.3a, T6.3b, T6.3c | C | Not started | 0 | |
-| T6.6 | Final UX review of every screen | ux-reviewer | T6.3a, T6.3b, T6.3c | C | Not started | 0 | |
+| T6.4 | Full regression; fresh-install test; upgrade test; auth e2e; 60-minute live soak | qa-engineer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Not started | 0 | |
+| T6.5 | Whole-repo security and quality review | code-reviewer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Not started | 0 | |
+| T6.6 | Final UX review of every screen | ux-reviewer | T6.1c, T6.3a, T6.3b, T6.3c | C | Not started | 0 | |
 | T6.7 | Fix round | owning agents | T6.4, T6.5, T6.6 | D | Not started | 0 | |
 
 **Decided at Phase 6 planning (ADR-017 item 2):** T6.3c's UX polish is a curated, bounded list (desktop density, "You" markers, pluralization), not the full accumulated Minor backlog -- score-range dot contrast, `sparkline.tsx`'s latent overflow risk, the win-probability triple-display, and swing-player tap-through stay backlogged for Phase 7/P1.
