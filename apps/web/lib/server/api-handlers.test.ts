@@ -9,6 +9,7 @@ import {
   type DbHandle,
 } from "@sideline/db";
 import {
+  LeagueIntelligenceResponseSchema,
   LineupResponseSchema,
   MatchupResponseSchema,
   OnboardingStatusSchema,
@@ -22,6 +23,7 @@ import { GET as statusRoute } from "../../app/api/onboarding/status/route";
 import { GET as searchRoute } from "../../app/api/l/[leagueId]/search/route";
 import { GET as lineupRoute } from "../../app/api/l/[leagueId]/lineup/route";
 import { GET as matchupRoute } from "../../app/api/l/[leagueId]/matchup/route";
+import { GET as leagueIntelligenceRoute } from "../../app/api/l/[leagueId]/league-intelligence/route";
 import { GET as getSettingsRoute, PATCH as patchSettingsRoute } from "../../app/api/settings/route";
 import { resetDbForTests } from "./db";
 import { seedLeague } from "./test-seed";
@@ -253,6 +255,25 @@ describe("GET /api/l/[leagueId]/matchup", () => {
         message: "No opponent is scheduled for this roster this week.",
       },
     });
+  });
+});
+
+describe("GET /api/l/[leagueId]/league-intelligence", () => {
+  const leagueIntelligence = (leagueId = "L1") =>
+    leagueIntelligenceRoute(new Request(`http://localhost/api/l/${leagueId}/league-intelligence`), {
+      params: Promise.resolve({ leagueId }),
+    });
+  it("returns a valid response for a real league", async () => {
+    const h = setup();
+    seedLeague(h, { rosterCount: 4 });
+    const r = await leagueIntelligence();
+    expect(r.status).toBe(200);
+    expect(LeagueIntelligenceResponseSchema.safeParse(await r.json()).success).toBe(true);
+  });
+  it("404 for an unknown league", async () => {
+    setup();
+    const r = await leagueIntelligence("nope");
+    expect(r.status).toBe(404);
   });
 });
 

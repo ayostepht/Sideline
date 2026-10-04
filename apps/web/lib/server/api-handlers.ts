@@ -3,6 +3,7 @@ import {
   OnboardingStatusSchema,
   PlayerSearchRequestSchema,
   PlayerSearchResultSchema,
+  LeagueIntelligenceResponseSchema,
   LineupRequestSchema,
   LineupResponseSchema,
   MatchupRequestSchema,
@@ -19,6 +20,7 @@ import {
 import { z } from "zod";
 import { errorResult, type ApiResult } from "./http";
 import { getSettings } from "./identity";
+import { getLeagueIntelligence } from "./league-intelligence";
 import { searchPlayers } from "./league-views";
 import { getLineup } from "./lineup";
 import { getMatchup } from "./matchup";
@@ -281,6 +283,19 @@ export function handleMatchup(
       return errorResult(404, "not_found", "League, week, or roster not found.");
     }
     return { status: 200, body: MatchupResponseSchema.parse(r.data) };
+  });
+}
+
+/** T5.4c: GET /api/l/[leagueId]/league-intelligence (all-play records, luck, power score,
+ * positional heatmap, playoff odds, manager tendencies, for every team at once). No query params
+ * beyond the league id itself. */
+export function handleLeagueIntelligence(leagueId: string, now: Date = new Date()): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(404, "not_found", "League not found.");
+  return withMigratedDb((h) => {
+    const r = getLeagueIntelligence(h, idOk.data, now);
+    if (!r.ok) return errorResult(404, "not_found", "League not found.");
+    return { status: 200, body: LeagueIntelligenceResponseSchema.parse(r.data) };
   });
 }
 
