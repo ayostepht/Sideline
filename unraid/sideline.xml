@@ -3,11 +3,11 @@
   Sideline Unraid Community Applications template.
 
   PLACEHOLDER NOTICE: <Repository> and <Registry> below point at a placeholder
-  "sideline/sideline" image. Sideline is not yet published to any container registry
-  (Docker Hub, GHCR, or otherwise), that choice, and the credentials/publish step it needs
-  in CI, is Steph's call and is intentionally not made here. Before this template is submitted
+  "sideline/sideline" image. CI is wired to publish to GHCR (GitHub Container Registry) on
+  pushes to main and on version tags, but this repo has no GitHub remote configured yet, so
+  there is no real image location to point at. Before this template is submitted
   to Community Applications or used for a real install, update <Repository> (and <Registry> if
-  the registry is not Docker Hub) to the real image location, for example:
+  the registry is not GHCR) to the real image location, for example:
     ghcr.io/<owner>/sideline:1.0.0   with  <Registry>https://ghcr.io</Registry>
   Until then, operators can still use this template with a locally built image: build with
   `docker compose build` (see docs/self-hosting.md), tag it to match <Repository>, and the

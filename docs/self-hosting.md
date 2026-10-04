@@ -34,14 +34,16 @@ line pointing at a published Sideline image once one exists (see "A note on imag
 
 1. In Unraid's Docker tab, go to **Add Container**, then switch to entering a template URL, or
    add the template manually. The template lives in this repo at `unraid/sideline.xml`.
-2. The template's `Repository` field is a placeholder until Sideline is published to a container
-   registry (Docker Hub, GHCR, or similar is Steph's call, not yet made). Until then:
+2. The template's `Repository` field is a placeholder until this repository is actually hosted on
+   GitHub and CI can publish to its real GHCR (GitHub Container Registry) package (see "A note on
+   images" below). Until then:
    - Build the image yourself on the Unraid box or another machine with
      `docker compose build` from this repo, tag it to match the `Repository` field in the
      template (or edit the template's `Repository` field to match whatever tag you built), and
      Unraid will run the local image.
-   - Once a real registry and tag exist, update the template's `Repository` (and `Registry` if
-     it is not Docker Hub) and it works like any other Community Applications app.
+   - Once this repo has a real GitHub remote, update the template's `Repository` to
+     `ghcr.io/<owner>/sideline` (and `Registry` to `https://ghcr.io`) and it works like any other
+     Community Applications app.
 3. Fill in the template fields:
    - **WebUI Port**: host port to map to the container's 3000 (default 3000).
    - **Data**: a path under `/mnt/user/appdata/` to hold the database and backups (default
@@ -242,9 +244,10 @@ phone open the dev build over your home Wi-Fi.
 
 ## A note on images
 
-This repository builds a multi-arch (amd64 and arm64) image in CI on every push to `main`, but
-does not currently publish it anywhere; `.github/workflows/ci.yml`'s Docker job verifies the
-build only. Until a registry is configured, install by building from source (`docker compose
-build`, or `docker build .` and tag it to match the Unraid template). If you want a published
-image, raise it with Steph; publishing needs a registry decision and credentials this repo does
-not currently have.
+This repository builds a multi-arch (amd64 and arm64) image in CI on every push to `main` and on
+every pushed version tag. Once this repository is actually hosted on GitHub, CI also publishes
+that image to the GHCR (GitHub Container Registry) package for this repository: a push to `main`
+publishes `latest` and a short-sha tag, and a version tag (for example `v1.0.0`) additionally
+publishes that exact version. Until then, or if you would rather not depend on that package,
+install by building from source (`docker compose build`, or `docker build .` and tag it to match
+the Unraid template).
