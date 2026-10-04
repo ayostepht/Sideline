@@ -40,21 +40,40 @@ export const DEFAULT_SIM_ITERATIONS = 10000;
 
 export type SimStarterStatus = "not_started" | "in_progress" | "finished";
 
-export interface SimStarter {
+/** Fields common to every `SimStarter` status variant. */
+interface SimStarterCommon {
   playerId: string;
   /** Mean (mode-adjusted) weekly projection. Ignored for `finished` players. */
   mean: number;
   /** PROJ-2 standard deviation. Ignored for `finished` players. */
   sd: number;
-  status: SimStarterStatus;
-  /** Points already scored. Required for `finished` and `in_progress`; ignored for `not_started`. */
-  actualPointsSoFar?: number;
-  /**
-   * Fraction of the player's game clock remaining, in [0, 1]. Only meaningful for `in_progress`.
-   * `null` means no game-clock data was available (SIM-1's "otherwise" branch).
-   */
-  fractionOfGameRemaining?: number | null;
 }
+
+/**
+ * Discriminated union on `status` (code-reviewer Major finding, T5.1 fix round): `finished` and
+ * `in_progress` each *require* `actualPointsSoFar`, so a caller that omits it for a player who
+ * actually scored points cannot silently fall back to 0 with no trace. The omission is now a
+ * compile error, not a runtime concern that only `flattenStarter`'s fallback would mask.
+ * `not_started` cannot carry `actualPointsSoFar` or `fractionOfGameRemaining` at all, since
+ * neither is meaningful before the player's game begins.
+ */
+export type SimStarter =
+  | (SimStarterCommon & { status: "not_started" })
+  | (SimStarterCommon & {
+      status: "finished";
+      /** Points already scored. Final for `finished`: never redrawn. */
+      actualPointsSoFar: number;
+    })
+  | (SimStarterCommon & {
+      status: "in_progress";
+      /** Points already scored so far this week. */
+      actualPointsSoFar: number;
+      /**
+       * Fraction of the player's game clock remaining, in [0, 1]. `null` means no game-clock
+       * data was available (SIM-1's "otherwise" branch).
+       */
+      fractionOfGameRemaining?: number | null;
+    });
 
 export interface SimTeam {
   rosterId: string;
@@ -131,43 +150,46 @@ function flattenStarter(
   starter: SimStarter,
   reasons: Reason[],
 ): FlatStarter {
-  const { playerId, mean, sd, status, actualPointsSoFar, fractionOfGameRemaining } = starter;
+  const { playerId, mean, sd, status } = starter;
 
-  if (status === "finished") {
-    return {
-      playerId,
-      rosterId,
-      team,
-      fixedBase: actualPointsSoFar ?? 0,
-      drawMean: 0,
-      drawSd: NO_DRAW,
-    };
+  switch (status) {
+    case "finished":
+      return {
+        playerId,
+        rosterId,
+        team,
+        fixedBase: starter.actualPointsSoFar,
+        drawMean: 0,
+        drawSd: NO_DRAW,
+      };
+
+    case "not_started":
+      return { playerId, rosterId, team, fixedBase: 0, drawMean: mean, drawSd: sd };
+
+    case "in_progress": {
+      const base = starter.actualPointsSoFar;
+      const { fractionOfGameRemaining } = starter;
+      if (fractionOfGameRemaining === null || fractionOfGameRemaining === undefined) {
+        reasons.push({
+          code: "SIM_REMAINING_APPROXIMATE",
+          label:
+            "No live game clock data, so the rest of this player's score uses the full projection",
+          value: playerId,
+        });
+        return { playerId, rosterId, team, fixedBase: base, drawMean: mean, drawSd: sd };
+      }
+
+      const fraction = Math.min(1, Math.max(0, fractionOfGameRemaining));
+      return {
+        playerId,
+        rosterId,
+        team,
+        fixedBase: base,
+        drawMean: mean * fraction,
+        drawSd: sd * Math.sqrt(fraction),
+      };
+    }
   }
-
-  if (status === "not_started") {
-    return { playerId, rosterId, team, fixedBase: 0, drawMean: mean, drawSd: sd };
-  }
-
-  // in_progress
-  const base = actualPointsSoFar ?? 0;
-  if (fractionOfGameRemaining === null || fractionOfGameRemaining === undefined) {
-    reasons.push({
-      code: "SIM_REMAINING_APPROXIMATE",
-      label: "No live game clock data, so the rest of this player's score uses the full projection",
-      value: playerId,
-    });
-    return { playerId, rosterId, team, fixedBase: base, drawMean: mean, drawSd: sd };
-  }
-
-  const fraction = Math.min(1, Math.max(0, fractionOfGameRemaining));
-  return {
-    playerId,
-    rosterId,
-    team,
-    fixedBase: base,
-    drawMean: mean * fraction,
-    drawSd: sd * Math.sqrt(fraction),
-  };
 }
 
 export function simulateMatchup(input: SimulateMatchupInput): SimulateMatchupResult {

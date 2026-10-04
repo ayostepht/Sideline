@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { simulateMatchup, type SimTeam } from "./matchup.js";
+import { simulateMatchup, type SimStarter, type SimTeam } from "./matchup.js";
 
 function notStarted(playerId: string, mean: number, sd: number) {
   return { playerId, mean, sd, status: "not_started" as const };
@@ -23,6 +23,25 @@ function buildTeam(rosterId: string, count: number, meanBase: number): SimTeam {
     ),
   };
 }
+
+describe("SimStarter discriminated union (code-reviewer Major finding, T5.1 fix round)", () => {
+  it("rejects a finished starter missing actualPointsSoFar at compile time", () => {
+    // @ts-expect-error - actualPointsSoFar is required when status is "finished"
+    const missingFinished: SimStarter = { playerId: "x", mean: 0, sd: 0, status: "finished" };
+    expect(missingFinished.status).toBe("finished");
+  });
+
+  it("rejects an in_progress starter missing actualPointsSoFar at compile time", () => {
+    // @ts-expect-error - actualPointsSoFar is required when status is "in_progress"
+    const missingInProgress: SimStarter = {
+      playerId: "x",
+      mean: 10,
+      sd: 2,
+      status: "in_progress",
+    };
+    expect(missingInProgress.status).toBe("in_progress");
+  });
+});
 
 describe("simulateMatchup determinism", () => {
   it("is bit-identical across two calls with the same inputs and seed", () => {
