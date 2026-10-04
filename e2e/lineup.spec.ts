@@ -99,14 +99,25 @@ test.describe("Lineup (LINEUP-5/6/9)", () => {
   test("LINEUP-FLOW-5: the swap list and exactly one issues-banner state render", async ({
     page,
   }) => {
-    await page.goto(`${L}/lineup`);
+    // The default (no `?mode=`) Projected view of week 4 for the viewer's own roster now
+    // correctly shows "Your lineup is already optimal" (ADR-017, T6.8/T6.9): its only possible
+    // swap's delta does not clear the shared 0.05pt materiality floor
+    // (lib/client/lineup-recommendation.ts `hasMaterialSwaps`), so `lineup-swaps` never renders
+    // there. Upside mode, same week and roster, is hand-confirmed (by probing every
+    // week x mode x roster combination against this fixture) to be the one combination that
+    // reliably clears the floor (+2.3 pts, 1 swap), so this test uses it to genuinely exercise
+    // the swap-list-renders-with-content path rather than only ever hitting the empty state.
+    await page.goto(`${L}/lineup?week=4&mode=upside`);
     const swaps = page.getByTestId("lineup-swaps");
     await expect(swaps).toBeVisible();
     // Retrying poll, not a one-shot count: swap rows can populate a tick after the
     // container itself, and did on mobile-iphone during the G5 gate (flaky, not a real bug).
     await expect.poll(async () => swaps.getByTestId("lineup-swap-row").count()).toBeGreaterThan(0);
     // LINEUP-1/LINEUP-6: the issues banner and the "no issues" message are mutually exclusive;
-    // exactly one renders regardless of which this fixture's week currently has.
+    // exactly one renders regardless of which this fixture's week currently has. Issues are
+    // computed from the lineup's slot assignments (unknown slot types, empty slots, inactive
+    // starters), not from mode, so this assertion is unaffected by the mode=upside navigation
+    // above.
     const bannerCount = await page.getByTestId("lineup-issues-banner").count();
     const emptyCount = await page.getByTestId("lineup-issues-empty").count();
     expect(bannerCount + emptyCount).toBe(1);
