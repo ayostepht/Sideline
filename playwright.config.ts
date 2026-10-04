@@ -18,6 +18,7 @@ import { assertSeededDataDir, createSeededDataDir } from "./scripts/lib/seed";
  */
 const PORT = 3000;
 const ONBOARDING_PORT = 3101;
+const AUTH_PORT = 3102;
 const HOST = "127.0.0.1";
 const externalBaseUrl = process.env["E2E_BASE_URL"];
 const baseURL = externalBaseUrl ?? `http://${HOST}:${PORT}`;
@@ -96,6 +97,25 @@ const onboardingDir =
 process.env["E2E_ONBOARDING_DATA_DIR"] = onboardingDir;
 const onboardingUrl = `http://${HOST}:${ONBOARDING_PORT}`;
 process.env["E2E_ONBOARDING_URL"] = onboardingUrl;
+
+// Auth server (T6.4): a third standalone server, on its own seeded fixture DATA_DIR, with
+// APP_PASSWORD/SESSION_SECRET configured so the optional HOST-8 login gate is actually on. The
+// main and onboarding servers above both run with no password configured (the common case
+// today), so this is the only place the login/logout round trip and the unauthenticated-redirect
+// behavior can be exercised end to end. Test-only secrets, not real: never used for anything but
+// this throwaway server, fine to keep in a tracked file (ADR-000 is about real identifiers, not
+// synthetic test credentials). SESSION_SECRET must be at least 32 characters
+// (packages/shared/src/config.ts).
+const AUTH_PASSWORD = "e2e-fixture-password-not-real";
+const AUTH_SESSION_SECRET = "e2e-fixture-session-secret-not-real-0000";
+const startAuthServer = process.env["E2E_SKIP_SERVER"] !== "1" && !onlyHelperSpecRequested();
+const authDir =
+  process.env["E2E_AUTH_DATA_DIR"] ??
+  (startAuthServer ? (await createSeededDataDir(REPO_ROOT)).dataDir : "");
+process.env["E2E_AUTH_DATA_DIR"] = authDir;
+const authUrl = `http://${HOST}:${AUTH_PORT}`;
+process.env["E2E_AUTH_URL"] = authUrl;
+process.env["E2E_AUTH_PASSWORD"] = AUTH_PASSWORD;
 
 const NOT_FOUND_SPEC = /not-found\.spec\.ts/;
 const MAIN_PROJECTS = ["desktop-chromium", "mobile-iphone", "mobile-pixel"];
@@ -201,6 +221,29 @@ export default defineConfig({
               HOSTNAME: HOST,
               DATA_DIR: onboardingDir,
               SIDELINE_GALLERY: "1",
+            },
+            reuseExistingServer: false,
+            timeout: 180_000,
+            stdout: "pipe" as const,
+            stderr: "pipe" as const,
+          },
+        ]
+      : []),
+    ...(startAuthServer
+      ? [
+          {
+            // No worker needed: the fixture league is already fully synced in this seeded dir
+            // (same seeding as the main server above), so settings/login just need the web
+            // server. Does not build (same reasoning as the onboarding server above).
+            command: "pnpm --filter @sideline/web start:standalone",
+            url: `${authUrl}/api/health`,
+            env: {
+              PORT: String(AUTH_PORT),
+              HOSTNAME: HOST,
+              DATA_DIR: authDir,
+              SIDELINE_GALLERY: "1",
+              APP_PASSWORD: AUTH_PASSWORD,
+              SESSION_SECRET: AUTH_SESSION_SECRET,
             },
             reuseExistingServer: false,
             timeout: 180_000,

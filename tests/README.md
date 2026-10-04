@@ -33,11 +33,13 @@ Config: `playwright.config.ts`. Projects: `desktop-chromium` (1280x800), `mobile
 - Without it, the config builds and starts the production standalone server (the one Docker
   ships, `pnpm --filter @sideline/web start:standalone`) on 127.0.0.1:3000
   (`reuseExistingServer: false`, so a stale server on the port is an error, not silently tested; 180 s timeout) with `SIDELINE_GALLERY=1` and `DATA_DIR` set to a fixture-seeded temp dir (`createSeededDataDir`, `pnpm db:seed:fixtures`). `E2E_DATA_DIR` overrides but must be seeded (marker file) and outside `./data`, or the config refuses. `E2E_SKIP_SERVER=1` never starts one.
-- Two servers: the seeded one (port 3000, league `1000000000000000001` exists, no worker) and an onboarding
-  server (port 3101, fresh unseeded DATA_DIR, fixture-mode worker alongside, no network). URLs and fixture ids
-  are in `e2e/helpers/servers.ts` (`seededBaseUrl`, `onboardingBaseUrl`, `FIXTURE`). Onboarding state is shared
-  across the run, so specs that change it run serially. The onboarding server does not build; with
-  `E2E_BASE_URL` set a build must already exist.
+- Three servers: the seeded one (port 3000, league `1000000000000000001` exists, no worker), an onboarding
+  server (port 3101, fresh unseeded DATA_DIR, fixture-mode worker alongside, no network), and an auth
+  server (port 3102, a second fixture-seeded DATA_DIR, started with `APP_PASSWORD`/`SESSION_SECRET` set so
+  HOST-8's login gate is actually on, used only by `e2e/auth.spec.ts`). URLs and fixture ids are in
+  `e2e/helpers/servers.ts` (`seededBaseUrl`, `onboardingBaseUrl`, `authBaseUrl`, `AUTH_PASSWORD`, `FIXTURE`).
+  Onboarding state is shared across the run, so specs that change it run serially. Neither the onboarding
+  nor the auth server builds; with `E2E_BASE_URL` set a build must already exist.
 - Routes for axe (UI2) and no-hscroll (UI5) live in `e2e/routes.ts` (`existingRoutes` covers every Phase 2 page, the
   onboarding done view and the gallery; `notFoundRoutes` must answer 404). Themes: `useTheme(page, theme)` before `goto`, then `expectThemeApplied`.
 - `e2e/helpers.spec.ts` is the helpers' own self-test (uses `page.setContent`, needs no app, so
