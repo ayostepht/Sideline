@@ -21,3 +21,5 @@ export * from "./trends/consistency.js";
 export * from "./trends/signal.js";
 export * from "./trends/momentum.js";
 export * from "./waiver/index.js";
+export * from "./sim/index.js";
+export * from "./league/index.js";
