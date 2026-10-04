@@ -46,6 +46,7 @@ Remove an item when it is done; the archive keeps history.
 ### Phase 6 (in progress)
 
 - **Batch A code review minor (`docs/reviews/2026-10-04-p6-batchA-code.md`):** `apps/web/lib/server/auth.ts`'s `constantTimeStringEqual` compares a wrong-length guess against a short placeholder instead of a same-length buffer, leaking a small timing signal about the configured password's length. Low real-world risk given the LAN/self-hosted threat model; candidate follow-up if ever revisited.
+- **Batch A UX review minors (`docs/reviews/2026-10-04-p6-batchA-ux.md`):** `apps/web/public/icons/icon-512.png`/`icon-192.png`'s purple accent bar's bottom corners sit just outside the standard 80%-diameter maskable safe-zone circle -- a few px of clipping under an aggressive circular OS mask on some Android launchers, barely visible (only the bar's corners, not the chevron glyph). `favicon.ico`'s 16x16 frame is a bit soft (downscaled from 48x48 rather than hand-tuned); still legible.
 
 ### Carried from Phase 5
 
