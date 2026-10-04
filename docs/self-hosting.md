@@ -22,6 +22,10 @@ variable, putting it behind Nginx Proxy Manager, and troubleshooting.
    That means the web app is up but the database has not finished migrating yet and the worker
    has not reported a heartbeat. Give it a minute and check again; `status: "ok"` means both the
    database and the worker are healthy.
+5. This gets Sideline running for you on your own LAN. Before you forward this port through your
+   router or otherwise make it reachable from the internet, set up Nginx Proxy Manager (below)
+   and read "Enabling the password" below, it covers a real security gap (rate-limit bypass) if
+   you expose the app without a reverse proxy in front of it.
 
 If you are not building from source, replace `build: .` in `docker-compose.yml` with an `image:`
 line pointing at a published Sideline image once one exists (see "A note on images" below).
@@ -47,6 +51,10 @@ line pointing at a published Sideline image once one exists (see "A note on imag
    - **TZ**, **APP_PASSWORD**, **SESSION_SECRET**, **SLEEPER_USERNAME**, **DEFAULT_LEAGUE_ID**:
      see the env reference below. The rest are under "Show more settings".
 4. Start the container, then open the WebUI link Unraid shows for it.
+5. If you plan to reach Sideline from outside your LAN, do not just port-forward the WebUI Port
+   on your router. Set up Nginx Proxy Manager (below) first and read "Enabling the password"
+   below: without a reverse proxy in front, `APP_PASSWORD`'s brute-force protection can be
+   bypassed by a remote attacker.
 
 ## Update
 
@@ -164,9 +172,23 @@ By default Sideline has no login. To add one:
 3. Restart the container. If `APP_PASSWORD` is set without a valid `SESSION_SECRET`, the app
    refuses to start and logs exactly that.
 
-Put the app behind HTTPS (see the NPM section above) before relying on the password over the
-internet; it protects against casual access on your LAN or through a reverse proxy, not against
-network eavesdropping on its own.
+**Important: this only has real brute-force protection behind a reverse proxy.** Sideline's
+login rate limiter (5 attempts per minute per IP) decides "per IP" by reading the last entry of
+the `X-Forwarded-For` header, trusting that exactly one reverse proxy sits in front of it and
+appends the real client IP as that last entry. That is the correct and secure design when Nginx
+Proxy Manager (or an equivalent proxy that sanitizes `X-Forwarded-For`) is actually in place.
+But if you expose the container directly, for example by port-forwarding the WebUI port on your
+router straight to Sideline with no reverse proxy in front, the container instead sees the
+`X-Forwarded-For` header the browser (or an attacker) sends, completely unfiltered. An attacker
+can then send a fake last entry on every login attempt, so each attempt looks like it is coming
+from a different IP, and fully bypass the rate limiter with unlimited password guesses. Treat
+`APP_PASSWORD` as a LAN-only convenience, not a real defense against a remote attacker, unless
+Nginx Proxy Manager (see above) is genuinely sitting in front of the app whenever it is reachable
+from outside your own network.
+
+Put the app behind HTTPS too (see the NPM section above) before relying on the password over the
+internet; HTTPS stops network eavesdropping on the password itself, which is a separate problem
+from the rate-limit bypass above, both need a reverse proxy to be solved.
 
 ## Troubleshooting
 
