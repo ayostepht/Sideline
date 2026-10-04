@@ -19,6 +19,7 @@ import { TrendIndicator } from "../../../../components/trend-indicator";
 import { Badge } from "../../../../components/ui/badge";
 import { buttonVariants } from "../../../../components/ui/button";
 import { Card, CardContent, CardHeader } from "../../../../components/ui/card";
+import { hasMaterialSwaps } from "../../../../lib/client/lineup-recommendation";
 import { leagueBase, parseWeek } from "../../../../lib/client/nav";
 import { getLeagueOverview, getMyTeam, getStandings } from "../../../../lib/server/league-views";
 import { getLineup } from "../../../../lib/server/lineup";
@@ -352,9 +353,9 @@ function HomeIssues({
         ? "1 starter needs attention"
         : `${n} starters need attention`;
   const lineupHref = `${base}/lineup${week === null ? "" : `?week=${week}`}`;
-  // A tiny positive delta can be a tiebreak artifact (equal-value players), not a real gain;
-  // only surface the recommendation as actionable when it is worth a tenth of a point or more.
-  const hasSwaps = lineup.swaps.length > 0 && lineup.pointDelta >= 0.05;
+  // Shared with the Lineup page's summary banner and swap list so both agree on what counts
+  // as an actionable recommendation (see lib/client/lineup-recommendation.ts).
+  const hasSwaps = hasMaterialSwaps(lineup.pointDelta, lineup.swaps.length);
   return (
     <div data-testid="home-issues">
       <p
