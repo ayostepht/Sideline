@@ -8,60 +8,37 @@
 | 1 Data layer and sync | G1 | `phase/1-data` (merged) | Done, G1 PASS 2026-10-02 |
 | 2 App shell and league views | G2 (human) | `phase/2-shell` (merged) | Done, G2 PASS 2026-10-02 (Steph approved) |
 | 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
-| 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` | Done, G4 PASS 2026-10-03 (human checkpoint optional, awaiting Steph's reply, not blocking Phase 5) |
-| 5 Matchups and league intelligence | G5 | `phase/5-matchups` | In progress, Batch A dispatched 2026-10-03 |
+| 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` (merged) | Done, G4 PASS 2026-10-03 (Steph approved) |
+| 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
 | 6 Hardening and v1.0 | G6 (human) | | Not started |
 
 ## Resume point
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
 
-## Phase 5 task table
-
-Batch letters and dependencies amended from PLAN.md's literal table per ADR-016 (T5.3 gets its own batch; T5.4 moves one batch later and depends on T5.3 too).
-
-| ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
-|---|---|---|---|---|---|---|---|
-| T5.1 | Matchup Monte Carlo and swing players (SIM-1 to SIM-3), `packages/core/src/sim/` | analytics-engineer | G4 | A | Done | 1 | `605c13f`, `d321cab` |
-| T5.2 | All-play, luck, power score, positional heatmap, manager tendencies (LEAGUE-1 to 4, 6), `packages/core/src/league/` | analytics-engineer | G4 | A | Done | 1 | `15f19b9` |
-| T5.3 | Playoff odds (LEAGUE-5) | analytics-engineer | T5.1 | B | Done | 1 | `2ce52e9`, `f5a5f08` |
-| T5.4a | `packages/db` read helpers: per-team weekly-score history, remaining-schedule pairings, league transactions, `playoffTeams` added to league settings read | backend-engineer | T5.1, T5.2, T5.3 | C1 | Done | 1 | `8995e67` |
-| T5.4b | Matchup data function, response DTO, API route, `computed_cache` wiring | backend-engineer | T5.4a | C2 | Done | 1 | `76b68e5`, `c83fa45` |
-| T5.4d | ROS-optimal-lineup roster strength per team (total and per-position), `apps/web/lib/server/roster-strength.ts` | backend-engineer | T5.4a | C2 | Done | 1 | `3ef1dad` |
-| T5.4c | League intelligence data function, response DTO, API route, `computed_cache` wiring | backend-engineer | T5.4a, T5.4d | C3 | Done | 1 | `59b4338`, `a9efed0` |
-| T5.5a | Matchup page (`matchup/page.tsx`, replaces the stub) | frontend-engineer | T5.4b | D | Done | 1 | `698c0fd`, `9d40b23`, `311da63` |
-| T5.5b | League intelligence sections (`league/(list)/page.tsx`, appended) | frontend-engineer | T5.4c | D | Done | 1 | `d05ad4b`, `200513f` |
-| T5.5c | Home win-probability card (`(main)/page.tsx`) | frontend-engineer | T5.4b | D | Done | 1 | `9ed83e3` |
-| T5.6 | Tests: seeded determinism; symmetry; playoff odds sum to `playoff_teams` x 100% within 0.5%; perf; e2e matchup and league | qa-engineer | T5.5 | E | Done | 1 | `1b8cdc8`, `41599d0` |
-
-**Decided at Phase 5 planning (not a dedicated task, per ADR-016 item 5):** `getPlayerDetail`'s perf cost and the missing `upsertUsageWeek` wiring stay in the backlog below — neither blocks any Phase 5 requirement.
-
 ## Earlier phases
 
-Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`; Phase 4 (task table, live fixes, gate-time fixes, G4 phase checks) in `docs/archive/progress-phase4.md`. Standing rules for briefs are in `docs/brief-rules.md`.
+Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`; Phase 4 (task table, live fixes, gate-time fixes, G4 phase checks) in `docs/archive/progress-phase4.md`; Phase 5 (task table, batch review trail, G5 phase checks) in `docs/archive/progress-phase5.md`. Standing rules for briefs are in `docs/brief-rules.md`.
 
 ## Backlog (open items only)
 
-### G5 gate-run findings
-
-- **Matchup route not yet in `lighthouserc.json`'s Lighthouse budget check** -- same pattern as the G3->G4 Lineup gap (closed at G4). Recommend adding before G6.
-- **Route JS soft-target (170,000 B) regressions this phase**: League (178,897 B) and League/teams/[rosterId] (179,534 B) newly crossed the soft target (both well under the 204,800 B hard cap) from Phase 5's new intelligence sections added to the same route. Joins the pre-existing G4 carryovers (Lineup, Waivers, Players list, Players detail) -- 7 of 15 routes now over soft target, up from 4 at G4. Worth a dedicated look if Phase 6 adds more client code to any of these.
-- **`pnpm test:e2e` (354 tests, UI1) and `pnpm test:a11y` (350 tests, UI2) run almost entirely overlapping test sets** (confirmed: 350 of 354 UI1 tests also match UI2's `--grep` filter), roughly doubling e2e wall-clock time (G5 gate: 73.3s + 66.0s) for limited marginal coverage. Both of this gate's flaky failures happened to surface in only one of the two near-duplicate runs. Worth a maintainer look at whether UI2 should filter to a true axe-only subset. Not a correctness issue, a cost/signal-ratio one.
-
-### Phase 5 (in progress)
-
-- **Batch A code review minors (`docs/reviews/2026-10-03-p5-batchA-code.md`):** `packages/core/src/sim/matchup.ts`'s `NO_DRAW = -1` sentinel overlaps a representable (if invalid) real `sd` value -- if `sd` is ever exactly -1, the starter silently gets treated as zero-variance instead of hitting the sampler's existing `sd <= 0` fallback; prefer a boolean `hasDraw` flag over an overloaded sign. `flattenStarter` builds an intermediate object array then copies into typed arrays -- redundant indirection, no measured perf impact (~30x margin against SIM-3's 300ms budget), lowest priority.
-- **Batch B code review minors (`docs/reviews/2026-10-03-p5-batchB-code.md`):** `packages/core/src/league/playoff-odds.ts` has no perf smoke test for its per-iteration ranking sort (unlike `sim/matchup.perf.test.ts`'s SIM-3 test) -- reviewer manually benchmarked a realistic 12-team/7-week/10,000-iteration run at ~33ms, not a bottleneck today but no regression guard exists; `seeds.get(t.rosterId) as number` (line ~146) is a provably-safe `Map.get` cast with no comment explaining why, unlike the file's other array-index casts which do have one.
-- **Batch C2 code review minors (`docs/reviews/2026-10-03-p5-batchC2-code.md`):** `roster-strength.test.ts`'s cache-invalidation test forces a `"rosters"` sync success after mutating `league_player_week_points`, not the matching `"projections"` job -- mechanism still correct (any of four hashed jobs invalidates) but doesn't exercise the realistic trigger; `matchup.ts`/`roster-strength.ts` both return a cached response's `freshness` as computed at write time, not recomputed on a cache hit (exact repeat of `lineup.ts`'s existing pattern, not a new regression).
-- **Pre-existing real-data gap, surfaced fixing the T5.4b bye-week Major (`c83fa45`):** `lineup.ts`'s `isBye`/`byeWeek` logic (now also inherited by `matchup.ts`'s bye check) compares a player's raw Sleeper team code against a schedule derived with nflverse team codes, without applying the `LAR` -> `LA` conversion ADR-006 documents and other lookups (DvP, schedule) in this same file already apply. Practical effect: a Rams player's bye week may not register as a bye in either the Lineup or Matchup views. Pre-existing (not introduced by Phase 5); candidate backend-engineer follow-up whenever `lineup.ts`'s bye detection is next touched.
-- **Batch C3 code review minors (`docs/reviews/2026-10-03-p5-batchC3-code.md`):** `LeagueIntelligencePlayoffOddsSchema`'s doc comment claims `playoffOdds` is null "exactly when `playoffTeams` is null," but it's also null when `playoffTeams` is set but outside `[0, numTeams]` (e.g. a roster removed mid-season) -- untested boundary, comment states an invariant that doesn't fully hold. `league-intelligence.ts`'s `populationStandardDeviation` duplicates `packages/core/src/projections/variance.ts`'s private helper of the same name byte-for-byte (correctly avoiding the CV-shrinkage wrapper, but the plain formula itself could be exported from core and reused instead of recopied).
-- **Batch D code review minors (`docs/reviews/2026-10-03-p5-batchD-code.md`):** `league/_components/format.ts`'s exported `sortByPlayoffPctDesc` is unit-tested but never called -- `playoff-odds.tsx` duplicates the identical sort inline instead; either wire it in or delete the unused export. Two stat figures (`all-play-luck.tsx`'s "actual vs expected wins" caption, Home's tie-chance percentage) lack `tabular-nums`, unlike every other stat figure in this batch. `all-play-luck.tsx`'s luck sign cutoff and `positional-strength-grid.tsx`'s heatmap tone-band thresholds are undocumented magic numbers. `apps/web/components/sparkline.tsx` has the same sr-only-table pattern that caused Batch D's (already-fixed) 390px overflow bug in two other components -- hasn't caused overflow yet only because its content stays under 390px today; worth a proactive `[contain:layout]` wrap whenever that file is next touched.
-- **Score-range chart's "your" median dot (`text-primary`, lime) measures only 1.18:1 against the white card in light mode**, the same class of contrast issue the Batch D UX review's Major finding caught for the chart's lines (fixed, `docs/reviews/2026-10-03-p5-batchD-ux.md`) -- the dots themselves were explicitly out of that fix's scope since the reviewer didn't flag them, but it's a real, smaller instance of the same problem. Candidate follow-up: swap the highlighted dot to `text-highlight` (already used for the line fix) or another token that clears 3:1 in light mode.
-- **G5 gate UX review minors (`docs/reviews/2026-10-03-G5-ux.md`):** only League's Standings section marks the viewer's own team ("You" badge + row tint) -- the other 5 new sections (power rankings, all-play/luck, positional strength, manager tendencies, playoff odds) show the viewer's row unmarked, breaking the convention used everywhere else in the app. Matchup's swing-players list stays a single stacked card list at 1280px desktop, leaving ~40% of the content column empty (same class as the League desktop-density item below).
-- **Batch D UX review minors (`docs/reviews/2026-10-03-p5-batchD-ux.md`):** `manager-tendencies.tsx` doesn't pluralize ("1 transactions", "1 waiver claims won"). The four new League sections (power rankings, all-play/luck, manager tendencies, playoff odds) stay single-column-stacked-card at every breakpoint including 1280px, unlike Standings on the same page, which gets a proper desktop table -- PLAN 6.1 wants desktop density, not just desktop whitespace; candidate `lg:` table variants matching `standings.tsx`'s pattern. Win probability is shown three times in quick succession on Home + Matchup (banner sentence, "YOU" card, "TIE" card) with no added information -- consider one compact three-segment probability bar instead of three stacked cards. Swing-player rows have no tap-through to player detail, unlike most other recommendation rows in the app.
-
-
 Remove an item when it is done; the archive keeps history.
+
+### Carried from Phase 5
+
+Full detail and fully-fixed history: `docs/archive/progress-phase5.md`, `docs/reviews/2026-10-03-p5-batch{A,B,C2,C3,D,E}-{code,ux}.md`, `docs/reviews/2026-10-03-G5-{code,ux}.md`.
+
+- **Desktop density on League and Matchup:** 5 of League's 6 sections (power rankings, all-play/luck, positional strength, manager tendencies, playoff odds -- only Standings is exempt) and Matchup's swing-players list all stay a single-column stacked-card layout at every breakpoint including 1280px, unlike Standings' proper desktop table on the same page. PLAN 6.1 wants desktop density, not just desktop whitespace; candidate `lg:` table variants matching `standings.tsx`'s pattern.
+- **Missing "You" marker in 5 of League's 6 new sections:** only Standings marks the viewer's own team (badge + row tint); the other 5 show it as a plain, unmarked row, breaking the convention used everywhere else in the app (Standings, Home, Matchup's swing players).
+- **Score-range chart's "your" median dot** (`text-primary`, lime) measures only 1.18:1 against the white card in light mode -- same class of contrast issue the chart's line-stroke Major already fixed (now 3.35-8.95:1), but the dots were out of that fix's scope. Candidate: swap to `text-highlight`.
+- `manager-tendencies.tsx` doesn't pluralize ("1 transactions", "1 waiver claims won"). Win probability is shown three times in quick succession on Home + Matchup (banner sentence, "YOU" card, "TIE" card) with no added information -- consider one compact three-segment probability bar instead. Swing-player rows have no tap-through to player detail, unlike most other recommendation rows in the app.
+- **Pre-existing real-data gap, surfaced fixing a Phase 5 bug:** `lineup.ts`'s `isBye`/`byeWeek` logic (now also inherited by `matchup.ts`) compares a player's raw Sleeper team code against an nflverse-coded schedule without the `LAR` -> `LA` conversion ADR-006 documents elsewhere in the same file -- a Rams player's bye week may not register as a bye in Lineup or Matchup. Not introduced by Phase 5.
+- **Minor code-quality items, all documented in their source review:** `sim/matchup.ts`'s `NO_DRAW = -1` sentinel overlaps a representable real `sd` value (prefer a boolean flag); `playoff-odds.ts` has no perf smoke test for its ranking sort (manually benchmarked ~33ms for 12 teams/7 weeks, no regression guard); `roster-strength.test.ts`'s cache-invalidation test triggers the wrong (but still-correct) sync job; `matchup.ts`/`roster-strength.ts` don't recompute `freshness` on a cache hit (matches `lineup.ts`'s existing pattern); `LeagueIntelligencePlayoffOddsSchema`'s doc comment understates when `playoffOdds` is null; `league-intelligence.ts`'s `populationStandardDeviation` duplicates a `packages/core` private helper instead of it being exported; `league/_components/format.ts`'s `sortByPlayoffPctDesc` is unused dead code; two stat figures lack `tabular-nums`; a few undocumented magic-number thresholds (luck sign cutoff, heatmap tone bands).
+- **`apps/web/components/sparkline.tsx` has the same sr-only-table pattern that caused two real, fixed 390px overflow bugs this phase** -- hasn't overflowed yet only because its content stays under 390px today. Proactively wrap with `[contain:layout]` whenever this file is next touched.
+- **Matchup route not yet in `lighthouserc.json`'s Lighthouse budget check** -- same pattern as the G3->G4 Lineup gap (closed at G4). Add before G6.
+- **Route JS soft-target (170,000 B) regressions this phase:** League (178,897 B) and League/teams/[rosterId] (179,534 B) newly crossed the soft target (both well under the 204,800 B hard cap). 7 of 15 routes now over soft target, up from 4 at G4. Worth a dedicated look if Phase 6 adds more client code to any of these.
+- **`pnpm test:e2e` (354 tests, UI1) and `pnpm test:a11y` (350 tests, UI2) run almost entirely overlapping test sets** (350 of 354 shared), roughly doubling e2e wall-clock time for limited marginal coverage. Worth a maintainer look at a true axe-only UI2 filter.
+- **Informational Brier-score calibration isn't computable from the recorded fixture** (no week has both a stored pregame projection and a completed outcome). A real `./data` database would support it naturally; closing this needs either a richer recorded fixture (sleeper-data-engineer) or a one-off manual analysis outside the committed test suite (never committed, per ADR-009).
 
 ### Carried from Phase 2
 
