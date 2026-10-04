@@ -43,6 +43,10 @@ Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progre
 
 Remove an item when it is done; the archive keeps history.
 
+### Phase 6 (in progress)
+
+- **Batch A code review minor (`docs/reviews/2026-10-04-p6-batchA-code.md`):** `apps/web/lib/server/auth.ts`'s `constantTimeStringEqual` compares a wrong-length guess against a short placeholder instead of a same-length buffer, leaking a small timing signal about the configured password's length. Low real-world risk given the LAN/self-hosted threat model; candidate follow-up if ever revisited.
+
 ### Carried from Phase 5
 
 Full detail and fully-fixed history: `docs/archive/progress-phase5.md`, `docs/reviews/2026-10-03-p5-batch{A,B,C2,C3,D,E}-{code,ux}.md`, `docs/reviews/2026-10-03-G5-{code,ux}.md`.
