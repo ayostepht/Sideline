@@ -257,4 +257,116 @@ describe("optimizer property tests (T3.6)", () => {
       { numRuns: NUM_RUNS },
     );
   });
+
+  /**
+   * T6.10 (LINEUP-2, LINEUP-6): generalizes the hand-picked "3-way tied WR/FLEX" regression in
+   * `recommend.test.ts` (T6.8's fix for Steph's reported bug) into a property.
+   *
+   * IMPORTANT, and why this is NOT simply "feed `result.optimalAssignment` straight back in as
+   * the next `currentAssignment` and assert no swaps": that construction is a mathematical
+   * tautology, true whether or not the stability bonus exists, so it would never have caught the
+   * T6.8 bug. Proof sketch: `solveOptimalAssignment`'s *chosen player multiset and raw value* for
+   * a given (slots, players, values) triple is already fully determined before the stability
+   * bonus is even considered (the bonus only breaks ties among equally-valued permutations of
+   * that same multiset). `recommendLineup`'s lock bookkeeping is also unaffected, because a locked
+   * slot's pinned starter in `optimalAssignment` is always literally the *same* player id that was
+   * locked in the original `currentAssignment` that produced it. So handing `optimalAssignment`'s
+   * player ids straight back in as the next call's `currentAssignment` reproduces an input the
+   * solver is already guaranteed to map to itself, with or without the bonus - confirmed
+   * empirically: with `STABILITY_BONUS_EPSILON`'s addition commented out in a local, reverted-
+   * before-reporting edit of `solve.ts`, this naive construction still passed all 1000 runs (see
+   * the Task Report).
+   *
+   * The actual bug needs a *different* permutation of the same optimal player multiset as the
+   * "current" lineup - exactly what "three WR-eligible players tied... across two WR slots and a
+   * FLEX slot" produces in the hand-picked regression (swapping any two of those three players
+   * never changes the total, since total value is a sum over the chosen multiset, independent of
+   * which slot each member sits in). This property builds that directly and generally: take a real
+   * optimal lineup, find any two of its *unlocked* filled slots whose players are mutually
+   * eligible for each other's slot (a legal, same-multiset, same-total-value swap), and swap them.
+   * Crucially this requires no value tie at all, only slot-eligibility overlap between two players
+   * that both happen to be optimal - a strictly more general trigger than the hand-picked example's
+   * equal-value setup. Feeding that swapped (but equally optimal) lineup back in as "today's
+   * current" must never produce a swap back to some other, differently-tie-broken permutation:
+   * that would be exactly T6.8's "chain of swaps that nets to zero benefit" bug.
+   */
+  it("LINEUP-6: an already-optimal lineup is a stable fixed point, even swapped among interchangeable slots", () => {
+    fc.assert(
+      fc.property(fc.gen(), (g) => {
+        const testCase = genCase(g);
+        const { slots, warnings, players, currentAssignment } = testCase;
+
+        const firstResult = recommendLineup({
+          slots,
+          slotWarnings: warnings,
+          players,
+          currentAssignment,
+          now: NOW,
+        });
+
+        // Find two distinct, unlocked, filled slots in the optimal lineup whose incumbents are
+        // mutually eligible for each other's slot, so exchanging them is a legal alternative
+        // optimal lineup (same multiset, same total value, different arrangement). Locked slots
+        // are excluded: they are pinned by a different invariant (LINEUP-3, checked elsewhere),
+        // not the stability bonus this test targets.
+        const unlockedFilled: { slotIndex: number; playerId: string }[] = [];
+        firstResult.optimalAssignment.forEach((assignment, i) => {
+          if (assignment.playerId === null) return;
+          const p = players.find((pl) => pl.playerId === assignment.playerId);
+          if (p === undefined) return;
+          const locked = isLocked(
+            { kickoffUtc: p.kickoffUtc, kickoffApproximate: p.kickoffApproximate },
+            NOW,
+          );
+          if (!locked) unlockedFilled.push({ slotIndex: i, playerId: assignment.playerId });
+        });
+
+        let swapPair: [number, number] | undefined;
+        outer: for (let a = 0; a < unlockedFilled.length; a++) {
+          for (let b = a + 1; b < unlockedFilled.length; b++) {
+            const entryA = unlockedFilled[a];
+            const entryB = unlockedFilled[b];
+            if (entryA === undefined || entryB === undefined) continue;
+            const playerA = players.find((pl) => pl.playerId === entryA.playerId);
+            const playerB = players.find((pl) => pl.playerId === entryB.playerId);
+            if (playerA === undefined || playerB === undefined) continue;
+            const slotA = slots[entryA.slotIndex];
+            const slotB = slots[entryB.slotIndex];
+            if (slotA === undefined || slotB === undefined) continue;
+            const crossEligible =
+              isPlayerEligibleForSlot(playerA.fantasyPositions, slotB.eligiblePositions) &&
+              isPlayerEligibleForSlot(playerB.fantasyPositions, slotA.eligiblePositions);
+            if (crossEligible) {
+              swapPair = [entryA.slotIndex, entryB.slotIndex];
+              break outer;
+            }
+          }
+        }
+        // No such pair exists for this randomly generated case (e.g. too few filled slots, or no
+        // eligibility overlap) - nothing to assert, discard the run rather than passing vacuously.
+        fc.pre(swapPair !== undefined);
+        const [slotIndexA, slotIndexB] = swapPair;
+
+        const secondCurrentAssignment = firstResult.optimalAssignment.map(
+          (assignment) => assignment.playerId,
+        );
+        const playerAtA = secondCurrentAssignment[slotIndexA];
+        const playerAtB = secondCurrentAssignment[slotIndexB];
+        secondCurrentAssignment[slotIndexA] = playerAtB ?? null;
+        secondCurrentAssignment[slotIndexB] = playerAtA ?? null;
+
+        const secondResult = recommendLineup({
+          slots,
+          slotWarnings: warnings,
+          players,
+          currentAssignment: secondCurrentAssignment,
+          now: NOW,
+        });
+
+        expect(secondResult.swaps).toEqual([]);
+        expect(Math.abs(secondResult.pointDelta)).toBeLessThanOrEqual(EPS);
+      }),
+      { numRuns: NUM_RUNS },
+    );
+  });
 });
