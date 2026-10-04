@@ -22,8 +22,8 @@ function YouBadge() {
  * Mobile shows one card per team (unchanged); `lg` and up additionally shows a denser `<table>`
  * (T6.3c), matching the house convention in `standings.tsx`/`positional-strength-grid.tsx`. Both
  * exist in the DOM at every width; CSS hides one. `myRosterId` (the signed-in user's roster id in
- * this league, not yet threaded through from the page, see the task report) marks the viewer's
- * own row with the same badge-plus-tint treatment `standings.tsx` uses.
+ * this league) marks the viewer's own row with the same badge-plus-tint treatment `standings.tsx`
+ * uses.
  */
 export function PowerRankingsList({
   teams,
