@@ -2,12 +2,14 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-04. **G5 PASS, merged and tagged (see history below). Phase 6 ("Hardening and v1.0 release") is underway on `phase/6-hardening`, Batches A and B done, Batch C (the gate-prep batch) in progress: T6.4 and T6.5 done, T6.6 about to be dispatched.** Everything is proceeding autonomously per Steph's explicit go-ahead to keep working overnight without waiting for her. **The one standing exception: G6 has a human checkpoint in PLAN.md's gate table (release approval before tagging `v1.0.0`) -- stop and wait for Steph's reply there, do not tag or treat v1.0.0 as released without it.** Everything up to and including writing the G6 gate report and presenting it to her can proceed without waiting.
+Last updated: 2026-10-04. **G5 PASS, merged and tagged (see history below). Phase 6 ("Hardening and v1.0 release") is code-complete on `phase/6-hardening`: all four batches done, `docs/gates/G6.md` written, automated checks PASS.** **STOP: G6's human checkpoint is now the only open item.** I have presented the gate report to Steph and am waiting for her explicit reply before merging `phase/6-hardening` to `main` or tagging `gate-G6`/`v1.0.0`. Do not take either of those actions without her approval, regardless of any "keep going" instruction from earlier in the session -- that instruction covered work up through writing and presenting this gate report, not the release decision itself.
 
-**Phase 6 Batches A and B done** (ADR-017's plan: `docs/DECISIONS.md`):
+**Phase 6 all batches done** (ADR-017's plan: `docs/DECISIONS.md`):
 - **Batch A: T6.1** (auth HOST-8, security headers, structured logging -- `apps/web/proxy.ts`, Next 16's renamed `middleware.ts`), **T6.2** (Docker/self-hosting: PUID/PGID default fix, Unraid template, `docs/self-hosting.md` rewrite), **T6.3a** (PWA manifest/icons, theme-color fix). One Major fixed: the login rate limiter's IP-based trust model wasn't enforced or warned about and had unbounded memory growth if violated -- fixed with a bounded/swept rate-limiter map plus a prominent self-hosting docs warning.
 - **Batch B: T6.1c** (login page, Settings logout control), **T6.3b** (preseason/offseason states, consolidated across 7 pages, keyed on the authoritative `LeagueOverview.status` instead of ad hoc week checks), **T6.3c** (League desktop tables, "You" markers, pluralization). Two Blockers fixed: a real axe color-contrast violation on Playoff Odds' seed-chances link against the new "mine" row tint (4.18:1, needed 4.5:1); the branch's own `pnpm test:a11y` suite was genuinely red (7/350) from two stale e2e assertions not updated for this batch's own UI changes (fixed, not weakened -- full suite now 363/363).
-- **Batch C so far: T6.4** (qa-engineer: full regression, fresh-install + upgrade tests, new `e2e/auth.spec.ts` login/logout e2e, 60-minute live soak -- `9ef2fdb`) and **T6.5** (code-reviewer: whole-repo security review -- APPROVE, one Minor fixed directly `12a2a58`, two accepted-risk nits) both done, in parallel as planned. `pnpm gate --amd64` is 11/11 clean. T6.4 found and fixed one real flaky test in its own new suite (a transient-URL race, not an app bug). Full review trail: `docs/reviews/2026-10-04-p6-batch{A,B}-{code,ux}.md`, `docs/reviews/2026-10-04-p6-T6.5-security.md`. `pnpm verify` on `phase/6-hardening`: 149 files, 1457 tests, all green.
+- **Batch C: T6.4** (qa-engineer: full regression, fresh-install + upgrade tests, new `e2e/auth.spec.ts` login/logout e2e, 60-minute live soak -- `9ef2fdb`), **T6.5** (code-reviewer: whole-repo security review -- APPROVE, one Minor fixed directly `12a2a58`, two accepted-risk nits), **T6.6** (ux-reviewer: final review of every screen -- APPROVE, one cosmetic Nit, `f3fa2d0`). All three done. `pnpm gate --amd64` is 11/11 clean. T6.4 found and fixed one real flaky test in its own new suite (a transient-URL race, not an app bug).
+- **Batch D: T6.7 (fix round) skipped** -- Batch C returned zero Blocker/Major findings, so there was nothing to fix (ADR-017 amendment, `docs/DECISIONS.md`).
+- Full review trail: `docs/reviews/2026-10-04-p6-batch{A,B}-{code,ux}.md`, `docs/reviews/2026-10-04-p6-T6.5-security.md`, `docs/reviews/2026-10-04-p6-T6.6-ux.md`. `pnpm verify` on `phase/6-hardening`: 149 files, 1457 tests, all green. **Gate report: `docs/gates/G6.md`, PASS (automated).**
 
 ## 1. Resume in five steps
 
@@ -36,14 +38,14 @@ Last updated: 2026-10-04. **G5 PASS, merged and tagged (see history below). Phas
 
 ## 3. In flight
 
-- **T6.4 and T6.5 done and committed** (`9ef2fdb`, `12a2a58`/`f3b20f2`). About to dispatch **T6.6** (ux-reviewer: final review of every screen), the last Batch C task, sequenced after T6.4's server-heavy work per the G5 port-contention lesson. Agents die with the session -- if resuming mid-T6.6, check for uncommitted files under `docs/reviews/`, `.screens/`, verify and commit, or discard and re-dispatch.
+- **Nothing in flight.** All of Phase 6 is committed. `docs/gates/G6.md` is written and PASS (automated checks). **Waiting on Steph's reply to the G6 human checkpoint** -- do not merge or tag until she responds.
 
 ## 4. Next steps (in order)
 
-1. Restart `pnpm dev:lan`/`pnpm dev:worker` (T6.4 confirmed all ports free, Docker clean -- safe to do now).
-2. Dispatch **T6.6** (ux-reviewer: final review of every screen, every route, both themes, all three widths -- the last full pass before the gate; Batch A/B's reviews already caught and fixed the main UI issues this phase, so this should mostly confirm, but give it real scrutiny).
-3. Batch D: T6.7 fix round (owning agents, based on T6.4/T6.5/T6.6 findings -- T6.5 is APPROVE with only accepted-risk nits, T6.4 found no app bugs, so T6.7's scope depends heavily on T6.6's findings).
-4. **G6 is a human checkpoint (PLAN.md's gate table).** When Phase 6's batches are done and the gate's automated checks pass, write `docs/gates/G6.md`, then **stop and present it to Steph** -- a five-line summary, exact instructions to try it, specific questions, known issues -- and wait for her reply before tagging `v1.0.0` or merging `phase/6-hardening` to `main` as a release. This is explicit in CLAUDE.md section 4 and PLAN.md's gate table; Steph's "keep going, don't wait" instruction this session was about G5 and the work leading up to G6, not about skipping G6's own approval gate.
+1. **Nothing to do autonomously right now except wait.** When Steph replies to the G6 checkpoint:
+   - **If she approves:** merge `phase/6-hardening` to `main`, tag both `gate-G6` and `v1.0.0`, archive Phase 6's task table to `docs/archive/`, update section 2 of this file, and tell her it's a good moment to `/clear`. Phase 7 (P1 backlog) planning would be the natural next step after that, but do not start it before she approves the release.
+   - **If she asks for changes:** route each item to the right owning subagent, run it through the normal brief/verify/review cycle, re-run the affected gate checks, update `docs/gates/G6.md` with what changed, and present it to her again. Do not re-tag or merge until she approves the updated state.
+2. The dev server and worker are running again (`pnpm dev:lan` log `/tmp/sideline-web-dev.log`, `pnpm dev:worker` log `/tmp/sideline-worker-dev.log`) for Steph's own hands-on testing of the gate's "how to try it" section.
 
 ## 5. Briefs
 

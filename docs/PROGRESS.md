@@ -10,7 +10,7 @@
 | 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` (merged) | Done, G4 PASS 2026-10-03 (Steph approved) |
 | 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
-| 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` | In progress, Batch C dispatched 2026-10-04 (Batches A, B done) |
+| 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` | Code-complete, G6 PASS (automated) 2026-10-04, awaiting Steph's release approval (`docs/gates/G6.md`) |
 
 ## Resume point
 
@@ -30,8 +30,8 @@ Batch letters and task splits amended from PLAN.md's literal table per ADR-017 (
 | T6.3c | League UX polish: desktop density (`lg:` tables, 5 sections), "You" markers (6 sections), manager-tendencies pluralization | frontend-engineer | G5 | B | Done | 1 | `a3f2b4a`, `de716fd`, `f9ce390` |
 | T6.4 | Full regression; fresh-install test; upgrade test; auth e2e; 60-minute live soak | qa-engineer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Done | 1 | `9ef2fdb` |
 | T6.5 | Whole-repo security and quality review | code-reviewer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Done (APPROVE) | 1 | `12a2a58` |
-| T6.6 | Final UX review of every screen | ux-reviewer | T6.1c, T6.3a, T6.3b, T6.3c | C | Not started | 0 | |
-| T6.7 | Fix round | owning agents | T6.4, T6.5, T6.6 | D | Not started | 0 | |
+| T6.6 | Final UX review of every screen | ux-reviewer | T6.1c, T6.3a, T6.3b, T6.3c | C | Done (APPROVE) | 1 | `f3fa2d0` |
+| T6.7 | Fix round | owning agents | T6.4, T6.5, T6.6 | D | Skipped (zero Blocker/Major in Batch C) | 0 | |
 
 **Decided at Phase 6 planning (ADR-017 item 2):** T6.3c's UX polish is a curated, bounded list (desktop density, "You" markers, pluralization), not the full accumulated Minor backlog -- score-range dot contrast, `sparkline.tsx`'s latent overflow risk, the win-probability triple-display, and swing-player tap-through stay backlogged for Phase 7/P1.
 
@@ -53,6 +53,7 @@ Remove an item when it is done; the archive keeps history.
 - **T6.1c follow-up, partially closed by T6.4:** login/logout round-trip e2e coverage now exists (`e2e/auth.spec.ts`, a dedicated third Playwright server with `APP_PASSWORD`/`SESSION_SECRET` set). Still open: `proxy.ts`'s redirect to `/login` carries no `?from=` param, so login always lands on Home rather than back at the originally requested page -- known, minor gap in `proxy.ts` (backend-engineer's file), not blocking.
 - **T6.4 follow-up:** `e2e/auth.spec.ts` discovered that `isRateLimited`'s 5/min/IP window falls back to one shared "direct" bucket when no `X-Forwarded-For` header is present, which is every request from a test client with no reverse proxy in front. The spec works around this with a `withUniqueClientIp` helper that fakes a distinct `X-Forwarded-For` per test. Worth remembering as the pattern for any future auth-touching e2e test, not a product bug (the real deployed app always sits behind the documented single reverse proxy).
 - **Batch A UX review minors (`docs/reviews/2026-10-04-p6-batchA-ux.md`):** `apps/web/public/icons/icon-512.png`/`icon-192.png`'s purple accent bar's bottom corners sit just outside the standard 80%-diameter maskable safe-zone circle -- a few px of clipping under an aggressive circular OS mask on some Android launchers, barely visible (only the bar's corners, not the chevron glyph). `favicon.ico`'s 16x16 frame is a bit soft (downscaled from 48x48 rather than hand-tuned); still legible.
+- **T6.6 final UX review nit (`docs/reviews/2026-10-04-p6-T6.6-ux.md`):** Waivers' "Suggested drop" column repeats the identical player name on all 75 rows -- correct by design (`computeLineupImpact` picks one roster-wide lowest-ROS-value player, independent of the candidate), just visually repetitive scrolling down a long list. Candidate frontend fix: show it once near the top, repeat inline only when a row's suggestion differs.
 
 ### Carried from Phase 5
 
