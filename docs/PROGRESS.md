@@ -10,45 +10,23 @@
 | 3 Scoring, projections, optimizer | G3 (human) | `phase/3-scoring` (merged) | Done, G3 PASS 2026-10-03 (Steph approved) |
 | 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` (merged) | Done, G4 PASS 2026-10-03 (Steph approved) |
 | 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
-| 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` | Code-complete, G6 PASS (automated) 2026-10-04, awaiting Steph's release approval (`docs/gates/G6.md`) |
+| 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` (merged) | Done, G6 PASS 2026-10-04 (Steph approved). **v1.0.0 released.** |
 
 ## Resume point
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
 
-## Phase 6 task table
-
-Batch letters and task splits amended from PLAN.md's literal table per ADR-017 (T6.1 stays one task but its login page splits out as T6.1c, frontend ownership; T6.3 splits into T6.3a/b/c).
-
-| ID | Task | Agent | Depends | Batch | Status | Attempts | Commit |
-|---|---|---|---|---|---|---|---|
-| T6.1 | Auth (HOST-8: session cookie, login/logout API routes, rate limiter, constant-time compare) + security headers (both via `apps/web/proxy.ts`, Next 16's renamed `middleware.ts`) + structured logging (`pino`, matching the worker's existing convention) | backend-engineer | G5 | A | Done | 1 | `40e3bc4`, `098e296` |
-| T6.2 | Docker final: PUID/PGID default fix, Unraid template, `docs/self-hosting.md` + README rewrite | devops-engineer | G5 | A | Done | 1 | `6c2b9f3`, `89d703c` |
-| T6.3a | PWA manifest, icons, favicon; theme-color/toggle conflict fix | frontend-engineer | G5 | A | Done | 1 | `0ed301f` |
-| T6.1c | Login page (`apps/web/app/login/page.tsx`), ownership split from T6.1 (non-API page) | frontend-engineer | T6.1 | B | Done | 1 | `77b4dab` |
-| T6.3b | Preseason and offseason states (consolidate existing ad hoc preseason copy, add offseason) | frontend-engineer | G5 | B | Done | 1 | `aa4d4f4` |
-| T6.3c | League UX polish: desktop density (`lg:` tables, 5 sections), "You" markers (6 sections), manager-tendencies pluralization | frontend-engineer | G5 | B | Done | 1 | `a3f2b4a`, `de716fd`, `f9ce390` |
-| T6.4 | Full regression; fresh-install test; upgrade test; auth e2e; 60-minute live soak | qa-engineer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Done | 1 | `9ef2fdb` |
-| T6.5 | Whole-repo security and quality review | code-reviewer | T6.1, T6.1c, T6.2, T6.3a, T6.3b, T6.3c | C | Done (APPROVE) | 1 | `12a2a58` |
-| T6.6 | Final UX review of every screen | ux-reviewer | T6.1c, T6.3a, T6.3b, T6.3c | C | Done (APPROVE) | 1 | `f3fa2d0` |
-| T6.7 | Fix round | owning agents | T6.4, T6.5, T6.6 | D | Skipped (zero Blocker/Major in Batch C) | 0 | |
-| T6.8 | Lineup optimizer solver stability tiebreak (fix zero-benefit swap recommendations) | analytics-engineer | G6 gate, Steph's live-testing report | E | Done | 1 | `89edcde` |
-| T6.9 | Lineup page UI materiality floor (mirrors Home's `hasSwaps` guard) | frontend-engineer | G6 gate, Steph's live-testing report | E | Done | 1 | `dd94a74` |
-| T6.10 | Optimizer stability property test | qa-engineer | T6.8 | E | Done | 1 | `96a495b` |
-| T6.11 | Wire GHCR into CI Docker build (Steph approved at the G6 checkpoint) | devops-engineer | G6 gate | E | Done | 1 | `666e787` |
-| T6.12 | Dedupe the 0.05pt materiality floor into one shared module (code review Major fix) | frontend-engineer | T6.9 code review | E | Done | 1 | `31b3f72` |
-
-**Decided at Phase 6 planning (ADR-017 item 2):** T6.3c's UX polish is a curated, bounded list (desktop density, "You" markers, pluralization), not the full accumulated Minor backlog -- score-range dot contrast, `sparkline.tsx`'s latent overflow risk, the win-probability triple-display, and swing-player tap-through stay backlogged for Phase 7/P1.
-
 ## Earlier phases
 
-Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`; Phase 4 (task table, live fixes, gate-time fixes, G4 phase checks) in `docs/archive/progress-phase4.md`; Phase 5 (task table, batch review trail, G5 phase checks) in `docs/archive/progress-phase5.md`. Standing rules for briefs are in `docs/brief-rules.md`.
+Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progress-phase0-1.md`; Phase 2 in `docs/archive/progress-phase2.md`; Phase 3 (task table, G3 phase checks, full backlog-as-of-gate) in `docs/archive/progress-phase3.md`; Phase 4 (task table, live fixes, gate-time fixes, G4 phase checks) in `docs/archive/progress-phase4.md`; Phase 5 (task table, batch review trail, G5 phase checks) in `docs/archive/progress-phase5.md`; Phase 6 (task table, the Batch E post-gate fix round, G6 phase checks) in `docs/archive/progress-phase6.md`. Standing rules for briefs are in `docs/brief-rules.md`.
 
 ## Backlog (open items only)
 
 Remove an item when it is done; the archive keeps history.
 
-### Phase 6 (in progress)
+### Carried from Phase 6
+
+Full detail and fully-fixed history: `docs/archive/progress-phase6.md`.
 
 - **T6.5 security review nits (`docs/reviews/2026-10-04-p6-T6.5-security.md`):** `apps/web/proxy.ts`'s CSP carries `'unsafe-inline'` for `script-src`/`style-src` in all environments (next-themes' pre-paint script, React inline styles, zero third-party/user scripts today) -- accepted residual risk, no mitigation if an XSS primitive is ever introduced; consider a nonce-based CSP if a future dependency ever needs `dangerouslySetInnerHTML`. `favicon.ico` bypasses `proxy.ts` entirely (standard Next.js matcher exclusion) so gets no security headers -- zero practical impact, immutable static content.
 - **Batch A code review minor (`docs/reviews/2026-10-04-p6-batchA-code.md`):** `apps/web/lib/server/auth.ts`'s `constantTimeStringEqual` compares a wrong-length guess against a short placeholder instead of a same-length buffer, leaking a small timing signal about the configured password's length. Low real-world risk given the LAN/self-hosted threat model; candidate follow-up if ever revisited.
@@ -64,14 +42,12 @@ Remove an item when it is done; the archive keeps history.
 
 Full detail and fully-fixed history: `docs/archive/progress-phase5.md`, `docs/reviews/2026-10-03-p5-batch{A,B,C2,C3,D,E}-{code,ux}.md`, `docs/reviews/2026-10-03-G5-{code,ux}.md`.
 
-- **Desktop density on League and Matchup:** 5 of League's 6 sections (power rankings, all-play/luck, positional strength, manager tendencies, playoff odds -- only Standings is exempt) and Matchup's swing-players list all stay a single-column stacked-card layout at every breakpoint including 1280px, unlike Standings' proper desktop table on the same page. PLAN 6.1 wants desktop density, not just desktop whitespace; candidate `lg:` table variants matching `standings.tsx`'s pattern.
-- **Missing "You" marker in 5 of League's 6 new sections:** only Standings marks the viewer's own team (badge + row tint); the other 5 show it as a plain, unmarked row, breaking the convention used everywhere else in the app (Standings, Home, Matchup's swing players).
+- **Resolved at Phase 6 (T6.3c): desktop density and "You" markers across League's 6 sections, and `manager-tendencies.tsx`'s pluralization.** Matchup's swing-players list is still single-column at every breakpoint (T6.3c's scope was curated to League only, ADR-017 item 2) -- still open if desktop density there is wanted.
 - **Score-range chart's "your" median dot** (`text-primary`, lime) measures only 1.18:1 against the white card in light mode -- same class of contrast issue the chart's line-stroke Major already fixed (now 3.35-8.95:1), but the dots were out of that fix's scope. Candidate: swap to `text-highlight`.
-- `manager-tendencies.tsx` doesn't pluralize ("1 transactions", "1 waiver claims won"). Win probability is shown three times in quick succession on Home + Matchup (banner sentence, "YOU" card, "TIE" card) with no added information -- consider one compact three-segment probability bar instead. Swing-player rows have no tap-through to player detail, unlike most other recommendation rows in the app.
+- Win probability is shown three times in quick succession on Home + Matchup (banner sentence, "YOU" card, "TIE" card) with no added information -- consider one compact three-segment probability bar instead. Swing-player rows have no tap-through to player detail, unlike most other recommendation rows in the app.
 - **Pre-existing real-data gap, surfaced fixing a Phase 5 bug:** `lineup.ts`'s `isBye`/`byeWeek` logic (now also inherited by `matchup.ts`) compares a player's raw Sleeper team code against an nflverse-coded schedule without the `LAR` -> `LA` conversion ADR-006 documents elsewhere in the same file -- a Rams player's bye week may not register as a bye in Lineup or Matchup. Not introduced by Phase 5.
 - **Minor code-quality items, all documented in their source review:** `sim/matchup.ts`'s `NO_DRAW = -1` sentinel overlaps a representable real `sd` value (prefer a boolean flag); `playoff-odds.ts` has no perf smoke test for its ranking sort (manually benchmarked ~33ms for 12 teams/7 weeks, no regression guard); `roster-strength.test.ts`'s cache-invalidation test triggers the wrong (but still-correct) sync job; `matchup.ts`/`roster-strength.ts` don't recompute `freshness` on a cache hit (matches `lineup.ts`'s existing pattern); `LeagueIntelligencePlayoffOddsSchema`'s doc comment understates when `playoffOdds` is null; `league-intelligence.ts`'s `populationStandardDeviation` duplicates a `packages/core` private helper instead of it being exported; `league/_components/format.ts`'s `sortByPlayoffPctDesc` is unused dead code; two stat figures lack `tabular-nums`; a few undocumented magic-number thresholds (luck sign cutoff, heatmap tone bands).
 - **`apps/web/components/sparkline.tsx` has the same sr-only-table pattern that caused two real, fixed 390px overflow bugs this phase** -- hasn't overflowed yet only because its content stays under 390px today. Proactively wrap with `[contain:layout]` whenever this file is next touched.
-- **Matchup route not yet in `lighthouserc.json`'s Lighthouse budget check** -- same pattern as the G3->G4 Lineup gap (closed at G4). Add before G6.
 - **Route JS soft-target (170,000 B) regressions this phase:** League (178,897 B) and League/teams/[rosterId] (179,534 B) newly crossed the soft target (both well under the 204,800 B hard cap). 7 of 15 routes now over soft target, up from 4 at G4. Worth a dedicated look if Phase 6 adds more client code to any of these.
 - **`pnpm test:e2e` (354 tests, UI1) and `pnpm test:a11y` (350 tests, UI2) run almost entirely overlapping test sets** (350 of 354 shared), roughly doubling e2e wall-clock time for limited marginal coverage. Worth a maintainer look at a true axe-only UI2 filter.
 - **Informational Brier-score calibration isn't computable from the recorded fixture** (no week has both a stored pregame projection and a completed outcome). A real `./data` database would support it naturally; closing this needs either a richer recorded fixture (sleeper-data-engineer) or a one-off manual analysis outside the committed test suite (never committed, per ADR-009).
@@ -124,7 +100,7 @@ Full detail and fully-fixed history: `docs/archive/progress-phase4.md`.
 - **`getPlayerDetail` costs ~125-127ms/call at a realistic week-17/1,000-player seed, confirmed stable (not worse) through the G4 gate, versus under 1ms for every other data function.** Home's `getPlayerDetail` x16 loop totals ~2.0-2.7s, under the 4,800ms budget but a real, worsening-with-the-season cost on the highest-traffic page. No `computed_cache` entry exists for `getPlayerDetail`/`getPlayersList` yet. Candidate for backend-engineer: a `computed_cache` entry, or caching `readLeagueWeekPositionRanks`/`readUsageWeek` per (league, season, week) instead of recomputing per player.
 - T4.8b's `PRIORITY_VALUE_BREAKDOWN` reason dropped its formula breakdown from `label` (now a short one-line summary) in favor of short chip copy; the numeric inputs (`positionFactor`/`weeksFactor`/`valueOfPriority`) are still on `ClaimAdviceResult` for a future render if Steph wants the detailed math visible.
 - T6.2 follow-ups from T4.3, PUID/PGID default mismatch fixed at T6.2 (`6c2b9f3`): a bare `docker exec <c> whoami` returns `root` by design -- gate verification scripts must use `docker top` or `docker exec -u <uid>:<gid>`, not `whoami`, to check non-root; PUID/PGID chown was verified on a named Docker volume and a real Linux host, not a macOS bind mount. No `SIGTERM`/`SIGINT` trap in the entrypoint (hard kill instead of graceful drain on `docker stop`); unconditional `chown -R` on every boot instead of only when ownership is already wrong.
-- **Image publishing/registry not set up** (T6.2 follow-up): `unraid/sideline.xml`'s `Repository` field and `docs/self-hosting.md`'s install path both require building the image locally today -- no Sideline image is published anywhere. Needs a real decision from Steph (Docker Hub vs. GHCR) before `.github/workflows/ci.yml`'s `docker` job can flip from `push: false` to publishing.
+- **Resolved at Phase 6 (T6.11): registry is GHCR**, wired into CI (push on `main`/version tags). `unraid/sideline.xml`'s `Repository` field still needs the real `ghcr.io/<owner>/sideline` value once this repo has an actual GitHub remote -- that's the one remaining step, not a decision.
 - **G4 gate code review (m3):** `apps/web/lib/server/waivers.test.ts`'s only end-to-end `nextClearAt` assertion for T4.9's DST fix uses a January (EST) date, so the DST branch itself isn't exercised at the web-integration layer (only at `packages/core`'s unit/golden level, which is thorough). Low risk, candidate qa-engineer follow-up: add an EDT-dated integration case.
 - **Route JS over the 170,000 B soft target (all under the 204,800 B hard budget), confirmed at the G4 gate:** Lineup 178,893 B, Waivers 191,364 B, Players list 178,260 B, Players detail 193,914 B (least headroom, ~5.3%). Worth revisiting the soft target's realism for feature-dense routes if Phase 5 adds more client code to any of these.
 
