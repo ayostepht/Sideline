@@ -1,6 +1,6 @@
 # Sleeper API notes (ground truth)
 
-Last updated: 2026-10-02 (T1.2b real-row rules, section 4.5). This file overrides PLAN.md where they disagree.
+Last updated: 2026-10-06 (DOCS-3: implementation claims re-checked against the code at v1.0.0). This file overrides PLAN.md where they disagree.
 
 How to read the status column: VERIFIED means it works and matches PLAN. CHANGED means it works but differs from PLAN (described). MISSING means it is not available.
 
@@ -46,6 +46,8 @@ Base: `https://api.sleeper.app/v1` unless noted. "Edge cache" is the `cache-cont
 | `GET https://api.sleeper.app/stats/nfl/{season}/{week}` | VERIFIED | Undocumented. `[]` for a week with no games yet. | 300 to 3,600 s | 15 min in game windows, daily otherwise |
 | `HEAD https://sleepercdn.com/content/nfl/players/thumb/{player_id}.jpg` | VERIFIED | `200 image/jpeg`, `cache-control: public, max-age=2678400` | CDN | Cache in browser |
 | `HEAD https://sleepercdn.com/avatars/thumbs/{avatar_id}` | VERIFIED | `200 image/png` | CDN | Cache in browser |
+
+The refresh suggestions above are spike-time guidance. The cadences the worker actually uses are in section 15.
 
 Response times: median 14 to 100 ms for everything except `/players/nfl` (222 ms). All responses were gzip encoded.
 
@@ -498,7 +500,7 @@ Counts across weeks 1 to 4: 14 waiver/complete, 10 waiver/failed, 46 free_agent/
 
 - Sleeper: **none**. Neither `/state/nfl`, `/players/nfl`, projections nor stats include a game time. The only per-game information is `date` (calendar day), `opponent` and a shared `game_id`.
 - Usable from Sleeper: which games are on Thursday, Sunday or Monday (by `date`), and who plays whom (by `team`/`opponent`). Not usable: Sunday early versus late versus night.
-- Provider plan: nflverse schedule for exact kickoff times, with the PLAN 3.4 fallback windows (Thu 20:00 to 24:00, Sun 13:00 to 24:00, Mon 20:00 to 24:00 ET) when it fails. The fallback treats all of Sunday as one lock window, which is acceptable for refresh cadence but too coarse for per-player lineup locks.
+- Implemented: the `nflverse` job (`apps/worker/src/jobs/nflverse-job.ts`) stores exact kickoff times from the nflverse schedule. A game with no usable kickoff gets 13:00 ET (Sunday) or 20:00 ET (other days) on its game date with `kickoffApproximate = true` (`apps/worker/src/kickoff.ts`). When no game has a kickoff at all, game-window detection (`apps/worker/src/windows.ts`) uses the fixed windows Thu 20:00 to 24:00, Sun 13:00 to 24:00, Mon 20:00 to 24:00 ET. Otherwise a game window runs from kickoff to kickoff plus 4 hours. The fixed fallback treats all of Sunday as one window, which is fine for refresh cadence but too coarse for per-player lineup locks. With `ENABLE_NFLVERSE` off the job ends `skipped` with a `degraded:` note.
 - Late week check: in week 4, the Thursday game is in `date` 2026-10-01, matching the real schedule.
 - Spread sign (PLAN 3.3): VERIFIED in T1.4a, see section 14d. Kickoff times and their time zone: section 14c.
 
@@ -608,7 +610,7 @@ All from GitHub releases of `nflverse/nflverse-data`. URL pattern: `https://gith
 
 - `gameday` is `YYYY-MM-DD` and `gametime` is `HH:MM` 24-hour, both in **America/New_York wall-clock time**. Evidence: the international games all read `09:30` (ET for a 14:30 BST London or 15:30 CET Madrid local kickoff, the real NFL pattern), and Sunday slot times are 13:00, 16:05, 16:25 and 20:20 (ET). `weekday` is the English weekday of `gameday` (observed: Sunday 228, Thursday 19, Monday 17, Friday 4, Saturday 2, Wednesday 2).
 - Observed 2026 `gametime` values: 09:30, 13:00, 15:00, 16:05, 16:25, 16:30, 17:00, 20:00, 20:15, 20:20, 20:35. All 272 games have one.
-- Conversion rule: parse `gameday` + `gametime` as an America/New_York local time (IANA zone, so DST is handled), then convert to UTC. Never use a fixed offset. DST ends **2026-11-01** (first Sunday of November): ET is UTC-4 before 02:00 that day and UTC-5 after. `kickoffUtc()` in `scripts/fixtures/nflverse-lib.ts` does this with `Intl.DateTimeFormat` and a two-pass offset correction; it has tests for both sides of the boundary.
+- Conversion rule: parse `gameday` + `gametime` as an America/New_York local time (IANA zone, so DST is handled), then convert to UTC. Never use a fixed offset. DST ends **2026-11-01** (first Sunday of November): ET is UTC-4 before 02:00 that day and UTC-5 after. `kickoffUtc()` in `packages/providers/src/schedule.ts` (and the recorder's copy in `scripts/fixtures/nflverse-lib.ts`) does this with `Intl.DateTimeFormat` and a two-pass offset correction; it has tests for both sides of the boundary.
 - Worked examples (from the 2026 schedule):
   - September: `2026_01_CHI_CAR`, gameday `2026-09-13`, gametime `13:00`, EDT (UTC-4) gives `2026-09-13T17:00:00Z`.
   - After DST ends: `2026_11_MIN_SF`, gameday `2026-11-22`, gametime `20:20`, EST (UTC-5) gives `2026-11-23T01:20:00Z`. Same wall time on a September Sunday would be 00:20Z, so one hour shifts.
@@ -622,7 +624,7 @@ All from GitHub releases of `nflverse/nflverse-data`. URL pattern: `https://gith
 - **`spread_line` positive means the HOME team is favored** (it is the number of points the home team is favored by). Confidence: high.
 - Evidence: (1) `home_moneyline` agrees with the sign of `spread_line` (positive spread and negative home moneyline, or the reverse) in 280 of 285 games in 2025 and 75 of 77 in 2026 (the misses are near pick'ems where the lines round differently). (2) `2026_01_CLE_JAX` (away CLE, home JAX): `spread_line` 8.5, `home_moneyline` -470, `away_moneyline` 360, JAX won 34 to 10. (3) `2026_01_ARI_LAC`: `spread_line` 8.5, `home_moneyline` -455: home LAC favored by 8.5 but lost 14 to 26 (the moneyline, not the result, is the evidence). (4) Negative case: `2026_02_PHI_TEN` (home TEN): `spread_line` -7, `home_moneyline` 260, `away_moneyline` -325, away PHI favored. (5) 2025 week 1 `DAL_PHI`: `spread_line` 8.5, `home_moneyline` -425, PHI won 24 to 20. Note `result` is `home_score - away_score`, so a positive `result` and positive `spread_line` mean a home win and a home favorite; they correlate (about 0.5 in 2025) but a result is not the line.
 - `total_line` is the over/under for combined points (for example 44.5 or 47.5). `total` is the actual combined score (result), not the line.
-- Implied team totals: `home = total_line / 2 + spread_line / 2`, `away = total_line / 2 - spread_line / 2`. Example: spread 3, total 44.5 gives home 23.75, away 20.75. `impliedTotals()` in `nflverse-lib.ts` is tested.
+- Implied team totals: `home = total_line / 2 + spread_line / 2`, `away = total_line / 2 - spread_line / 2`. Example: spread 3, total 44.5 gives home 23.75, away 20.75. `impliedTotals()` in `packages/providers/src/schedule.ts` (and `scripts/fixtures/nflverse-lib.ts`) is tested.
 - Lines are present only for upcoming games roughly through the current week (77 of 272 games have `spread_line` and `total_line` on 2026-10-02: weeks 1 to 4 and part of week 5; later weeks are blank). Missing lines mean "no implied total", never a zero.
 
 ### 14e. Team codes: nflverse versus Sleeper
@@ -659,11 +661,15 @@ Byes derive from the schedule: a team with no game in a regular-season week has 
 
 Worker decisions that follow from the API behavior above (no new endpoint facts):
 
+- Cadences: `DEFAULT_CADENCES` in `apps/worker/src/schedule.ts`, with intervals from `SYNC_CADENCE_MS` in `packages/shared/src/sync.ts`. Interval jobs: `state` 15 min, `league` 1 h, `users` 1 h, `rosters` 15 min (5 min in a game window), `matchups` 15 min (2 min in a game window), `transactions` 15 min, `trending` 30 min, `stats` 1 h, `projections` 1 h. Cron jobs (evaluated in America/New_York): `players` `30 4 * * *`, `nflverse` `0 5 * * *`. `backfill_2025` never recurs and runs only on request. Each job can be overridden with a cron expression in `SYNC_<JOB>_CRON` (`SYNC_STATE_CRON`, `SYNC_LEAGUE_CRON`, `SYNC_USERS_CRON`, `SYNC_ROSTERS_CRON`, `SYNC_MATCHUPS_CRON`, `SYNC_TRANSACTIONS_CRON`, `SYNC_PLAYERS_CRON`, `SYNC_TRENDING_CRON`, `SYNC_STATS_CRON`, `SYNC_PROJECTIONS_CRON`, `SYNC_NFLVERSE_CRON`). A job runs in this order when `all` is requested: state, league, users, rosters, matchups, transactions, players, trending, stats, nflverse, projections.
+- HTTP client (`packages/sleeper/src/http/`): every call acquires the shared rate limiter first (5 req/s, burst 5, hard cap 300 per rolling 60 s). 10 s timeout per attempt. Retries only on 429 and 5xx, up to 3 retries after the first attempt (4 attempts total). Timeouts and network errors are not retried. User-Agent is `Sideline/<version> (self-hosted)`.
 - Matchups: each run fetches the current week and the previous week (final scores can land after the week rolls over), plus any completed or future week (through `playoff_week_start - 1`, default 15 if unset) that is not stored yet. A week with no stored rows is refetched on every run until Sleeper returns rows.
-- Stats and projections: stats refetch current and previous week; projections fetch current and next week (next week exists a week early, section 4.4). `pre` maps to week 1; `off` and `post` skip.
+- Stats and projections: stats refetch current and previous week, plus any earlier week not stored yet (self-heals gaps after downtime); projections fetch current and next week (next week exists a week early, section 4.4). `pre` maps to week 1; `off` and `post` skip.
 - Pregame snapshots join the player's team (`row.team`, `row.player.team`, or the DEF id) to the schedule by team code, mapping Sleeper `LAR` to the schedule's `LA` (section 14e). Without a schedule row (nflverse not synced yet) no snapshot is written and the job note says so.
 - `/players/nfl` is guarded to once per 24 h, always without ETag. A fantasy position whose count drops more than 10% versus the stored set (stored count at least 20) logs a warning; the sync still completes.
-- Backfill stores 2025 regular-season weeks 1 to 18 without ETags (36 calls) and skips weeks already present.
+- Backfill stores 2025 regular-season weeks 1 to 18 without ETags (36 Sleeper calls) and skips weeks already present. It also fetches the 2025 schedule through the nflverse provider (one more call) unless that is already stored, and degrades without failing when nflverse is off or unreachable.
+- nflverse provider (`packages/providers/src/`): downloads `.csv.gz` release assets from `https://github.com/nflverse/nflverse-data/releases/download/<tag>/<asset>` into `<DATA_DIR>/cache/nflverse`, at most one refresh per 24 h per asset, with a conditional GET, stale-if-error and a 30 s timeout. Usage joins try the trimmed `gsis_id` first, then normalized name plus team (with a nickname alias step). `carry_share` is computed and `rz_touches` is always null.
+- Still open: no worker job calls the provider's `getUsage`, so `usage_week` is not populated by any sync job yet.
 
 ```json
 { "projections_snapshot_rule": "fetched_at < kickoff_utc (strict)", "players_min_interval_hours": 24 }
