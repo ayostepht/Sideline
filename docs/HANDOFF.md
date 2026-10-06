@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-04. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/6-hardening` merged to `main`, tagged both `gate-G6` and `v1.0.0` (commit `fd56f10`). All six phases of PLAN.md are now shipped. No git remote is configured on this repo, so nothing has been pushed anywhere -- the tags and merge are local only.
+Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/6-hardening` merged to `main`, tagged both `gate-G6` and `v1.0.0` (commit `fd56f10`). All six phases of PLAN.md are now shipped. Remote: `origin` is https://github.com/ayostepht/Sideline (public). Steph pushes; the orchestrator does not push unless asked.
 
 **This is a clean point to `/clear`.** Phase 7 (P1 backlog) planning is the natural next step, but has not started -- do not begin it without Steph's go-ahead, since this is new scope beyond what she's approved so far.
 
@@ -26,12 +26,13 @@ Last updated: 2026-10-04. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 - **Real MATCH-3 decision (ADR-014, unchanged): matchup adjustment stays off** (`alpha=0, beta=0`). Matchup grades remain context-only.
 - **Design:** ADR-011 is the visual identity (lime fill only, one per-page content-recommendation accent), verified clean across every route through the G6 UX review.
 - **Local data:** `./data` (gitignored) holds a live-synced DB with the full 2025 season plus 2026 weeks. Never take screenshots from it (ADR-009 item 17) -- `pnpm screens` only runs against a fixture-seeded temp DATA_DIR.
-- **Registry:** images publish to GHCR on pushes to `main`/version tags (T6.11), but dormant -- no GitHub remote is configured on this repo yet. `unraid/sideline.xml`'s `Repository` field still needs the real `ghcr.io/<owner>/sideline` value once one exists.
+- **Registry:** CI publishes `ghcr.io/ayostepht/sideline` on pushes to `main` (`latest`, `sha-*`) and version tags (`v*.*.*`). `unraid/sideline.xml` points at it [OPS-1]. The GHCR package must be Public for Unraid to pull without credentials.
 - **Backlog:** see `docs/PROGRESS.md`'s "Backlog (open items only)" -- carried-from-Phase-6 items (CSP `'unsafe-inline'` accepted risk, a timing side-channel in `constantTimeStringEqual`, League table row-height variance, login card centering, missing offseason/complete-league e2e coverage, `proxy.ts`'s missing `?from=` redirect param, Waivers' repetitive "Suggested drop" text), carried-from-Phase-5/4/3/2 items, and the standing worker/providers/tests/tooling sections. Nothing there is release-blocking; everything is either a documented design tradeoff or a legitimate follow-up for whenever its owning agent next touches that area.
 
 ## 3. In flight
 
-- Nothing. Working tree clean on `main`, all commits through `fd56f10` plus tags `gate-G6` and `v1.0.0`.
+- PERF-1 (backend-engineer, running): speed up `getPlayerDetail`. Its perf test fails on GitHub runners (8.1 s vs 4.8 s budget), which turns CI's verify job red. The Docker job does not depend on verify, so images still publish. Budget must not change.
+- DOCS-1..3 docs audit done 2026-10-06 (committed). Historical records (gates, reviews, archive, backtests, ADR bodies) were left as written on purpose.
 
 ## 4. Next steps (in order)
 
@@ -49,9 +50,9 @@ Every Task Brief says: "Read `docs/brief-rules.md` first." Restate in the brief 
 2. Walk the acceptance criteria against real output. Confirm `git diff --stat` stays in the agent's paths.
 3. Scan the staged diff for identifiers:
    ```
-   set -a && . ./.env && set +a && git diff --cached | grep -c -e "$SLEEPER_USERNAME" -e "$DEFAULT_LEAGUE_ID"
+   set -a && . ./.env && set +a && git diff --cached | sed -E "s#(github\.com|raw\.githubusercontent\.com|ghcr\.io)/$SLEEPER_USERNAME##gI" | grep -c -i -e "$SLEEPER_USERNAME" -e "$DEFAULT_LEAGUE_ID"
    ```
-   It must print 0.
+   It must print 0. The sed strips the repo and image URLs that ADR-018 allows.
 4. Run `pnpm fixtures:check` when `tests/fixtures/` changed.
 5. Stage exact paths only (never `git add docs` or `git add .`).
 6. Commit with the task id and the attribution line, update the PROGRESS.md task table, then update sections 2 to 4 of this file and commit it.
