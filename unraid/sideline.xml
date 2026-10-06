@@ -2,32 +2,25 @@
 <!--
   Sideline Unraid Community Applications template.
 
-  PLACEHOLDER NOTICE: <Repository> and <Registry> below point at a placeholder
-  "sideline/sideline" image. CI is wired to publish to GHCR (GitHub Container Registry) on
-  pushes to main and on version tags, but this repo has no GitHub remote configured yet, so
-  there is no real image location to point at. Before this template is submitted
-  to Community Applications or used for a real install, update <Repository> (and <Registry> if
-  the registry is not GHCR) to the real image location, for example:
-    ghcr.io/<owner>/sideline:1.0.0   with  <Registry>https://ghcr.io</Registry>
-  Until then, operators can still use this template with a locally built image: build with
-  `docker compose build` (see docs/self-hosting.md), tag it to match <Repository>, and the
-  template will run it.
+  The image is published by CI to GHCR (ghcr.io/ayostepht/sideline). The GHCR package must be
+  set to Public visibility for Unraid to pull it without credentials. To install, copy this file
+  to /boot/config/plugins/dockerMan/templates-user/my-sideline.xml on the Unraid box.
 -->
 <Container version="2">
   <Name>Sideline</Name>
-  <Repository>sideline/sideline:latest</Repository>
-  <Registry>https://hub.docker.com/r/sideline/sideline</Registry>
+  <Repository>ghcr.io/ayostepht/sideline:latest</Repository>
+  <Registry>https://github.com/ayostepht/Sideline/pkgs/container/sideline</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/sideline/sideline/issues</Support>
-  <Project>https://github.com/sideline/sideline</Project>
-  <Overview>Sideline is a self-hosted fantasy football analyzer for Sleeper leagues. It reads your league from Sleeper's public API (no login needed) and shows lineup optimization, waiver targets, FAAB suggestions, trends, and matchup views, all computed under your league's exact scoring rules. Runs as a single container with a web server and a background sync worker; data is stored in SQLite under the /data path you map below. See https://github.com/sideline/sideline/blob/main/docs/self-hosting.md for the full install and configuration guide.</Overview>
+  <Support>https://github.com/ayostepht/Sideline/issues</Support>
+  <Project>https://github.com/ayostepht/Sideline</Project>
+  <Overview>Sideline is a self-hosted fantasy football analyzer for Sleeper leagues. It reads your league from Sleeper's public API (no login needed) and shows lineup optimization, waiver targets, FAAB suggestions, trends, and matchup views, all computed under your league's exact scoring rules. Runs as a single container with a web server and a background sync worker; data is stored in SQLite under the /data path you map below. See https://github.com/ayostepht/Sideline/blob/main/docs/self-hosting.md for the full install and configuration guide.</Overview>
   <Category>Tools: Sports:</Category>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
-  <TemplateURL/>
-  <Icon>https://raw.githubusercontent.com/sideline/sideline/main/unraid/icon.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/ayostepht/Sideline/main/unraid/sideline.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/ayostepht/Sideline/main/apps/web/public/icons/icon-512.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>

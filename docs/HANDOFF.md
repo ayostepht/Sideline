@@ -35,7 +35,7 @@ Last updated: 2026-10-04. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 4. Next steps (in order)
 
-1. **Nothing is owed right now.** v1.0.0 is released and Steph is testing it live.
+1. **Unraid deploy in progress (2026-10-06).** Repo is public at github.com/ayostepht/Sideline; CI publishes `ghcr.io/ayostepht/sideline`. Template fixed [OPS-1]. Steph's to-dos: set the GHCR package Public, push the template commit and the `v1.0.0` tag, install via `my-sideline.xml`. No APP_PASSWORD: it sits behind NPM + Authentik.
 2. **Phase 7 (P1 backlog) planning is the natural next step**, per PLAN.md section 9's suggested order: notifications (Home Assistant webhook first, then ntfy and Discord), trade analyzer and finder, Auto lineup mode, weekly backtest job, league history, weather, offline caching, "view as team." Each follows the same brief/verify/review cycle and ends with a mini-gate. **Do not start Phase 7 without Steph's explicit go-ahead** -- PLAN.md only has a suggested feature order, not a task table, so the first real step is planning it (likely an Explore pass plus an ADR, same precedent as every prior phase).
 3. Restarting `pnpm dev:lan`/`pnpm dev:worker` is no longer withheld -- both are running now at Steph's request. Stop them only for a gate-affecting run (section 2's standing lesson), and restart after.
 

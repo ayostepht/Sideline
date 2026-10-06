@@ -28,22 +28,18 @@ variable, putting it behind Nginx Proxy Manager, and troubleshooting.
    you expose the app without a reverse proxy in front of it.
 
 If you are not building from source, replace `build: .` in `docker-compose.yml` with an `image:`
-line pointing at a published Sideline image once one exists (see "A note on images" below).
+line pointing at `ghcr.io/ayostepht/sideline:latest` (see "A note on images" below).
 
 ## Install on Unraid
 
 1. In Unraid's Docker tab, go to **Add Container**, then switch to entering a template URL, or
    add the template manually. The template lives in this repo at `unraid/sideline.xml`.
-2. The template's `Repository` field is a placeholder until this repository is actually hosted on
-   GitHub and CI can publish to its real GHCR (GitHub Container Registry) package (see "A note on
-   images" below). Until then:
-   - Build the image yourself on the Unraid box or another machine with
-     `docker compose build` from this repo, tag it to match the `Repository` field in the
-     template (or edit the template's `Repository` field to match whatever tag you built), and
-     Unraid will run the local image.
-   - Once this repo has a real GitHub remote, update the template's `Repository` to
-     `ghcr.io/<owner>/sideline` (and `Registry` to `https://ghcr.io`) and it works like any other
-     Community Applications app.
+2. The template pulls `ghcr.io/ayostepht/sideline:latest`, which CI publishes (see "A note on
+   images" below). The GHCR package must be public for Unraid to pull it without credentials. To
+   install, copy the template to `/boot/config/plugins/dockerMan/templates-user/my-sideline.xml`
+   on the Unraid box. Alternatively, build the image yourself with `docker compose build` from
+   this repo, tag it as `ghcr.io/ayostepht/sideline:latest` (or edit the template's `Repository`
+   field to match your tag), and Unraid will run the local image.
 3. Fill in the template fields:
    - **WebUI Port**: host port to map to the container's 3000 (default 3000).
    - **Data**: a path under `/mnt/user/appdata/` to hold the database and backups (default
@@ -188,6 +184,10 @@ from a different IP, and fully bypass the rate limiter with unlimited password g
 Nginx Proxy Manager (see above) is genuinely sitting in front of the app whenever it is reachable
 from outside your own network.
 
+Running behind a reverse proxy that already has an auth layer, such as Authentik with Nginx Proxy
+Manager, and leaving `APP_PASSWORD` empty is a supported setup. The proxy handles login, so
+Sideline does not need its own.
+
 Put the app behind HTTPS too (see the NPM section above) before relying on the password over the
 internet; HTTPS stops network eavesdropping on the password itself, which is a separate problem
 from the rate-limit bypass above, both need a reverse proxy to be solved.
@@ -245,9 +245,7 @@ phone open the dev build over your home Wi-Fi.
 ## A note on images
 
 This repository builds a multi-arch (amd64 and arm64) image in CI on every push to `main` and on
-every pushed version tag. Once this repository is actually hosted on GitHub, CI also publishes
-that image to the GHCR (GitHub Container Registry) package for this repository: a push to `main`
+every pushed version tag, and publishes it to `ghcr.io/ayostepht/sideline`: a push to `main`
 publishes `latest` and a short-sha tag, and a version tag (for example `v1.0.0`) additionally
-publishes that exact version. Until then, or if you would rather not depend on that package,
-install by building from source (`docker compose build`, or `docker build .` and tag it to match
-the Unraid template).
+publishes that exact version. If you would rather not depend on that package, install by building
+from source (`docker compose build`, or `docker build .` and tag it to match the Unraid template).
