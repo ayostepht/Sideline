@@ -30,13 +30,13 @@ import {
 import {
   lastSuccessAt,
   readLeaguePlayerWeekPoints,
-  readLeagueWeekPositionRanks,
   readPlayers as readPlayersDb,
+  readPlayerUsageWeeks,
+  readPlayerWeekPoints,
+  readPlayerWeekPositionRanks,
   readTrending,
-  readUsageWeek,
   type DbHandle,
   type FullPlayerRow,
-  type UsageWeekRow,
 } from "@sideline/db";
 import {
   computeFreshness,
@@ -186,15 +186,6 @@ export function getPlayersList(
   };
 }
 
-function usageWeeksFor(h: DbHandle, season: number, weeks: readonly number[], playerId: string) {
-  const out: UsageWeekRow[] = [];
-  for (const week of weeks) {
-    const row = readUsageWeek(h, season, week).find((r) => r.playerId === playerId);
-    if (row !== undefined) out.push(row);
-  }
-  return out;
-}
-
 function consistencyWeeksFor(
   h: DbHandle,
   leagueId: string,
@@ -208,11 +199,17 @@ function consistencyWeeksFor(
     // `computeConsistency` ignore `positionRank` entirely, so the filler value is never read.
     return weeklyPoints.map((w) => ({ week: w.week, actualPts: w.actualPts, positionRank: 0 }));
   }
-  return weeklyPoints.map((w) => {
-    const ranks = readLeagueWeekPositionRanks(h, leagueId, league.season, w.week);
-    const mine = ranks.find((r) => r.playerId === playerId);
-    return { week: w.week, actualPts: w.actualPts, positionRank: mine?.rank ?? 0 };
-  });
+  // One indexed query for all of this player's weeks (not a league-wide rescan per week).
+  const rankByWeek = new Map(
+    readPlayerWeekPositionRanks(h, leagueId, league.season, playerId).map(
+      (r) => [r.week, r.rank] as const,
+    ),
+  );
+  return weeklyPoints.map((w) => ({
+    week: w.week,
+    actualPts: w.actualPts,
+    positionRank: rankByWeek.get(w.week) ?? 0,
+  }));
 }
 
 /**
@@ -231,12 +228,12 @@ export function getPlayerDetail(
   const player: FullPlayerRow | undefined = readPlayersDb(h, [playerId])[0];
   if (player === undefined) return { ok: false, reason: "not_found" };
 
-  const pointsRows = readLeaguePlayerWeekPoints(h, leagueId, league.season);
+  const pointsRows = readPlayerWeekPoints(h, leagueId, league.season, playerId);
   const weeklyPoints = scoringWeeksFor(pointsRows, playerId);
   const scoring = computeScoringTrend({ weeklyPoints });
 
   const weeks = weeklyPoints.map((w) => w.week);
-  const usageRows = usageWeeksFor(h, league.season, weeks, playerId);
+  const usageRows = readPlayerUsageWeeks(h, league.season, weeks, playerId);
   const usage = computeUsageTrend({ position: player.position ?? "", weeks: usageRows });
 
   const startableCount = startableCountFor(league, player.position);

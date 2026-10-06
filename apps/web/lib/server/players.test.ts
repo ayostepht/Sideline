@@ -1,4 +1,13 @@
-import { schema, type DbHandle } from "@sideline/db";
+import {
+  readLeaguePlayerWeekPoints,
+  readLeagueWeekPositionRanks,
+  readPlayerUsageWeeks,
+  readPlayerWeekPoints,
+  readPlayerWeekPositionRanks,
+  readUsageWeek,
+  schema,
+  type DbHandle,
+} from "@sideline/db";
 import {
   PlayerDetailResponseSchema,
   PlayersListResponseSchema,
@@ -244,5 +253,69 @@ describe("handlePlayersList and handlePlayerDetail", () => {
     expect(handlePlayerDetail("L1", "nope", SEED_NOW).status).toBe(404);
     expect(handlePlayerDetail("nope", "p1", SEED_NOW).status).toBe(404);
     void h;
+  });
+});
+
+describe("targeted per-player reads (PERF-1) match the league-wide reads", () => {
+  function seedWeeks(h: DbHandle): void {
+    const ids = ["p1", "p2", "p3", "p4", "p5", "p6"];
+    const rows: { playerId: string; week: number; actualPts: number }[] = [];
+    for (const week of [1, 2, 3]) {
+      ids.forEach((playerId, i) => {
+        // Deliberate ties (i % 3) so competition ranking ("1224") is exercised.
+        rows.push({ playerId, week, actualPts: 10 + ((i + week) % 3) * 5 });
+      });
+    }
+    insertPoints(h, rows);
+    insertUsage(
+      h,
+      [1, 2, 3].map((week) => ({ playerId: "p2", week, snapPct: 0.4 + week / 10 })),
+    );
+  }
+
+  function legacyRanks(h: DbHandle, playerId: string) {
+    const out: { week: number; rank: number }[] = [];
+    for (const week of [1, 2, 3]) {
+      const mine = readLeagueWeekPositionRanks(h, "L1", 2026, week).find(
+        (r) => r.playerId === playerId,
+      );
+      if (mine !== undefined) out.push({ week, rank: mine.rank });
+    }
+    return out;
+  }
+
+  it("ranks, points and usage are identical to the league-wide reads, for every player", () => {
+    const h = setup({ playerCount: 20 });
+    seedWeeks(h);
+    for (const playerId of ["p1", "p2", "p3", "p4", "p5", "p6"]) {
+      expect(readPlayerWeekPositionRanks(h, "L1", 2026, playerId)).toEqual(
+        legacyRanks(h, playerId),
+      );
+      expect(readPlayerWeekPoints(h, "L1", 2026, playerId)).toEqual(
+        readLeaguePlayerWeekPoints(h, "L1", 2026)
+          .filter((r) => r.playerId === playerId)
+          .sort((a, b) => a.week - b.week),
+      );
+    }
+    const legacyUsage = [1, 2, 3].flatMap((w) =>
+      readUsageWeek(h, 2026, w).filter((r) => r.playerId === "p2"),
+    );
+    expect(readPlayerUsageWeeks(h, 2026, [1, 2, 3], "p2")).toEqual(legacyUsage);
+    expect(readPlayerUsageWeeks(h, 2026, [], "p2")).toEqual([]);
+  });
+
+  it("reflects changed input data immediately (nothing is cached)", () => {
+    const h = setup({ playerCount: 20 });
+    seedWeeks(h);
+    const before = readPlayerWeekPositionRanks(h, "L1", 2026, "p1");
+    h.sqlite
+      .prepare(
+        `UPDATE league_player_week_points SET actual_pts = 99 WHERE player_id = 'p1' AND week = 1`,
+      )
+      .run();
+    const after = readPlayerWeekPositionRanks(h, "L1", 2026, "p1");
+    expect(after).not.toEqual(before);
+    expect(after).toEqual(legacyRanks(h, "p1"));
+    expect(after.find((r) => r.week === 1)?.rank).toBe(1);
   });
 });

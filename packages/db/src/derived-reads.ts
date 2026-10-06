@@ -401,6 +401,99 @@ export function readLeagueWeekPositionRanks(
   return out;
 }
 
+/**
+ * One player's rank (1 = best) at their own position in every week they scored, for a
+ * league/season. Same result as picking the player out of {@link readLeagueWeekPositionRanks} for
+ * each week, but computed in one indexed query instead of rescanning the whole league table per
+ * week: standard competition ranking ("1224") is `1 + count of same-position players strictly
+ * ahead`. Weeks with a null score, and players with no known position, are omitted.
+ */
+export function readPlayerWeekPositionRanks(
+  h: DbHandle,
+  leagueId: string,
+  season: number,
+  playerId: string,
+): { week: number; rank: number }[] {
+  return h.sqlite
+    .prepare(
+      `SELECT me.week AS week,
+              1 + (SELECT COUNT(*)
+                   FROM league_player_week_points o
+                   JOIN players op ON op.player_id = o.player_id
+                   WHERE o.league_id = me.league_id AND o.season = me.season AND o.week = me.week
+                     AND o.actual_pts IS NOT NULL AND op.position = p.position
+                     AND o.actual_pts > me.actual_pts) AS rank
+       FROM league_player_week_points me
+       JOIN players p ON p.player_id = me.player_id
+       WHERE me.league_id = ? AND me.season = ? AND me.player_id = ?
+         AND me.actual_pts IS NOT NULL AND p.position IS NOT NULL
+       ORDER BY me.week`,
+    )
+    .all(leagueId, season, playerId) as { week: number; rank: number }[];
+}
+
+/** One player's league-scored actual points for a season (same rows as
+ * {@link readLeaguePlayerWeekPoints} filtered to the player, ordered by week). Uses
+ * `lpwp_player_idx`. */
+export function readPlayerWeekPoints(
+  h: DbHandle,
+  leagueId: string,
+  season: number,
+  playerId: string,
+): LeaguePlayerWeekPointsRow[] {
+  return h.db
+    .select({
+      week: leaguePlayerWeekPoints.week,
+      playerId: leaguePlayerWeekPoints.playerId,
+      actualPts: leaguePlayerWeekPoints.actualPts,
+    })
+    .from(leaguePlayerWeekPoints)
+    .where(
+      and(
+        eq(leaguePlayerWeekPoints.leagueId, leagueId),
+        eq(leaguePlayerWeekPoints.season, season),
+        eq(leaguePlayerWeekPoints.playerId, playerId),
+      ),
+    )
+    .orderBy(leaguePlayerWeekPoints.week)
+    .all();
+}
+
+/** One player's usage rows for the given weeks (same rows as calling {@link readUsageWeek} per
+ * week and filtering to the player), ordered by week. Uses the `usage_week` primary key. */
+export function readPlayerUsageWeeks(
+  h: DbHandle,
+  season: number,
+  weeks: readonly number[],
+  playerId: string,
+): UsageWeekRow[] {
+  if (weeks.length === 0) return [];
+  return h.db
+    .select({
+      season: usageWeek.season,
+      week: usageWeek.week,
+      playerId: usageWeek.playerId,
+      team: usageWeek.team,
+      snapPct: usageWeek.snapPct,
+      targets: usageWeek.targets,
+      targetShare: usageWeek.targetShare,
+      airYardsShare: usageWeek.airYardsShare,
+      carries: usageWeek.carries,
+      carryShare: usageWeek.carryShare,
+      rzTouches: usageWeek.rzTouches,
+    })
+    .from(usageWeek)
+    .where(
+      and(
+        eq(usageWeek.season, season),
+        eq(usageWeek.playerId, playerId),
+        inArray(usageWeek.week, [...weeks]),
+      ),
+    )
+    .all()
+    .sort((a, b) => a.week - b.week);
+}
+
 export interface FullPlayerRow {
   playerId: string;
   fullName: string;
