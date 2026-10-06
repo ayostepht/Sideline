@@ -7,6 +7,10 @@ your league's exact scoring rules. It runs as a single Docker container on your 
 
 ## Quickstart (self-hosting)
 
+CI publishes a multi-arch (amd64 and arm64) image to `ghcr.io/ayostepht/sideline`. Tags:
+`latest` (main), `sha-*`, and `v*.*.*` for releases. On Unraid, use the template at
+`unraid/sideline.xml`. To build from source with Docker Compose:
+
 ```sh
 cp .env.example .env   # fill in what you need; every value is optional except where noted
 docker compose up -d --build

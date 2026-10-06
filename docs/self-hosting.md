@@ -8,7 +8,10 @@ variable, putting it behind Nginx Proxy Manager, and troubleshooting.
 ## Install with Docker Compose
 
 1. Copy `.env.example` to `.env` and fill in what you need (see the env reference below). Every
-   value is optional except the ones noted.
+   value is optional except the ones noted. The bundled `docker-compose.yml` only passes `TZ`,
+   `APP_PASSWORD`, `SESSION_SECRET`, `PUID`, and `PGID` from `.env` into the container. To set any
+   other variable (for example `SLEEPER_USERNAME`), add it under `environment:` in
+   `docker-compose.yml`. Without a `TZ` in `.env`, Compose uses `UTC`.
 2. From the repo root:
 
    ```sh
@@ -32,8 +35,9 @@ line pointing at `ghcr.io/ayostepht/sideline:latest` (see "A note on images" bel
 
 ## Install on Unraid
 
-1. In Unraid's Docker tab, go to **Add Container**, then switch to entering a template URL, or
-   add the template manually. The template lives in this repo at `unraid/sideline.xml`.
+1. The template lives in this repo at `unraid/sideline.xml`
+   (`https://raw.githubusercontent.com/ayostepht/Sideline/main/unraid/sideline.xml`). Use the
+   manual copy in the next step.
 2. The template pulls `ghcr.io/ayostepht/sideline:latest`, which CI publishes (see "A note on
    images" below). The GHCR package must be public for Unraid to pull it without credentials. To
    install, copy the template to `/boot/config/plugins/dockerMan/templates-user/my-sideline.xml`
@@ -122,6 +126,7 @@ if a value is invalid.
 | `ODDS_API_KEY` | empty | Optional API key for betting odds. Leave empty to disable that feature. |
 | `SYNC_STATE_CRON`, `SYNC_LEAGUE_CRON`, `SYNC_USERS_CRON`, `SYNC_ROSTERS_CRON`, `SYNC_MATCHUPS_CRON`, `SYNC_TRANSACTIONS_CRON`, `SYNC_PLAYERS_CRON`, `SYNC_TRENDING_CRON`, `SYNC_STATS_CRON`, `SYNC_PROJECTIONS_CRON`, `SYNC_NFLVERSE_CRON` | empty (built-in defaults) | Per-job cron overrides, for example `*/15 * * * *`. Leave empty unless you have a reason to change the sync schedule. |
 | `LOG_LEVEL` | `info` | Log verbosity: `fatal`, `error`, `warn`, `info`, `debug`, `trace`. |
+| `SIDELINE_ALLOW_ROOT` | unset | Docker only. Set to `1` to allow `PUID=0` or `PGID=0`, which runs the app as root. Not recommended. |
 | `PORT` | `3000` | Port the web server listens on inside the container. Usually left alone; map a different host port instead of changing this. |
 
 `SIDELINE_GALLERY` and `SIDELINE_DEV_ORIGINS` also exist in `.env.example` but are development
