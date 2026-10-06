@@ -5,7 +5,7 @@ handlers in `tests/msw/sleeper-handlers.ts`. Default test runs never touch the n
 
 ## Layout contract
 
-Root for recorded data: `tests/fixtures/sleeper/` (written by the T0.3b recorder, never by hand).
+Root for recorded data: `tests/fixtures/sleeper/` (written by the recorder, never by hand).
 
 | Request | File under the root |
 |---|---|
@@ -20,7 +20,7 @@ Examples: `v1/state/nfl.json`, `v1/league/<leagueId>.json`, `v1/league/<leagueId
 - Query strings are ignored when looking up a file.
 - A path with no file returns `404 {"error":"no fixture","path":...}` and is recorded in
   `handlers.unhandled`. Tests should assert `unhandled` is empty.
-- `manifest.json`: see "Manifest keys" below.
+- `manifest.json`: see "Manifest keys" below. Each tree also has its own `manifest.json`.
 
 ## Synthetic fixtures
 
@@ -92,7 +92,12 @@ list holds the recorded league plus a synthetic second league `10000000000000009
 | `syntheticLeagueId` | The second, synthetic league added to the user's league list. |
 | `sanitizerVersion` | Bumps when sanitizer output changes; re-record after a bump. |
 | `trimming` | What was cut to stay small: `players` (kept fields, count, `excludedForNameCollision`), `rows`, and a `sanitizer` description. |
+| `userId`, `username` | Fake fixture user (`manager_04`). |
+| `weeks` | Completed weeks recorded (excludes `partialWeeks`). |
 | `recordedAt` | ISO timestamp. |
+
+nflverse manifest (`tests/fixtures/nflverse/manifest.json`) keys: `season`, `throughWeek`,
+`keepTeams`, `note`, `assets`, `recordedAt`, `files`.
 
 ## Re-recording
 
@@ -103,5 +108,6 @@ gitignored `.spike-cache/`. Never commit raw or unsanitized data.
    2 h, `--max-age-hours N`).
 2. `pnpm fixtures:check` (leak scan across the repo) and `pnpm verify`.
 3. Keep the tree under about 6 MB. Re-record with trimming rather than adding weeks.
-4. nflverse: `pnpm exec tsx scripts/fixtures/nflverse.ts` (see the header of that file for flags).
+4. nflverse: `pnpm exec tsx scripts/fixtures/nflverse.ts` (see the header of that file for flags:
+   `--from-cache`, `--season N`, `--through-week N`). Raw downloads stay in `.spike-cache/nflverse/`.
 5. Update tests that pin counts or weeks, and note it in `docs/PROGRESS.md`.
