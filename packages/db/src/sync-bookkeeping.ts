@@ -3,7 +3,7 @@
  * `/players/nfl` once-a-day guard. Every helper takes `now: Date` (never reads the clock).
  * Write transactions are short, and read-modify-write sequences use IMMEDIATE transactions.
  */
-import { and, asc, desc, eq, gte, lt, max, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lt, max, or, sql } from "drizzle-orm";
 import {
   SyncRequestSchema,
   SyncRunSchema,
@@ -209,6 +209,7 @@ function toRequest(row: typeof syncRequests.$inferSelect): SyncRequest {
     startedAt: row.startedAt,
     finishedAt: row.finishedAt,
     error: row.error,
+    target: row.target,
   });
 }
 
@@ -222,6 +223,7 @@ function findActiveIn(tx: Tx, job: SyncRequest["job"], now: Date, staleMs: numbe
     .where(
       and(
         eq(syncRequests.job, job),
+        isNull(syncRequests.target),
         or(
           eq(syncRequests.status, "pending"),
           and(eq(syncRequests.status, "running"), gte(syncRequests.startedAt, cutoff)),
@@ -329,6 +331,59 @@ export function enqueueWithParams(
       const res = tx
         .insert(syncRequests)
         .values({ job, paramsJson, requestedAt: iso(now), status: "pending", source })
+        .run();
+      const row = tx
+        .select()
+        .from(syncRequests)
+        .where(eq(syncRequests.id, Number(res.lastInsertRowid)))
+        .get();
+      if (row === undefined) throw new Error("sync_requests insert not readable");
+      return { request: toRequest(row), created: true };
+    },
+    { behavior: "immediate" },
+  );
+}
+
+/**
+ * Queues an on-demand "refresh news for this player" request (job `player_news`, target = player
+ * id, source `api`). Dedupes against a pending request, or a running one started within `staleMs`,
+ * for the same player: that request is returned with `created: false`.
+ */
+export function enqueuePlayerNewsRequest(
+  h: DbHandle,
+  playerId: string,
+  nowIso: string,
+  staleMs: number = DEFAULT_STALE_MS,
+): { request: SyncRequest; created: boolean } {
+  const cutoff = new Date(new Date(nowIso).getTime() - staleMs).toISOString();
+  return h.db.transaction(
+    (tx) => {
+      const existing = tx
+        .select()
+        .from(syncRequests)
+        .where(
+          and(
+            eq(syncRequests.job, "player_news"),
+            eq(syncRequests.target, playerId),
+            or(
+              eq(syncRequests.status, "pending"),
+              and(eq(syncRequests.status, "running"), gte(syncRequests.startedAt, cutoff)),
+            ),
+          ),
+        )
+        .orderBy(asc(syncRequests.id))
+        .limit(1)
+        .get();
+      if (existing !== undefined) return { request: toRequest(existing), created: false };
+      const res = tx
+        .insert(syncRequests)
+        .values({
+          job: "player_news",
+          target: playerId,
+          requestedAt: nowIso,
+          status: "pending",
+          source: "api",
+        })
         .run();
       const row = tx
         .select()

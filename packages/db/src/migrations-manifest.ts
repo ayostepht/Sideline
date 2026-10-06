@@ -12,4 +12,5 @@ export interface ExpectedMigration {
 export const EXPECTED_MIGRATIONS: readonly ExpectedMigration[] = [
   { tag: "0000_fuzzy_snowbird", when: 1790949381949 },
   { tag: "0001_volatile_tinkerer", when: 1790953813425 },
+  { tag: "0002_material_leader", when: 1791331056794 },
 ];

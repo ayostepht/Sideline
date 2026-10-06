@@ -13,6 +13,7 @@ export const SYNC_JOB_NAMES = [
   "projections",
   "backfill_2025",
   "nflverse",
+  "player_news",
 ] as const;
 export const SyncJobNameSchema = z.enum(SYNC_JOB_NAMES);
 export type SyncJobName = (typeof SYNC_JOB_NAMES)[number];
@@ -102,6 +103,8 @@ export const SyncRequestSchema = z.strictObject({
   startedAt: z.string().nullable(),
   finishedAt: z.string().nullable(),
   error: z.string().nullable(),
+  /** Optional job target (a player id for "player_news"); absent or null otherwise. */
+  target: z.string().nullable().optional(),
 });
 export type SyncRequest = z.infer<typeof SyncRequestSchema>;
 
@@ -127,4 +130,5 @@ export const SYNC_CADENCE_MS: Record<SyncJobName, number | null> = {
   projections: HOUR_MS,
   backfill_2025: null,
   nflverse: 24 * HOUR_MS,
+  player_news: 30 * MIN_MS,
 };

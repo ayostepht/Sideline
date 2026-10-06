@@ -121,6 +121,8 @@ export const players = sqliteTable(
     depthChartOrder: integer("depth_chart_order"),
     searchRank: integer("search_rank"),
     gsisId: text("gsis_id"),
+    /** ESPN athlete id (Sleeper `espn_id`), used to match ESPN news. Null when unknown. */
+    espnId: text("espn_id"),
     /** ISO 8601. */
     updatedAt: text("updated_at").notNull(),
   },
@@ -408,6 +410,31 @@ export const httpCache = sqliteTable("http_cache", {
   fetchedAt: text("fetched_at").notNull(),
 });
 
+/**
+ * Recent player news from ESPN (worker-written, web-read). `id` is namespaced
+ * (`espn:<storyId>:<playerId>`) so one story mentioning several players is one row per player.
+ */
+export const playerNews = sqliteTable(
+  "player_news",
+  {
+    id: text("id").primaryKey(),
+    playerId: text("player_id").notNull(),
+    headline: text("headline").notNull(),
+    summary: text("summary"),
+    url: text("url"),
+    /** Provider label, e.g. "ESPN". */
+    source: text("source").notNull(),
+    /** ISO 8601. */
+    publishedAt: text("published_at").notNull(),
+    /** ISO 8601. Volatile: not part of the change test. */
+    fetchedAt: text("fetched_at").notNull(),
+  },
+  (t) => [
+    index("player_news_player_idx").on(t.playerId, sql`${t.publishedAt} desc`),
+    index("player_news_published_idx").on(t.publishedAt),
+  ],
+);
+
 /** Manual sync runs queued for the worker (ADR-005 item 3). Matches shared SyncRequest. */
 export const syncRequests = sqliteTable(
   "sync_requests",
@@ -426,6 +453,8 @@ export const syncRequests = sqliteTable(
     startedAt: text("started_at"),
     finishedAt: text("finished_at"),
     error: text("error"),
+    /** Optional job target, e.g. a player id for "player_news". Null for untargeted jobs. */
+    target: text("target"),
   },
   (t) => [
     index("sync_requests_status_idx").on(t.status, t.id),

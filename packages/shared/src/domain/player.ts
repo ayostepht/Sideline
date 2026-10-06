@@ -21,5 +21,7 @@ export const PlayerSchema = z.strictObject({
   depthChartOrder: z.number().nullable(),
   searchRank: z.number().nullable(),
   gsisId: z.string().nullable(),
+  /** ESPN athlete id. Optional: undefined or null leaves a stored value unchanged on upsert. */
+  espnId: z.string().nullable().optional(),
 });
 export type Player = z.infer<typeof PlayerSchema>;

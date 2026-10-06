@@ -2,7 +2,7 @@
  * Typed read helpers replacing the worker's raw SQL (apps/worker/src/jobs/db-reads.ts), same
  * semantics. Mapping old -> new is in each doc comment.
  */
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { SeasonTypeSchema, type NflState, type SeasonType } from "@sideline/shared";
 import type { DbHandle } from "./connection.js";
 import {
@@ -10,6 +10,7 @@ import {
   matchups,
   nflState,
   playerWeekProjections,
+  playerNews,
   playerWeekStats,
   players,
   schedule,
@@ -141,4 +142,53 @@ export function readNflStateFetchedAt(h: DbHandle): string | null {
 /** touchStateFetchedAt -> touchNflStateFetchedAt. */
 export function touchNflStateFetchedAt(h: DbHandle, fetchedAt: string): void {
   h.db.update(nflState).set({ fetchedAt }).where(eq(nflState.id, 1)).run();
+}
+
+export interface PlayerNewsItem {
+  id: string;
+  playerId: string;
+  headline: string;
+  summary: string | null;
+  url: string | null;
+  source: string;
+  publishedAt: string;
+  fetchedAt: string;
+}
+
+/** Newest-first news for one player (default limit 5). */
+export function readPlayerNews(
+  h: DbHandle,
+  playerId: string,
+  opts: { limit?: number } = {},
+): PlayerNewsItem[] {
+  return h.db
+    .select()
+    .from(playerNews)
+    .where(eq(playerNews.playerId, playerId))
+    .orderBy(desc(playerNews.publishedAt), desc(playerNews.id))
+    .limit(opts.limit ?? 5)
+    .all();
+}
+
+/** player_id to ESPN id for players with a non-null ESPN id; all players when `playerIds` is omitted. */
+export function readPlayerEspnIds(h: DbHandle, playerIds?: readonly string[]): Map<string, string> {
+  const out = new Map<string, string>();
+  const collect = (rows: { id: string; e: string | null }[]): void => {
+    for (const r of rows) if (r.e !== null) out.set(r.id, r.e);
+  };
+  const sel = () => h.db.select({ id: players.playerId, e: players.espnId }).from(players);
+  if (playerIds === undefined) {
+    collect(sel().where(isNotNull(players.espnId)).all());
+    return out;
+  }
+  for (let i = 0; i < playerIds.length; i += 500) {
+    collect(
+      sel()
+        .where(
+          and(isNotNull(players.espnId), inArray(players.playerId, playerIds.slice(i, i + 500))),
+        )
+        .all(),
+    );
+  }
+  return out;
 }
