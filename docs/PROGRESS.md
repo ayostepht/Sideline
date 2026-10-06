@@ -11,10 +11,23 @@
 | 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` (merged) | Done, G4 PASS 2026-10-03 (Steph approved) |
 | 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
 | 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` (merged) | Done, G6 PASS 2026-10-04 (Steph approved). **v1.0.0 released.** |
+| 7a Player card (ADR-019) | mini-gate | `phase/7-player-card` | In progress |
 
 ## Resume point
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
+
+## Phase 7a task table (ADR-019)
+
+| ID | Title | Agent | Batch | Status | Attempts | Commit |
+|---|---|---|---|---|---|---|
+| P7.1 | DB: players.espn_id, player_news table, helpers, news sync job + on-demand target | backend-engineer | A | Dispatched | 1 | |
+| P7.2 | ESPN news provider client (zod, fixture, limiter) | sleeper-data-engineer | A | Dispatched | 1 | |
+| P7.3 | Pop-up via intercepting route, clickable names app-wide, team subline | frontend-engineer | A | Dispatched | 1 | |
+| P7.4 | DTO (weekly rows, headshot, news) + getPlayerDetail + CSP | backend-engineer | B | Open | 0 | |
+| P7.5 | Persist espn_id; news worker job (scheduled + on-demand) | sleeper-data-engineer | B | Open | 0 | |
+| P7.6 | Player card: headshot, weekly table, news section | frontend-engineer | C | Open | 0 | |
+| P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Open | 0 | |
 
 ## Earlier phases
 

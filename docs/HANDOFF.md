@@ -30,8 +30,7 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- Nothing. PERF-1 done (`fda1f65`): `getPlayerDetail` 16-call loop 2.2 s -> about 85 ms, which fixes the CI verify failure on GitHub runners. Review APPROVE, minors in PROGRESS backlog.
-- DOCS-1..3 docs audit done 2026-10-06 (committed). Historical records (gates, reviews, archive, backtests, ADR bodies) were left as written on purpose.
+- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Steph requested it 2026-10-06 and chose ESPN news, a pop-up with its own URL, and CDN headshots. Batch A dispatched: P7.1 (backend), P7.2 (sleeper-data), P7.3 (frontend). Task table in `docs/PROGRESS.md`. If the session died, check uncommitted files in those agents' paths.
 
 ## 4. Next steps (in order)
 

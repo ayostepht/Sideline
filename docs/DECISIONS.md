@@ -26,6 +26,8 @@ Read this list at session start. Open a full ADR below only when a task touches 
 - **Phase 5 plan (ADR-016):** new `packages/core/src/sim/` (T5.1, owns the seeded RNG) and `packages/core/src/league/` (T5.2) run parallel in Batch A, both analytics-engineer, file-disjoint. T5.3 (playoff odds) moves to its own Batch B and reuses T5.1's RNG/sampler rather than building a second one. T5.4 (data functions/APIs) moves from PLAN's Batch B to Batch C and its dependency widens to T5.1+T5.2+T5.3 (not just T5.1+T5.2), because it must expose LEAGUE-5 (playoff odds) too and that doesn't exist until T5.3 lands. Batches D (T5.5, frontend) and E (T5.6, qa) are unchanged from PLAN's table.
 - **Phase 6 plan (ADR-017):** T6.1 (auth HOST-8 plus security headers plus structured logging, backend-engineer, `apps/web/middleware.ts` plus `lib/server`) stays one task; its login PAGE is split out as T6.1c (frontend-engineer, ownership: `apps/web/app/` non-api pages belong to frontend, depends on T6.1's API contract). T6.3 splits into T6.3a (PWA manifest/icons), T6.3b (preseason/offseason states), T6.3c (League UX polish: desktop density, "You" markers, pluralization). Batch A: T6.1, T6.2 (Docker/self-hosting), T6.3a. Batch B: T6.1c, T6.3b, T6.3c. Batch C (unchanged from PLAN): T6.4/T6.5/T6.6 in parallel. Batch D: T6.7 fix round, skipped (Batch C returned zero Blocker/Major findings). G6 keeps its human checkpoint (release approval before tagging `v1.0.0`) regardless of how autonomously the rest of the phase runs.
 
+- **Player card (ADR-019):** pop-up via intercepting route with its own URL; headshots from sleepercdn.com in the browser (CSP img-src); news from ESPN's unofficial feed, worker-only, zod-validated, degrades to "No recent news". Tasks P7.1..P7.7.
+
 ## ADR-000: Process, privacy, and ownership decisions for Phase 0
 
 Date: 2026-10-01
@@ -458,3 +460,17 @@ The repo went public on GitHub under her handle, and CI publishes the image to G
 - The pre-commit identifier scan (HANDOFF section 6) strips the three URL forms before grepping, so a hit still means a real leak.
 - The whole-repo scan at gates uses the same filter.
 
+
+## ADR-019: Player card (pop-up, weekly table, headshots, ESPN news)
+
+Date: 2026-10-06
+
+**Decision**
+
+1. **Scope.** Steph asked (2026-10-06) for: every player name clickable app-wide, opening the player detail as a pop-up; a weekly points table alongside the existing line chart; player news; player photos; NFL team shown under player names in a smaller font. This is the first Phase 7 work, approved directly by her request. It also closes the G4 backlog request "prior performance and news" on the Players detail page.
+2. **Pop-up = Next.js intercepting route** (`@modal` parallel slot plus `(.)players/[playerId]`-style interception under `/l/[leagueId]`). Soft navigation opens a modal over the current page and updates the URL; Back closes it; a direct load or refresh renders the existing full page. One shared player-link component is used wherever a player name renders.
+3. **Headshots load in the browser straight from Sleeper's CDN** (`https://sleepercdn.com/content/nfl/players/thumb/{playerId}.jpg`; team logo for DEF), with an initials fallback. CSP `img-src` adds `https://sleepercdn.com`. This is a static CDN asset, not a Sleeper API call, so ADR-002's "worker is the only Sleeper caller" still holds for the API. Alternative (worker-cached headshots) rejected by Steph as unnecessary.
+4. **News comes from ESPN's unofficial fantasy news feed**, free and keyless, matched by the `espn_id` Sleeper includes on each player (newly persisted on `players`). Only the worker calls ESPN, through its own polite limiter and the providers cache; the web reads a `player_news` table. The web may enqueue an on-demand news refresh for one player via `sync_requests`. Because the feed is undocumented, every response is zod-validated and a shape change degrades to "No recent news" plus a logged warning, never an error page. Alternatives: Google News RSS (noisier, name collisions), paid feeds (cost). Steph chose ESPN.
+5. **Task plan.** Batch A: P7.1 (backend, db schema/helpers), P7.2 (sleeper-data, ESPN provider client), P7.3 (frontend, pop-up plus clickable names plus team subline), file-disjoint. Batch B: P7.4 (backend, DTO plus `getPlayerDetail` plus CSP), P7.5 (sleeper-data, espn_id persistence plus news worker job). Batch C: P7.6 (frontend, headshot, weekly table, news section), then P7.7 (qa, e2e plus a11y).
+
+**Consequences:** a new external dependency that may break without notice; it is isolated behind zod and degrades quietly. News freshness depends on the worker cadence.
