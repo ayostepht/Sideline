@@ -21,7 +21,6 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 - **What Phase 6 shipped:** optional `APP_PASSWORD` login (HOST-8) with security headers and structured logging; a real Docker/Unraid self-hosting path (PUID/PGID fix, Unraid template, full `docs/self-hosting.md`, GHCR wired into CI); a PWA manifest/icon set; consolidated preseason/offseason states and League desktop-table polish. A post-release fix round (Batch E, `docs/archive/progress-phase6.md`) fixed a real optimizer bug Steph found live-testing: the lineup solver could recommend a zero-benefit swap chain when multiple players tied in value across interchangeable slots -- fixed at the root (a stability tiebreak) and defensively (a UI materiality floor), plus a generalizing property test.
 - **Standing lesson from the gate-rerun chase during Batch E: a `pnpm gate` run dispatched through a subagent can silently stall in the subagent's own completion-watcher even though the gate script itself finishes fine** (happened once -- the gate completed in ~9 minutes but the subagent didn't report back for about an hour). If a dispatched gate run goes quiet, check `docs/gates/latest.json`'s `finishedAt` and `.gate/logs/*.log` timestamps directly rather than waiting indefinitely, or just run `pnpm gate` directly via a background Bash command (gets a native harness notification, no extra indirection).
 - **Standing lesson, reconfirmed at G5/G6: stop the host's `pnpm dev:lan` and `pnpm dev:worker` before any gate-affecting run, every time, no exceptions** (frees port 3000; avoids resource-contention false-positive perf-test failures, seen at G4, G5, and twice during Batch E).
-- **`getPlayerDetail` perf test (`apps/web/lib/server/perf.test.ts`) remains a known-tight budget** (~125-127ms/call, vs. under 1ms for every other data function; no `computed_cache` entry exists). Its coverage-exclusion glob bug is now fixed (Batch E), but the underlying slowness itself is still backlog, not yet actioned -- candidate Phase 7 follow-up if it starts failing its 4800ms budget again even uninstrumented.
 - **Known gap, not yet fixed: no worker job calls `upsertUsageWeek`.** TREND-2 and the Waiver Score's usage-trend component silently fall back to a scoring-trend proxy on real data. Logged in `docs/PROGRESS.md` backlog.
 - **Real MATCH-3 decision (ADR-014, unchanged): matchup adjustment stays off** (`alpha=0, beta=0`). Matchup grades remain context-only.
 - **Design:** ADR-011 is the visual identity (lime fill only, one per-page content-recommendation accent), verified clean across every route through the G6 UX review.
@@ -31,7 +30,7 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- PERF-1 (backend-engineer, running): speed up `getPlayerDetail`. Its perf test fails on GitHub runners (8.1 s vs 4.8 s budget), which turns CI's verify job red. The Docker job does not depend on verify, so images still publish. Budget must not change.
+- Nothing. PERF-1 done (`fda1f65`): `getPlayerDetail` 16-call loop 2.2 s -> about 85 ms, which fixes the CI verify failure on GitHub runners. Review APPROVE, minors in PROGRESS backlog.
 - DOCS-1..3 docs audit done 2026-10-06 (committed). Historical records (gates, reviews, archive, backtests, ADR bodies) were left as written on purpose.
 
 ## 4. Next steps (in order)
