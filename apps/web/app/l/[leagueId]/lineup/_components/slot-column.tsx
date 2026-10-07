@@ -5,7 +5,7 @@ import { MatchupGrade } from "../../../../../components/matchup-grade";
 import { PlayerRow } from "../../../../../components/player-row";
 import { Badge } from "../../../../../components/ui/badge";
 import { WeatherChips, weatherChipsFromReasons } from "../../../../../components/weather";
-import { WhySheet } from "../../../../../components/why-sheet";
+import { WhySheetEager as WhySheet } from "../../../../../components/why-sheet-eager";
 import { formatValue, MODE_STAT_LABEL, playerById } from "./format";
 
 /**

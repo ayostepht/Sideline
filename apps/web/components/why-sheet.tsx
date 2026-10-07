@@ -5,14 +5,15 @@ import { ArrowDown, ArrowUp, HelpCircle } from "lucide-react";
 import {
   cloneElement,
   isValidElement,
-  useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
-  type ComponentType,
   type MouseEvent,
   type ReactElement,
   type ReactNode,
 } from "react";
 import { cn } from "../lib/client/cn";
+import { createLazyLoader, useLazyModule } from "../lib/client/lazy-module";
 import { formatImpact, formatProjectedPoints, formatReasonValue } from "./reason-format";
 import { Button } from "./ui/button";
 
@@ -86,7 +87,7 @@ export interface WhySheetProps extends WhyBodyProps {
   defaultOpen?: boolean;
 }
 
-let loaded: ComponentType<WhySheetProps> | undefined;
+const loader = createLazyLoader(() => import("./why-sheet-impl"));
 
 const DEFAULT_TRIGGER = (
   <Button variant="ghost" size="sm" className="min-h-11 gap-1 px-2" data-testid="why-trigger">
@@ -95,33 +96,65 @@ const DEFAULT_TRIGGER = (
   </Button>
 );
 
+type TriggerProps = { onClick?: (e: MouseEvent) => void; "aria-expanded"?: boolean };
+
 /**
  * The sheet code (Radix dialog) loads after hydration to keep route JS small. Until then the
- * trigger renders as a plain button; a tap before the code arrives opens the sheet on load.
+ * trigger renders as a plain button; a tap before the code arrives opens the sheet on load (and
+ * reports `onOpenChange(true)` in controlled mode). Focus on the trigger is kept across the swap.
+ * If the code fails to load, a tap expands the numbers inline instead.
  */
 export function WhySheet(props: WhySheetProps) {
-  const [Impl, setImpl] = useState<ComponentType<WhySheetProps> | undefined>(() => loaded);
+  const host = useRef<HTMLSpanElement>(null);
+  const hadFocus = useRef(false);
   const [tapped, setTapped] = useState(false);
-  useEffect(() => {
-    if (Impl) return;
-    let live = true;
-    void import("./why-sheet-impl").then((m) => {
-      loaded = m.default;
-      if (live) setImpl(() => m.default);
-    });
-    return () => {
-      live = false;
+  const { mod, failed } = useLazyModule(loader, {
+    onBeforeSwap: () => {
+      hadFocus.current = host.current?.contains(document.activeElement) ?? false;
+    },
+  });
+  useLayoutEffect(() => {
+    if (mod && hadFocus.current && !tapped) {
+      host.current?.querySelector<HTMLElement>("button, a, [role=button]")?.focus();
+    }
+    hadFocus.current = false;
+  }, [mod, tapped]);
+
+  let body: ReactNode;
+  if (mod) {
+    const Impl = mod.default;
+    body = <Impl {...props} defaultOpen={props.defaultOpen === true || tapped} />;
+  } else {
+    const trigger = props.trigger ?? DEFAULT_TRIGGER;
+    const onTap = (e: MouseEvent): void => {
+      (isValidElement(trigger) ? (trigger.props as TriggerProps).onClick : undefined)?.(e);
+      if (failed) {
+        setTapped((t) => !t);
+        return;
+      }
+      setTapped(true);
+      props.onOpenChange?.(true);
     };
-  }, [Impl]);
-  if (Impl) return <Impl {...props} defaultOpen={props.defaultOpen === true || tapped} />;
-  const onTap = (e: MouseEvent): void => {
-    e.preventDefault();
-    setTapped(true);
-  };
-  const trigger = props.trigger ?? DEFAULT_TRIGGER;
-  return isValidElement(trigger)
-    ? cloneElement(trigger as ReactElement<{ onClick?: (e: MouseEvent) => void }>, {
-        onClick: onTap,
-      })
-    : trigger;
+    const triggerEl = isValidElement(trigger)
+      ? cloneElement(trigger as ReactElement<TriggerProps>, {
+          onClick: onTap,
+          ...(failed ? { "aria-expanded": tapped } : {}),
+        })
+      : trigger;
+    body = (
+      <>
+        {triggerEl}
+        {failed && tapped ? (
+          <div role="region" aria-label={props.title} data-testid="why-inline">
+            <WhyBody summary={props.summary} reasons={props.reasons} />
+          </div>
+        ) : null}
+      </>
+    );
+  }
+  return (
+    <span ref={host} className="contents">
+      {body}
+    </span>
+  );
 }

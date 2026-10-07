@@ -2,12 +2,14 @@
 
 import { Info } from "lucide-react";
 import {
-  type ComponentType,
   forwardRef,
   type ComponentPropsWithoutRef,
-  useEffect,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
   useState,
 } from "react";
+import { createLazyLoader, useLazyModule } from "../lib/client/lazy-module";
 
 type InfoPopoverProps = { label: string; text: string; testid?: string };
 
@@ -30,26 +32,63 @@ export const InfoButton = forwardRef<
   );
 });
 
-let loaded: ComponentType<InfoPopoverProps> | undefined;
+const loader = createLazyLoader(() => import("./info-popover-impl"));
+
+/** No-JS-chunk fallback when the popover code fails to load: the text expands inline. */
+export function InfoPopoverFallback({ label, text, testid }: InfoPopoverProps) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="inline-flex flex-wrap items-center">
+      <InfoButton
+        label={label}
+        testid={testid}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+      />
+      {open ? (
+        <span
+          role="note"
+          className="basis-full rounded-control border bg-muted p-2 text-sm"
+          data-testid={testid ? `${testid}-content` : undefined}
+        >
+          {text}
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
 /**
  * Tap-to-open explanation. Works on touch, keyboard and screen readers (Escape closes, focus
  * returns to the button). The popover code (Radix popover and positioning) loads after hydration
- * to keep route JS small; until then the button renders without behavior.
+ * to keep route JS small. A tap before it arrives opens the popover on load, and focus on the
+ * button is kept across the swap. If the code fails to load, the text expands inline instead.
  */
 export function InfoPopover(props: InfoPopoverProps) {
-  const [Impl, setImpl] = useState<ComponentType<InfoPopoverProps> | undefined>(() => loaded);
-  useEffect(() => {
-    if (Impl) return;
-    let live = true;
-    void import("./info-popover-impl").then((m) => {
-      loaded = m.default;
-      if (live) setImpl(() => m.default);
-    });
-    return () => {
-      live = false;
-    };
-  }, [Impl]);
-  if (Impl) return <Impl {...props} />;
-  return <InfoButton label={props.label} testid={props.testid} />;
+  const host = useRef<HTMLSpanElement>(null);
+  const hadFocus = useRef(false);
+  const [tapped, setTapped] = useState(false);
+  const { mod, failed } = useLazyModule(loader, {
+    onBeforeSwap: () => {
+      hadFocus.current = host.current?.contains(document.activeElement) ?? false;
+    },
+  });
+  useLayoutEffect(() => {
+    if (mod && hadFocus.current && !tapped) host.current?.querySelector("button")?.focus();
+    hadFocus.current = false;
+  }, [mod, tapped]);
+  let body: ReactNode;
+  if (mod) {
+    const Impl = mod.default;
+    body = <Impl {...props} defaultOpen={tapped} />;
+  } else if (failed) {
+    body = <InfoPopoverFallback {...props} />;
+  } else {
+    body = <InfoButton label={props.label} testid={props.testid} onClick={() => setTapped(true)} />;
+  }
+  return (
+    <span ref={host} className="inline-flex">
+      {body}
+    </span>
+  );
 }

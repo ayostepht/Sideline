@@ -8,13 +8,15 @@ export default function InfoPopoverImpl({
   label,
   text,
   testid,
+  defaultOpen,
 }: {
   label: string;
   text: string;
   testid?: string;
+  defaultOpen?: boolean;
 }) {
   return (
-    <Popover>
+    <Popover defaultOpen={defaultOpen === true}>
       <PopoverTrigger asChild>
         <InfoButton label={label} testid={testid} />
       </PopoverTrigger>

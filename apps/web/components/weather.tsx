@@ -82,8 +82,8 @@ export function WeatherChips({
       aria-label="Weather"
       data-testid="weather-chips"
     >
-      {chips.map((c) => (
-        <WeatherChip key={c.label} {...c} />
+      {chips.map((c, i) => (
+        <WeatherChip key={`${i}-${c.label}`} {...c} />
       ))}
     </ul>
   );
