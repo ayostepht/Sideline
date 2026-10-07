@@ -13,8 +13,9 @@ import { themes, useTheme } from "./helpers/theme";
  * Home and Waivers, Mahomes 4046 KC on roster 3 (no news), Jeudy 6783 CLE free agent.
  */
 const isDesktop = (width: number | undefined): boolean => (width ?? 0) >= 1024;
-const NEWSLESS_ID = DATA.otherPlayerId;
-const NEWSLESS_NAME = DATA.otherPlayerName;
+// The fixture seed gives Mahomes (otherPlayerId) recorded news, so use the free agent here.
+const NEWSLESS_ID = DATA.freeAgentId;
+const NEWSLESS_NAME = DATA.freeAgentName;
 const UNKNOWN_ID = "99999999";
 
 const playerUrl = (id: string): RegExp => new RegExp(`${L}/players/${id}$`);
@@ -401,9 +402,9 @@ test.describe("Player news (ADR-020 item 4)", () => {
     });
     await page.goto(`${L}/lineup`);
     await expect(page.getByTestId("lineup-page")).toBeVisible();
-    // Mahomes has no stored news and no fetch record, so the card asks for a refresh.
+    // The newsless player has no stored news and no fetch record, so the card asks for a refresh.
     await page.goto(`${L}/players`);
-    await searchPlayers(page, DATA.otherPlayerQuery);
+    await searchPlayers(page, DATA.freeAgentQuery);
     const desktop = isDesktop(page.viewportSize()?.width);
     const rows = page.getByTestId(desktop ? "players-table-row" : "players-row");
     await expect.poll(async () => rows.count()).toBe(1);
