@@ -85,8 +85,30 @@ const ENTITIES: Record<string, string> = {
   quot: '"',
   apos: "'",
   nbsp: " ",
-  "#39": "'",
+  hellip: "\u2026",
+  rsquo: "\u2019",
+  lsquo: "\u2018",
+  ldquo: "\u201C",
+  rdquo: "\u201D",
+  mdash: "\u2014",
+  ndash: "\u2013",
 };
+
+function codePoint(n: number, original: string): string {
+  try {
+    return String.fromCodePoint(n);
+  } catch {
+    return original;
+  }
+}
+
+function decodeEntity(m: string, e: string): string {
+  const dec = /^#(\d+)$/.exec(e);
+  if (dec) return codePoint(Number(dec[1]), m);
+  const hex = /^#x([0-9a-f]+)$/i.exec(e);
+  if (hex) return codePoint(Number.parseInt(hex[1] ?? "", 16), m);
+  return ENTITIES[e] ?? m;
+}
 
 /** Removes tags and entities, collapses whitespace, caps length. Returns null when nothing remains. */
 export function cleanSummary(
@@ -97,7 +119,7 @@ export function cleanSummary(
   const text = raw
     .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
     .replace(/<[^>]*>/g, " ")
-    .replace(/&(#?\w+);/g, (m, e: string) => ENTITIES[e] ?? m)
+    .replace(/&(#?\w+);/g, decodeEntity)
     .replace(/\s+/g, " ")
     .trim();
   if (!text) return null;
@@ -133,6 +155,7 @@ async function getJson(url: string, opts: EspnNewsOptions): Promise<{ json: unkn
         ok: false,
         reason: res.status === 404 ? "not_found" : "network",
         message: `ESPN news HTTP ${res.status}`,
+        status: res.status,
       };
     }
     try {

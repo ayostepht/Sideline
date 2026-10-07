@@ -141,6 +141,25 @@ describe("cleanSummary", () => {
     expect(s?.length).toBeLessThanOrEqual(400);
     expect(s?.endsWith("…")).toBe(true);
   });
+  it("decodes numeric, hex, and named typographic entities", () => {
+    expect(cleanSummary("It&#39;s &#8217;ok&#x2019; &#x1F600; &hellip; &rsquo;&lsquo;")).toBe(
+      "It's \u2019ok\u2019 \u{1F600} \u2026 \u2019\u2018",
+    );
+    expect(cleanSummary("&ldquo;a&rdquo; &mdash; b &ndash; c&nbsp;d")).toBe(
+      "\u201Ca\u201D \u2014 b \u2013 c d",
+    );
+  });
+  it("leaves invalid code points and unknown entities as-is", () => {
+    expect(cleanSummary("x &#99999999999; &#xZZ; &bogus; y")).toBe(
+      "x &#99999999999; &#xZZ; &bogus; y",
+    );
+  });
+  it("exposes the HTTP status on failures", async () => {
+    expect(await fetchEspnRecentNews({ ...fast, fetch: json({}, 429) })).toMatchObject({
+      ok: false,
+      status: 429,
+    });
+  });
   it("strips HTML from fetched items", async () => {
     const body = {
       articles: [

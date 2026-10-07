@@ -30,7 +30,13 @@ export interface PlayerNewsJobDeps {
   limiter?: MinIntervalLimiter;
   /** Test seam: per-run cap on per-player calls. */
   cap?: number;
+  /** Test seam: overrides the per-request timeout for every call (defaults: 10 s feed, 5 s per player). */
+  timeoutMs?: number;
 }
+
+/** Stop the per-player loop after this many failures in a row. */
+export const MAX_CONSECUTIVE_FAILURES = 3;
+export const PLAYER_TIMEOUT_MS = 5_000;
 
 function toRow(item: EspnNewsItem, playerId: string, fetchedAt: string): PlayerNewsRow {
   return {
@@ -64,11 +70,21 @@ export function playerNewsJob(deps: PlayerNewsJobDeps = {}): Job {
   const cap = deps.cap ?? PLAYER_NEWS_CAP;
   let cursor = 0;
 
-  const opts = (ctx: JobContext) => ({
-    ...(deps.fetch ? { fetch: deps.fetch } : {}),
-    now: () => ctx.now(),
-    limiter,
-  });
+  const opts = (ctx: JobContext, timeoutMs?: number) => {
+    const t = deps.timeoutMs ?? timeoutMs;
+    return {
+      ...(deps.fetch ? { fetch: deps.fetch } : {}),
+      now: () => ctx.now(),
+      limiter,
+      ...(t !== undefined ? { timeoutMs: t } : {}),
+    };
+  };
+
+  /** Rate limited, unavailable, or hanging: more calls would only pile on. */
+  function isHardStop(res: ProviderResult<unknown>): boolean {
+    if (res.ok) return false;
+    return res.status === 429 || res.status === 503 || /timed out/.test(res.message);
+  }
 
   function warn(ctx: JobContext, what: string, res: ProviderResult<unknown>): void {
     if (!res.ok) ctx.logger.warn({ what, reason: res.reason, message: res.message }, "ESPN news");
@@ -76,22 +92,25 @@ export function playerNewsJob(deps: PlayerNewsJobDeps = {}): Job {
 
   async function forPlayer(
     ctx: JobContext,
-    playerId: string,
+    playerIds: readonly string[],
     espnId: string,
     rows: Map<string, PlayerNewsRow>,
     fetchedAt: string,
-  ): Promise<boolean> {
-    const res = await fetchEspnPlayerNews(espnId, opts(ctx));
+  ): Promise<ProviderResult<unknown>> {
+    const res = await fetchEspnPlayerNews(espnId, opts(ctx, PLAYER_TIMEOUT_MS));
     if (!res.ok) {
-      warn(ctx, `player ${playerId}`, res);
-      return false;
+      warn(ctx, `player ${playerIds.join(",")}`, res);
+      return res;
     }
-    // The request was for this player, so every returned item belongs to them.
     for (const item of res.data) {
-      const row = toRow(item, playerId, fetchedAt);
-      rows.set(row.id, row);
+      // Keep items about the requested athlete; items with no athlete ids are attributed to them.
+      if (item.espnAthleteIds.length > 0 && !item.espnAthleteIds.includes(espnId)) continue;
+      for (const playerId of playerIds) {
+        const row = toRow(item, playerId, fetchedAt);
+        rows.set(row.id, row);
+      }
     }
-    return true;
+    return res;
   }
 
   async function targeted(ctx: JobContext, playerId: string): Promise<JobResult> {
@@ -100,8 +119,9 @@ export function playerNewsJob(deps: PlayerNewsJobDeps = {}): Job {
       return { rowsChanged: 0, status: "skipped", note: `no ESPN id for ${playerId}` };
     }
     const rows = new Map<string, PlayerNewsRow>();
-    const ok = await forPlayer(ctx, playerId, espnId, rows, ctx.now().toISOString());
-    if (!ok) return { rowsChanged: 0, status: "skipped", note: "degraded: ESPN news unavailable" };
+    const res = await forPlayer(ctx, [playerId], espnId, rows, ctx.now().toISOString());
+    if (!res.ok)
+      return { rowsChanged: 0, status: "skipped", note: "degraded: ESPN news unavailable" };
     return { rowsChanged: store(ctx, rows), note: `${rows.size} items for ${playerId}` };
   }
 
@@ -115,47 +135,66 @@ export function playerNewsJob(deps: PlayerNewsJobDeps = {}): Job {
       let failures = 0;
 
       // (a) The league-wide feed, matched to players by ESPN athlete id.
-      const byEspn = new Map<string, string>();
-      for (const [playerId, espnId] of readPlayerEspnIds(ctx.db)) byEspn.set(espnId, playerId);
+      // Two Sleeper players can share an ESPN id; each gets a row.
+      const byEspn = new Map<string, string[]>();
+      for (const [playerId, espnId] of readPlayerEspnIds(ctx.db)) {
+        byEspn.set(espnId, [...(byEspn.get(espnId) ?? []), playerId]);
+      }
+      if (ctx.signal.aborted) return { rowsChanged: 0, status: "skipped", note: "aborted" };
       const recent = await fetchEspnRecentNews(opts(ctx));
       calls++;
+      let stopEarly = false;
       if (recent.ok) {
         for (const w of recent.meta.warnings) ctx.logger.warn({ warning: w }, "ESPN news warning");
         for (const item of recent.data) {
           for (const athlete of item.espnAthleteIds) {
-            const playerId = byEspn.get(athlete);
-            if (playerId === undefined) continue;
-            const row = toRow(item, playerId, fetchedAt);
-            rows.set(row.id, row);
+            for (const playerId of byEspn.get(athlete) ?? []) {
+              const row = toRow(item, playerId, fetchedAt);
+              rows.set(row.id, row);
+            }
           }
         }
       } else {
         failures++;
         warn(ctx, "recent feed", recent);
+        if (isHardStop(recent)) {
+          stopEarly = true;
+          ctx.logger.warn({ calls, failures }, "ESPN degraded, stopping early");
+        }
       }
 
       // (b) Rostered players in the active league, a rotating slice per run.
       const leagueId = requireLeagueId(ctx);
-      if (leagueId !== null) {
+      if (leagueId !== null && !stopEarly) {
         const espnIds = readPlayerEspnIds(ctx.db, [...readRosteredPlayerIds(ctx.db, leagueId)]);
         const ids = [...espnIds.keys()].sort();
         if (ids.length > 0) {
           const start = cursor % ids.length;
           const slice = Array.from({ length: Math.min(cap, ids.length) }, (_, i) => {
-            return ids[(start + i) % ids.length] as string;
-          });
+            return ids[(start + i) % ids.length];
+          }).filter((id): id is string => id !== undefined);
           cursor = (start + slice.length) % ids.length;
+          // Players sharing an ESPN id are fetched once and written for each.
+          const byId = new Map<string, string[]>();
           for (const playerId of slice) {
+            const espnId = espnIds.get(playerId);
+            if (espnId !== undefined) byId.set(espnId, [...(byId.get(espnId) ?? []), playerId]);
+          }
+          let consecutive = 0;
+          for (const [espnId, playerIds] of byId) {
             if (ctx.signal.aborted) break;
             calls++;
-            const ok = await forPlayer(
-              ctx,
-              playerId,
-              espnIds.get(playerId) as string,
-              rows,
-              fetchedAt,
-            );
-            if (!ok) failures++;
+            const res = await forPlayer(ctx, playerIds, espnId, rows, fetchedAt);
+            if (res.ok) {
+              consecutive = 0;
+              continue;
+            }
+            failures++;
+            consecutive++;
+            if (isHardStop(res) || consecutive >= MAX_CONSECUTIVE_FAILURES) {
+              ctx.logger.warn({ calls, failures }, "ESPN degraded, stopping early");
+              break;
+            }
           }
         }
       }

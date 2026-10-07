@@ -97,19 +97,22 @@ describe("P7.5 player news job", () => {
     const ids = ["a", "b", "c", "d", "e"];
     const s = setup(
       [...ids, "noespn"],
-      [...ids.map((i, n) => player(i, String(100 + n))), player("noespn", null)],
+      [
+        ...ids.map((i, n) => player(i, n === 0 ? "3139477" : String(100 + n))),
+        player("noespn", null),
+      ],
     );
     const rec = recording();
     const job = playerNewsJob({ fetch: rec.fetch, limiter: noWait, cap: 2 });
     await job.run(s.ctx());
     const per = (u: string[]) =>
       u.filter((x) => x.includes("playerId=")).map((x) => /playerId=(\d+)/.exec(x)?.[1]);
-    expect(per(rec.urls)).toEqual(["100", "101"]);
+    expect(per(rec.urls)).toEqual(["3139477", "101"]);
     rec.urls.length = 0;
     await job.run(s.ctx());
     expect(per(rec.urls)).toEqual(["102", "103"]);
-    // Per-player items belong to the requested player.
-    expect(new Set(newsRows(s.db).map((r) => r.p))).toEqual(new Set(["a", "b", "c", "d"]));
+    // The fixture feed is about athlete 3139477 (player "a"); other requests keep nothing.
+    expect(new Set(newsRows(s.db).map((r) => r.p))).toEqual(new Set(["a"]));
   });
 
   it("an ESPN failure does not throw, is skipped as degraded, and other jobs still run", async () => {
@@ -143,12 +146,12 @@ describe("P7.5 player news job", () => {
   });
 
   it("targeted request fetches only that player", async () => {
-    const s = setup(["a", "b"], [player("a", "100"), player("b", "101")]);
+    const s = setup(["a", "b"], [player("a", "100"), player("b", "3139477")]);
     const rec = recording();
     const job = playerNewsJob({ fetch: rec.fetch, limiter: noWait });
     const res = await job.run(s.ctx({ target: "b" }));
     expect(rec.urls).toHaveLength(1);
-    expect(rec.urls[0]).toContain("playerId=101");
+    expect(rec.urls[0]).toContain("playerId=3139477");
     expect(res.rowsChanged).toBeGreaterThan(0);
     expect(new Set(newsRows(s.db).map((r) => r.p))).toEqual(new Set(["b"]));
   });
@@ -194,5 +197,100 @@ describe("P7.5 player news job", () => {
     } finally {
       globalThis.fetch = real;
     }
+  });
+
+  describe("circuit breaker", () => {
+    const six = ["a", "b", "c", "d", "e", "f"];
+    const sixPlayers = () => six.map((i, n) => player(i, String(100 + n)));
+    const counting = (status: number | "hang") => {
+      let calls = 0;
+      const fetch: typeof globalThis.fetch = (_i, init) => {
+        calls++;
+        if (status === "hang") {
+          return new Promise((_res, rej) => {
+            init?.signal?.addEventListener("abort", () => rej(new Error("aborted")));
+          });
+        }
+        return Promise.resolve(new Response("x", { status }));
+      };
+      return { fetch, calls: () => calls };
+    };
+
+    it("stops after 3 consecutive per-player failures (total calls <= 4)", async () => {
+      const s = setup(six, sixPlayers());
+      const f = counting(500);
+      const res = await playerNewsJob({ fetch: f.fetch, limiter: noWait }).run(s.ctx());
+      expect(f.calls()).toBeLessThanOrEqual(4);
+      expect(res.status).toBe("skipped");
+    });
+
+    it("a 429 on the first per-player call stops the loop after that call", async () => {
+      const s = setup(six, sixPlayers());
+      let calls = 0;
+      const fetch: typeof globalThis.fetch = (input, init) => {
+        const u = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        if (!u.includes("playerId=")) return createFixtureFetch()(input, init);
+        calls++;
+        return Promise.resolve(new Response("slow down", { status: 429 }));
+      };
+      await playerNewsJob({ fetch, limiter: noWait }).run(s.ctx());
+      expect(calls).toBe(1);
+    });
+
+    it("a 429 on the recent feed skips the per-player loop", async () => {
+      const s = setup(six, sixPlayers());
+      const f = counting(429);
+      await playerNewsJob({ fetch: f.fetch, limiter: noWait }).run(s.ctx());
+      expect(f.calls()).toBe(1);
+    });
+
+    it("a hanging ESPN is bounded by the timeout and skips the per-player loop", async () => {
+      const s = setup(six, sixPlayers());
+      const f = counting("hang");
+      const res = await playerNewsJob({ fetch: f.fetch, limiter: noWait, timeoutMs: 20 }).run(
+        s.ctx(),
+      );
+      expect(f.calls()).toBe(1);
+      expect(res.status).toBe("skipped");
+    });
+
+    it("stops calling when the signal is aborted", async () => {
+      const s = setup(six, sixPlayers());
+      const ac = new AbortController();
+      let calls = 0;
+      const fetch: typeof globalThis.fetch = () => {
+        calls++;
+        ac.abort();
+        return Promise.resolve(new Response("x", { status: 500 }));
+      };
+      await playerNewsJob({ fetch, limiter: noWait }).run(s.ctx({ signal: ac.signal }));
+      expect(calls).toBe(1);
+    });
+  });
+
+  it("per-player feed keeps only the requested athlete and attributes id-less items", async () => {
+    const s = setup(["a"], [player("a", "100")]);
+    const feed = {
+      feed: [
+        { id: 1, headline: "mine", published: "2026-10-05T00:00:00Z" },
+        { id: 2, headline: "other", published: "2026-10-05T00:00:00Z", playerId: 555 },
+        { id: 3, headline: "also mine", published: "2026-10-05T00:00:00Z", playerId: 100 },
+      ],
+    };
+    const fetch: typeof globalThis.fetch = (input) => {
+      const u = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      const body = u.includes("playerId=") ? feed : { articles: [] };
+      return Promise.resolve(Response.json(body));
+    };
+    await playerNewsJob({ fetch, limiter: noWait }).run(s.ctx());
+    expect(newsRows(s.db).map((r) => r.id)).toEqual(["espn:1:a", "espn:3:a"]);
+  });
+
+  it("writes a row for each Sleeper player sharing an ESPN id", async () => {
+    const s = setup([], [player("p1", "4430027"), player("p2", "4430027")]);
+    await playerNewsJob({ fetch: createFixtureFetch(), limiter: noWait }).run(s.ctx());
+    const rows = newsRows(s.db);
+    expect(new Set(rows.map((r) => r.p))).toEqual(new Set(["p1", "p2"]));
+    expect(rows.filter((r) => r.p === "p1").length).toBe(rows.filter((r) => r.p === "p2").length);
   });
 });
