@@ -27,11 +27,11 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 | P7b.5 | Server: Auto mode in `getLineup` (reads `getMatchup`), default mode, Home card follows | backend-engineer | 3 | P7b.1 | AUTO-1 | Done | 1 | 24a8b72 |
 | P7b.6 | Worker: `weather` job (outdoor/open games next 7 days, every 3 h, degrades); orchestrator pre-applies the parked job-name patch (`shared/sync.ts` name and cadence, contracts test count, `JOB_TABLES`) | sleeper-data-engineer | 3 | P7b.2, P7b.4 | WX-1, WX-3 | Done | 1 | 3b6118c |
 | P7b.7 | Server: trade data functions and API routes (evaluate, finder, same-seed playoff deltas, export ROS values from roster-strength) | backend-engineer | 3 | P7b.3 | TRADE-1..4 | Done | 1 | 830f9d6 |
-| P7b.8 | UI: Auto in the mode toggle (fixes review m3: toggle must show Auto selected), Home card requests `auto`, "Auto picked ..." reason | frontend-engineer | 4 | P7b.5 | AUTO-1 | In progress | 0 | |
-| P7b.7f | Batch 3 review fixes: trade reason labels use names (M1), honest top-10 playoff reason (M2), hashes add leagues/players (m1), cached baseline sim (m2), `lineup-inputs.ts` breaks the import cycle (m3) | backend-engineer | 4 | P7b.7 | TRADE-1..4 | In progress | 0 | |
-| P7b.6f | Open-Meteo HTTP 400 counts as a failure, not out of range (m4) | sleeper-data-engineer | 4 | P7b.6 | WX-1 | In progress | 0 | |
-| P7b.9 | Server: weather reads joined into lineup reasons, next-opponents and matchup data; review m1 (`keepIfNull: ["stadium_id"]` in the SCHEDULE upsert spec) | backend-engineer | 4 | P7b.2, P7b.6 | WX-4, WX-5 | Planned | 0 | |
-| P7b.10 | UI: Trades route and nav item (Analyzer and Finder tabs, mobile More sheet) | frontend-engineer | 4 | P7b.7 | TRADE-3..5 | Planned | 0 | |
+| P7b.8 | UI: Auto in the mode toggle (fixes review m3: toggle must show Auto selected), Home card requests `auto`, "Auto picked ..." reason | frontend-engineer | 4 | P7b.5 | AUTO-1 | Done | 1 | 0ef710b |
+| P7b.7f | Batch 3 review fixes: trade reason labels use names (M1), honest top-10 playoff reason (M2), hashes add leagues/players (m1), cached baseline sim (m2), `lineup-inputs.ts` breaks the import cycle (m3) | backend-engineer | 4 | P7b.7 | TRADE-1..4 | Done | 1 | b67cca6 |
+| P7b.6f | Open-Meteo HTTP 400 counts as a failure, not out of range (m4) | sleeper-data-engineer | 4 | P7b.6 | WX-1 | Done | 1 | 58c64ac |
+| P7b.9 | Server: weather reads joined into lineup reasons, next-opponents and matchup data; review m1 (`keepIfNull: ["stadium_id"]` in the SCHEDULE upsert spec) | backend-engineer | 4 | P7b.2, P7b.6 | WX-4, WX-5 | In progress | 0 | |
+| P7b.10 | UI: Trades route and nav item (Analyzer and Finder tabs, mobile More sheet) | frontend-engineer | 4 | P7b.7 | TRADE-3..5 | In progress | 0 | |
 | P7b.11 | UI: weather chips on Lineup, player card Next opponents, Matchup | frontend-engineer | 5 | P7b.9 | WX-4, WX-5 | Planned | 0 | |
 | P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Planned | 0 | |
 
