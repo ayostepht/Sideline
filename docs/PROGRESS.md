@@ -25,6 +25,16 @@ Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progre
 
 Remove an item when it is done; the archive keeps history.
 
+### Found during fix/news-usage (2026-10-07, review `docs/reviews/2026-10-07-news-usage-code.md`)
+
+- [m1] `apps/worker/src/jobs/data-jobs.ts` backfill: if 2025 usage stays empty, every backfill run re-parses cached nflverse CSVs and reports "ok" instead of "skipped". Add a cooldown or terminal state plus a stays-empty test (sleeper-data-engineer).
+- [m2] Raw `sqlite.prepare` + `as` casts in the worker (`countRows` in data-jobs.ts, `readPlayerRefs` in nflverse-job.ts); move to `packages/db/src/sync-reads.ts` helpers (backend, then worker).
+- [m3] `packages/providers/src/espn-news.ts` `max * 0.6` word-boundary threshold: name the constant.
+- [m4] Players guard is 20h, so a manual run 20h+ before the cron allows two `/players/nfl` fetches in 24h. Consider calendar-day plus jitter.
+- [n1] `apps/web/lib/server/players.ts:244` maps unknown kinds silently; use `PlayerNewsKindSchema.catch("article")`.
+- NEWS-UI-2's measured Show more (effect + ResizeObserver) has no unit test (no jsdom); cover in e2e (qa-engineer).
+- The `syncUsageForSeason` diff has no test for the case where usage stays empty on a second run.
+
 ### Found during Phase 7a
 
 - Pre-hydration typing lost (frontend, minor, real users on slow phones): text typed into the Players search before `players-explorer.tsx` hydrates stays in the box but never filters (`queryInput` state initialised from `initialQuery`, DOM value never read back). Fix: on mount, read the input via a ref and call `changeQuery` if it differs. Check `WaiverBoard` and `search-dialog` for the same shape. The e2e side is handled by `e2e/helpers/players-search.ts` (CI flake PLAYERS-FLOW-4/5 on WebKit, runs 37559296289).
