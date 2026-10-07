@@ -191,6 +191,118 @@ test.describe("Player pop-up behavior (ADR-019)", () => {
   });
 });
 
+test.describe("Player pop-up navigation sequences (ADR-019 amendment, P7.9)", () => {
+  const e = ENTRIES[1] as Entry; // Lineup
+
+  // Pop-up soft navigation to another player id: next/link behavior, the card has no player links.
+  const softPush = (page: Page, href: string): Promise<unknown> =>
+    page.evaluate(
+      `(() => { const r = window.next && window.next.router; if (!r) throw new Error("window.next.router is missing"); r.push(${JSON.stringify(href)}); })()`,
+    );
+
+  test("PLAYERCARD-15: Back then Forward re-opens the same player as a pop-up, Lineup stays current", async ({
+    page,
+  }) => {
+    await openFrom(page, e);
+    await page.goBack();
+    await expect(page.getByTestId("player-modal")).toHaveCount(0);
+    await expect(page.getByTestId("lineup-page")).toBeVisible();
+    await page.goForward();
+    await expect(page).toHaveURL(playerUrl(e.id));
+    // Recorded behavior: Forward restores the intercepted pop-up (not the full page).
+    await expect(page.getByRole("dialog", { name: e.name })).toBeVisible();
+    await expect(page.getByTestId("player-modal")).toHaveCount(1);
+    await expect(page.getByTestId("lineup-page")).toBeAttached();
+    await expect(page.locator(`a[href="${L}/lineup"][aria-current="page"]`).first()).toBeAttached();
+    await expect(page.locator(`a[href="${L}/players"][aria-current="page"]`)).toHaveCount(0);
+  });
+
+  test("PLAYERCARD-16: the card has no player links; history A to B and back switches the dialog", async ({
+    page,
+  }) => {
+    await openFrom(page, e);
+    // Documented: the pop-up has no links to other players or teams, only the close button.
+    await expect(page.getByTestId("player-modal").getByRole("link")).toHaveCount(0);
+    await softPush(page, `${L}/players/${NEWSLESS_ID}`);
+    await expect(page).toHaveURL(playerUrl(NEWSLESS_ID));
+    await expect(page.getByRole("dialog", { name: NEWSLESS_NAME })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: e.name })).toHaveCount(0);
+    await page.goBack();
+    await expect(page).toHaveURL(playerUrl(e.id));
+    await expect(page.getByRole("dialog", { name: e.name })).toBeVisible();
+    await page.goForward();
+    await expect(page.getByRole("dialog", { name: NEWSLESS_NAME })).toBeVisible();
+    await page.goBack();
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`${L}/lineup$`));
+    await expect(page.getByTestId("player-modal")).toHaveCount(0);
+    await expect(page.getByTestId("lineup-page")).toBeVisible();
+  });
+
+  test("PLAYERCARD-17: open A, Back, open B, Back, Forward twice ends on B then stays on B", async ({
+    page,
+  }) => {
+    await openFrom(page, e);
+    await page.goBack();
+    await expect(page.getByTestId("player-modal")).toHaveCount(0);
+    // A second player linked on the Lineup page.
+    const links = await page.locator('[data-testid="player-link"]').locator("visible=true").all();
+    const hrefs = await Promise.all(links.map(async (l) => (await l.getAttribute("href")) ?? ""));
+    const other = hrefs.find((h) => !h.endsWith(`/players/${e.id}`));
+    if (other === undefined) throw new Error("no second player on Lineup");
+    const otherId = other.split("/").pop() ?? "";
+    await linkTo(page, otherId).click();
+    await expect(page).toHaveURL(playerUrl(otherId));
+    await expect(page.getByTestId("player-modal")).toBeVisible();
+    await page.goBack();
+    await expect(page.getByTestId("player-modal")).toHaveCount(0);
+    await page.goForward();
+    await expect(page).toHaveURL(playerUrl(otherId));
+    await expect(page.getByTestId("player-modal")).toBeVisible();
+    // Second Forward has nowhere to go: still on B.
+    await page.goForward();
+    await expect(page).toHaveURL(playerUrl(otherId));
+    await expect(page.getByTestId("player-modal")).toHaveCount(1);
+  });
+
+  test("PLAYERCARD-18: leaving the pop-up for another page puts focus on #main-content", async ({
+    page,
+  }) => {
+    const link = await openFrom(page, e);
+    // No links inside the card, and the nav is behind the overlay: Escape, then use the nav.
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("player-modal")).toHaveCount(0);
+    await expect(link).toBeFocused();
+    await page.locator(`a[href="${L}/matchup"]:visible`).first().click();
+    await expect(page).toHaveURL(new RegExp(`${L}/matchup$`));
+    await expect(page.getByTestId("matchup-page")).toBeVisible();
+    await expect(page.locator("#main-content")).toBeFocused();
+  });
+
+  test("PLAYERCARD-19: soft navigation away with the pop-up open lands focus on #main-content, not a stale trigger", async ({
+    page,
+  }) => {
+    const link = await openFrom(page, e);
+    await page.evaluate(
+      `(() => { const a = document.querySelector('a[href="${L}/matchup"]'); if (!a) throw new Error("no matchup link"); a.click(); })()`,
+    );
+    await expect(page).toHaveURL(new RegExp(`${L}/matchup$`));
+    await expect(page.getByTestId("matchup-page")).toBeVisible();
+    await expect(page.getByTestId("player-modal")).toHaveCount(0);
+    await expect(page.locator("#main-content")).toBeFocused();
+    await expect(link).not.toBeFocused();
+  });
+
+  test("PLAYERCARD-20: right after opening, focus is inside the dialog, not on #main-content", async ({
+    page,
+  }) => {
+    await openFrom(page, e);
+    const modal = page.getByTestId("player-modal");
+    await expect.poll(() => modal.locator(":focus").count()).toBeGreaterThan(0);
+    await expect(page.locator("#main-content")).not.toBeFocused();
+  });
+});
+
 test.describe("Player card content (ADR-019)", () => {
   test("PLAYERCARD-8: headshot loads from the CDN, weekly table has caption, headers and rows", async ({
     page,
