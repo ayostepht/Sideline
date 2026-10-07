@@ -1,6 +1,8 @@
 import { ArrowLeftRight } from "lucide-react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { PageTitle } from "../../../../components/page-title";
 import { DataFreshness } from "../../../../components/data-freshness";
 import { DbError } from "../../../../components/db-error";
 import { EmptyState } from "../../../../components/empty-state";
@@ -19,6 +21,9 @@ import { Analyzer, type AnalyzerTeam } from "./_components/analyzer";
 import { parseIdList, parseOther, parseTab, type TradeSelection } from "./_components/format";
 import { SuggestionCard } from "./_components/suggestion-card";
 import { TradesTabs } from "./_components/tabs";
+
+const PAGE_TITLE = "Trades | Sideline";
+export const metadata: Metadata = { title: PAGE_TITLE };
 
 const MAX_SHOWN = 10;
 
@@ -49,7 +54,12 @@ export default async function TradesPage({
   if (!overview.ok && overview.reason === "not_found") notFound();
   if (!overview.ok) return <DbError retryHref={`${base}/trades`} />;
 
-  const heading = <h1 className="text-2xl font-semibold tracking-tight">Trades</h1>;
+  const heading = (
+    <>
+      <PageTitle title={PAGE_TITLE} />
+      <h1 className="text-2xl font-semibold tracking-tight">Trades</h1>
+    </>
+  );
 
   if (seasonStateFor(overview.data.status) !== null) {
     return (
