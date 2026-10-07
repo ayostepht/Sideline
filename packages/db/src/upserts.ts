@@ -466,6 +466,8 @@ const SCHEDULE: TableSpec = {
     "stadium_id",
   ],
   keys: ["season", "game_id"],
+  // Sleeper-only schedule refreshes carry no stadium id; keep the stored nflverse value (m1).
+  keepIfNull: ["stadium_id"],
 };
 
 /** A schedule row plus the optional nflverse stadium id (missing writes null). */

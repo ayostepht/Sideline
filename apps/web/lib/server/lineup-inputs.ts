@@ -198,3 +198,8 @@ export function opponentRosterIdFor(
     .get(leagueId, week, mine.matchupId, rosterId) as { rosterId: number } | undefined;
   return other?.rosterId ?? null;
 }
+
+/** Sleeper uses `LAR`; nflverse (`schedule`, `defense_vs_position`) uses `LA`. */
+export function toNflverseTeam(sleeperTeam: string): string {
+  return sleeperTeam === "LAR" ? "LA" : sleeperTeam;
+}

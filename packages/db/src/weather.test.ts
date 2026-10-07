@@ -125,3 +125,20 @@ describe("readOutdoorGamesBetween and stadiumId", () => {
     expect(rows[1]?.stadiumId).toBeNull();
   });
 });
+
+describe("upsertSchedule stadium_id (m1)", () => {
+  it("keeps the stored stadium id when a later row omits it, and updates when given", () => {
+    upsertSchedule(h, [{ ...game("a", "2026-10-11T17:00:00.000Z"), stadiumId: "KAN00" }]);
+    const stadium = (): unknown =>
+      (
+        h.sqlite.prepare("SELECT stadium_id AS s FROM schedule WHERE game_id = 'a'").get() as {
+          s: string | null;
+        }
+      ).s;
+    expect(stadium()).toBe("KAN00");
+    upsertSchedule(h, [{ ...game("a", "2026-10-11T17:00:00.000Z"), homeScore: 3 }]);
+    expect(stadium()).toBe("KAN00");
+    upsertSchedule(h, [{ ...game("a", "2026-10-11T17:00:00.000Z"), stadiumId: "LON00" }]);
+    expect(stadium()).toBe("LON00");
+  });
+});

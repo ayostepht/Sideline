@@ -45,12 +45,14 @@ import {
 } from "@sideline/shared";
 import { z } from "zod";
 import { getMatchup } from "./matchup.js";
+import { weatherByGame, weatherReasons } from "./weather.js";
 import {
   opponentRosterIdFor,
   readByeWeeks,
   readHistory,
   readPositionCv,
   readProjections,
+  toNflverseTeam,
 } from "./lineup-inputs.js";
 
 // Re-exported for existing callers (tests/integration) that import these from `./lineup`.
@@ -101,10 +103,7 @@ function mean(values: readonly number[]): number {
   return values.length === 0 ? 0 : values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-/** Sleeper uses `LAR`; nflverse (`schedule`, `defense_vs_position`) uses `LA`. */
-export function toNflverseTeam(sleeperTeam: string): string {
-  return sleeperTeam === "LAR" ? "LA" : sleeperTeam;
-}
+export { toNflverseTeam };
 
 interface LineupLeagueRow {
   league_id: string;
@@ -161,6 +160,8 @@ function readPlayers(h: DbHandle, ids: string[]): Map<string, LineupPlayerRow> {
 }
 
 interface ScheduleEntry {
+  gameId: string;
+  week: number;
   opponent: string;
   kickoffUtc: string | null;
   kickoffApproximate: boolean;
@@ -170,10 +171,11 @@ interface ScheduleEntry {
 function readWeekSchedule(h: DbHandle, season: number, week: number): Map<string, ScheduleEntry> {
   const rows = h.sqlite
     .prepare(
-      `SELECT home, away, kickoff_utc AS kickoffUtc, kickoff_approximate AS kickoffApproximate
+      `SELECT game_id AS gameId, home, away, kickoff_utc AS kickoffUtc, kickoff_approximate AS kickoffApproximate
        FROM schedule WHERE season = ? AND week = ?`,
     )
     .all(season, week) as {
+    gameId: string;
     home: string;
     away: string;
     kickoffUtc: string | null;
@@ -183,11 +185,15 @@ function readWeekSchedule(h: DbHandle, season: number, week: number): Map<string
   for (const r of rows) {
     const approximate = r.kickoffApproximate !== 0;
     out.set(r.home, {
+      gameId: r.gameId,
+      week,
       opponent: r.away,
       kickoffUtc: r.kickoffUtc,
       kickoffApproximate: approximate,
     });
     out.set(r.away, {
+      gameId: r.gameId,
+      week,
       opponent: r.home,
       kickoffUtc: r.kickoffUtc,
       kickoffApproximate: approximate,
@@ -239,11 +245,14 @@ export function readDefenseVsPosition(
   return out;
 }
 
-function inputsHashFor(h: DbHandle): string {
+function inputsHashFor(h: DbHandle, now: Date): string {
   const payload = JSON.stringify({
     rosters: lastSuccessAt(h, "rosters"),
     stats: lastSuccessAt(h, "stats"),
     projections: lastSuccessAt(h, "projections"),
+    weather: lastSuccessAt(h, "weather"),
+    // The synthesized "No forecast" window moves with time; re-evaluate every 3 hours.
+    weatherWindow: Math.floor(now.getTime() / (3 * 60 * 60 * 1000)),
   });
   // A cheap, stable digest; cryptographic strength is not needed, only determinism.
   return createHash("sha256").update(payload).digest("hex").slice(0, 16);
@@ -344,7 +353,7 @@ export function getLineup(
   const mode: LineupMode = requestedMode;
   const modeReason: Reason | null = null;
   const kind = `lineup:${requestedMode}:${rosterId}`;
-  const inputsHash = inputsHashFor(h);
+  const inputsHash = inputsHashFor(h, now);
   const cached = getComputed(h, { leagueId, week, kind, inputsHash });
   if (cached !== null) {
     const parsed = LineupResponseSchema.safeParse(cached);
@@ -372,6 +381,7 @@ export function getLineup(
   const history = readHistory(h, leagueId, league.season, week, eligibleIds);
 
   const recommendPlayers: RecommendLineupPlayer[] = [];
+  const gameByPlayer = new Map<string, ScheduleEntry>();
   const matchupInfoByPlayer = new Map<
     string,
     { grade: MatchupGradeLetter | null; label: string | null }
@@ -424,6 +434,7 @@ export function getLineup(
       }
     }
     matchupInfoByPlayer.set(playerId, { grade, label });
+    if (scheduleEntry !== undefined) gameByPlayer.set(playerId, scheduleEntry);
 
     const isBye = ownTeam !== null && byes.get(ownTeam) === week;
 
@@ -451,11 +462,25 @@ export function getLineup(
     now,
   });
 
+  // WX-4: context only. One batched read; never feeds values or the optimizer.
+  const weather = weatherByGame(
+    h,
+    league.season,
+    [...gameByPlayer.values()].map((g) => ({
+      gameId: g.gameId,
+      week: g.week,
+      kickoffUtc: g.kickoffUtc,
+    })),
+    now,
+  );
+
   const players_: LineupPlayer[] = recommendPlayers.map((rp) => {
     const p = players.get(rp.playerId);
     const matchupInfo = matchupInfoByPlayer.get(rp.playerId) ?? { grade: null, label: null };
     const reasons = recommendResult.playerReasons[rp.playerId] ?? [];
     const locked = reasons.some((r) => r.code === "LOCKED");
+    const game = gameByPlayer.get(rp.playerId);
+    const gameWeather = game === undefined ? null : (weather.get(game.gameId) ?? null);
     const availability = applyAvailability({
       status: rp.status,
       isBye: rp.isBye,
@@ -474,7 +499,8 @@ export function getLineup(
       matchupLabel: matchupInfo.label,
       locked,
       kickoffApproximate: rp.kickoffApproximate,
-      reasons: [...reasons],
+      weather: gameWeather,
+      reasons: [...reasons, ...weatherReasons(gameWeather)],
     };
   });
 

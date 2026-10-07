@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { FreshnessSchema } from "./freshness.js";
 import { ReasonSchema } from "../reason.js";
+import { GameWeatherSchema } from "./weather.js";
 
 /** LINEUP-5: the three value modes a caller may optimize for. Mode-agnostic in the optimizer. */
 export const LineupModeSchema = z.enum(["projected", "safe", "upside"]);
@@ -45,6 +46,8 @@ export const LineupPlayerSchema = z.strictObject({
   matchupLabel: z.string().nullable(),
   locked: z.boolean(),
   kickoffApproximate: z.boolean(),
+  /** WX-4: this week's game forecast, context only. Null on a bye or when no game/forecast applies. */
+  weather: GameWeatherSchema.nullable().optional(),
   reasons: z.array(ReasonSchema),
 });
 export type LineupPlayer = z.infer<typeof LineupPlayerSchema>;

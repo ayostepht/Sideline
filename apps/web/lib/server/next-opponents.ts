@@ -11,6 +11,7 @@ import { matchupGrade } from "@sideline/core";
 import { readNflState, type DbHandle, type FullPlayerRow } from "@sideline/db";
 import type { NextOpponents, NextOpponentWeek } from "@sideline/shared";
 import { readDefenseVsPosition, toNflverseTeam } from "./lineup";
+import { weatherByGame } from "./weather";
 
 export const NEXT_OPPONENT_WEEKS = 4;
 const LAST_REGULAR_WEEK = 18;
@@ -36,11 +37,12 @@ export function nextOpponentsFor(
   const team = toNflverseTeam(player.team);
   const games = h.sqlite
     .prepare(
-      `SELECT week, home, away, kickoff_utc AS kickoffUtc FROM schedule
+      `SELECT week, game_id AS gameId, home, away, kickoff_utc AS kickoffUtc FROM schedule
        WHERE season = ? AND week BETWEEN ? AND ? AND (home = ? OR away = ?)`,
     )
     .all(season, current, LAST_REGULAR_WEEK, team, team) as {
     week: number;
+    gameId: string;
     home: string;
     away: string;
     kickoffUtc: string | null;
@@ -62,6 +64,7 @@ export function nextOpponentsFor(
 
   const dvp = readDefenseVsPosition(h, leagueId, season, LAST_REGULAR_WEEK).get(player.position);
   const weeks: NextOpponentWeek[] = [];
+  const gameIdByWeek = new Map<number, string>();
   for (
     let week = start;
     week <= LAST_REGULAR_WEEK && weeks.length < NEXT_OPPONENT_WEEKS;
@@ -83,7 +86,23 @@ export function nextOpponentsFor(
       row.rank = idx + 1;
       row.totalTeams = dvp.length;
     }
+    gameIdByWeek.set(week, g.gameId);
     weeks.push(row);
+  }
+  // WX-4: one batched forecast read for the listed games. Context only.
+  const weather = weatherByGame(
+    h,
+    season,
+    [...gameIdByWeek].map(([week, gameId]) => ({
+      gameId,
+      week,
+      kickoffUtc: byWeek.get(week)?.kickoffUtc ?? null,
+    })),
+    now,
+  );
+  for (const w of weeks) {
+    const id = gameIdByWeek.get(w.week);
+    if (id !== undefined) w.weather = weather.get(id) ?? null;
   }
   return { weeks, reasonUnavailable: null };
 }
@@ -99,5 +118,6 @@ function emptyWeek(week: number, bye: boolean): NextOpponentWeek {
     ptsAllowedPg: null,
     rank: null,
     totalTeams: null,
+    weather: null,
   };
 }
