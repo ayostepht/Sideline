@@ -34,6 +34,7 @@ Remove an item when it is done; the archive keeps history.
 - [n1] `apps/web/lib/server/players.ts:244` maps unknown kinds silently; use `PlayerNewsKindSchema.catch("article")`.
 - NEWS-UI-2's measured Show more (effect + ResizeObserver) has no unit test (no jsdom); cover in e2e (qa-engineer).
 - The `syncUsageForSeason` diff has no test for the case where usage stays empty on a second run.
+- UX re-review [m1]: put the Latest block's "Show more" and "Read full note on ESPN" in one `flex flex-wrap items-center gap-x-4` row (removes ~20px of dead space). [m2]: "Checking for news..." footer text shifts the layout height. Not yet run: `pnpm test:a11y` on `/l/1000000000000000001/players/4046` (port 3000 was held by the dev server) (frontend, qa).
 
 ### Found during Phase 7a
 

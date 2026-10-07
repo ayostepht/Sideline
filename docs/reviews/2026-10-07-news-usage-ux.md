@@ -17,3 +17,11 @@ Real button with aria-expanded/controls, `min-h-11`, sr-only "opens in new tab",
 
 ## Disposition
 M1, m1, m2, m3 and n1 go to frontend-engineer (NEWS-UI-2). Seeding news fixtures for screens and a11y goes to devops-engineer (NEWS-SEED), followed by a re-review. n2: footer fixed to "News from ESPN and RotoWire" whenever any note is present (keep as is).
+
+## Re-review after NEWS-UI-2 and NEWS-SEED (2026-10-07)
+
+VERDICT: PASS. Screens: `.screens/l-1000000000000000001-players-4046/{390,768,1280}-{light,dark}.png` (fresh build, seeded Mahomes news).
+- M1, m1, m2, m3 and n1 are confirmed fixed. m1 was checked from source. For m3, the overflow toggle shows only when the text is clamped. The "fits, no toggle" case could not be seen because the seeded note clamps at every width.
+- New [m1] Minor: "Show more" and "Read full note on ESPN" are stacked 44px targets that leave about 20px of dead space. Put them in one `flex flex-wrap items-center gap-x-4` row. Sent to the backlog.
+- New [m2] Minor: the transient "Checking for news..." footer text shifts the layout height. Sent to the backlog.
+- [n1] Nit: list notes and articles look alike. Accepted.
