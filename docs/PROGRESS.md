@@ -25,6 +25,13 @@ Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progre
 
 Remove an item when it is done; the archive keeps history.
 
+### Found during fix/news-ids (2026-10-07, review `docs/reviews/2026-10-07-news-ids-code.md`)
+
+- [m2] `fillMissingEspnIds` should skip an espn id already used by another player (defense in depth; the provider drops shared ids since NEWS-IDS-4) (backend).
+- [m4] `apps/web/lib/server/next-opponents.ts`: a null `kickoff_utc` keeps a played game as "next" until the week rolls over (backend).
+- [m5] `next-opponents.ts`: return `reasonUnavailable: "Season complete"` after week 18 (backend).
+- [n1] `next-opponents.ts:62` comment wording on bye weeks.
+
 ### Found during fix/news-usage (2026-10-07, review `docs/reviews/2026-10-07-news-usage-code.md`)
 
 - [m1] `apps/worker/src/jobs/data-jobs.ts` backfill: if 2025 usage stays empty, every backfill run re-parses cached nflverse CSVs and reports "ok" instead of "skipped". Add a cooldown or terminal state plus a stays-empty test (sleeper-data-engineer).
