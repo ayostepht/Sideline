@@ -30,9 +30,8 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Done through P7.7 `89830e3` (new `e2e/player-card.spec.ts`, search specs updated, pop-up axe; full e2e 425 pass / 4 fail: 3x LINEUP-FLOW-5 clock issue, 1x PLAYERCARD-3). In flight: P7.8d frontend, intermittent focus return on Escape (PLAYERCARD-3), must pass `--repeat-each=15` on all projects.
-- **Dev servers are STOPPED** (port 3000 for e2e). Restart `pnpm dev:lan` (log `/tmp/sideline-web-dev.log`) and `pnpm dev:worker` (log `/tmp/sideline-worker-dev.log`) once P7.8d is verified.
-- After P7.8d: short code re-review of 2a0b262..HEAD, then present to Steph (merge to main is her call).
+- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** All tasks done through P7.8d `3ee5490` (focus race fixed; PLAYERCARD-3 990/990). `pnpm verify` green (1563 tests). Only known e2e failure: LINEUP-FLOW-5 (pre-existing clock issue). In flight: final code re-review of 08c76f6..3ee5490. Then present to Steph; merge to main is her call.
+- Dev servers restarted after P7.8d (`pnpm dev:lan`, `pnpm dev:worker`).
 - **Blocker for P7.7, waiting on Steph:** pre-existing e2e clock time bomb (PROGRESS "Found during Phase 7a"). Asked whether the existing `fix/e2e-clock` worktree is hers/another session's, or whether to fix it here.
 - Dev worker restarted 2026-10-06 after P7.5 (migration 0002 applied). espn_ids fill on the next daily players sync.
 
