@@ -1,5 +1,6 @@
 import path from "node:path";
 import { appendFileSync } from "node:fs";
+import { DEFAULT_SCREENS_GAME_CLOCK } from "../lib/game-clock.js";
 import { createSeededDataDir, type SeededDataDir } from "../lib/seed.js";
 import { ServerStartError, startStandaloneServer, type RunningServer } from "../lib/server.js";
 import { runLogged, readTail, type ExecResult } from "./exec.js";
@@ -88,7 +89,8 @@ export class GateContext {
         root: this.root,
         logFile: this.logFile("server"),
         dataDir: await this.seededDataDir(id),
-        env: { SIDELINE_GALLERY: "1" },
+        // Same pinned football clock as playwright.config.ts (ADR-019); e2e specs depend on it.
+        env: { SIDELINE_GALLERY: "1", SIDELINE_GAME_CLOCK: DEFAULT_SCREENS_GAME_CLOCK },
       });
     } catch (err) {
       if (err instanceof ServerStartError) {
