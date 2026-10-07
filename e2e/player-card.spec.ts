@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { expectNoSeriousA11yViolations } from "./helpers/axe";
 import { DATA, L } from "./helpers/data";
 import { expectNoHorizontalScroll, PHONE_WIDTH } from "./helpers/no-hscroll";
+import { searchPlayers } from "./helpers/players-search";
 import { NEWS_FIXTURE, seedPlayerNews } from "./helpers/news";
 import { settleAnimations } from "./helpers/settle";
 import { themes, useTheme } from "./helpers/theme";
@@ -108,7 +109,7 @@ test.describe("Player pop-up opens from every page (ADR-020)", () => {
 
   test("PLAYERCARD-1: Players: a row opens the pop-up and shows the team", async ({ page }) => {
     await page.goto(`${L}/players`);
-    await page.getByTestId("players-search-input").fill(DATA.otherPlayerQuery);
+    await searchPlayers(page, DATA.otherPlayerQuery);
     const desktop = isDesktop(page.viewportSize()?.width);
     const rows = page.getByTestId(desktop ? "players-table-row" : "players-row");
     await expect.poll(async () => rows.count()).toBe(1);
@@ -402,7 +403,7 @@ test.describe("Player news (ADR-020 item 4)", () => {
     await expect(page.getByTestId("lineup-page")).toBeVisible();
     // Mahomes has no stored news and no fetch record, so the card asks for a refresh.
     await page.goto(`${L}/players`);
-    await page.getByTestId("players-search-input").fill(DATA.otherPlayerQuery);
+    await searchPlayers(page, DATA.otherPlayerQuery);
     const desktop = isDesktop(page.viewportSize()?.width);
     const rows = page.getByTestId(desktop ? "players-table-row" : "players-row");
     await expect.poll(async () => rows.count()).toBe(1);

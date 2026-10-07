@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { DATA, L } from "./helpers/data";
+import { searchPlayers } from "./helpers/players-search";
 
 const isDesktop = (width: number | undefined): boolean => (width ?? 0) >= 1024;
 
@@ -76,7 +77,7 @@ test.describe("Players explorer (TREND-1..5)", () => {
     page,
   }) => {
     await page.goto(`${L}/players`);
-    await page.getByTestId("players-search-input").fill(DATA.otherPlayerQuery);
+    await searchPlayers(page, DATA.otherPlayerQuery);
     await expect(page).toHaveURL(new RegExp(`${L}/players\\?q=${DATA.otherPlayerQuery}$`));
     const rows = visibleRows(page);
     await expect.poll(async () => rows.count()).toBeGreaterThan(0);
@@ -92,7 +93,7 @@ test.describe("Players explorer (TREND-1..5)", () => {
     page,
   }) => {
     await page.goto(`${L}/players`);
-    await page.getByTestId("players-search-input").fill("zzzzqqqqnonexistent");
+    await searchPlayers(page, "zzzzqqqqnonexistent");
     const clear = page.getByTestId("players-clear-filters");
     await expect(clear).toBeVisible();
     await clear.click();
@@ -102,7 +103,7 @@ test.describe("Players explorer (TREND-1..5)", () => {
 
   test("PLAYERS-FLOW-5: opening a player's row navigates to its detail page", async ({ page }) => {
     await page.goto(`${L}/players`);
-    await page.getByTestId("players-search-input").fill(DATA.otherPlayerQuery);
+    await searchPlayers(page, DATA.otherPlayerQuery);
     const rows = visibleRows(page);
     await expect.poll(async () => rows.count()).toBe(1);
     await clickableRow(page, 0).click();
