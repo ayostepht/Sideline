@@ -210,6 +210,7 @@ function buildTeamDetail(
   row: RosterRow,
   roster: StandingsRow,
   freshness: Freshness,
+  shared?: { players: Map<string, PlayerRow>; byes: Map<string, number> },
 ): TeamDetail {
   const starters = parseList(row.starters_json);
   const reserve = parseList(row.reserve_json);
@@ -220,8 +221,8 @@ function buildTeamDetail(
   );
   const ids = new Set<string>([...starters, ...reserve, ...taxi, ...all]);
   ids.delete("0");
-  const players = readPlayers(h, [...ids]);
-  const byes = readByeWeeks(h, league.season);
+  const players = shared?.players ?? readPlayers(h, [...ids]);
+  const byes = shared?.byes ?? readByeWeeks(h, league.season);
 
   const toRow = (
     playerId: string,
@@ -275,6 +276,60 @@ export function getTeamDetail(
     ok: true,
     data: buildTeamDetail(h, league, row, standing, freshnessFor(h, "rosters", now)),
   };
+}
+
+/** One team's roster for the Trades Analyzer picker. Same fields the page maps from `TeamDetail`. */
+export interface AllTeamRostersRow {
+  rosterId: number;
+  teamName: string;
+  isMine: boolean;
+  /** Every rostered player (starter, bench, ir, taxi) in `getTeamDetail`'s order. */
+  players: Pick<TeamPlayerRow, "playerId" | "name" | "position" | "nflTeam" | "slot">[];
+}
+
+/**
+ * Every team's roster in standings order, in one pass (one rosters read, one players read, one
+ * schedule read) instead of `getStandings` plus N `getTeamDetail` calls. Row shape matches the
+ * Trades page's `AnalyzerTeam`, so the page can pass `data.teams` straight through.
+ */
+export function getAllTeamRosters(
+  h: DbHandle,
+  leagueId: string,
+  now: Date,
+): Lookup<{ teams: AllTeamRostersRow[]; freshness: Freshness }> {
+  const league = readLeague(h, leagueId);
+  if (league === null) return { ok: false, reason: "not_found" };
+  const rows = readRosters(h, leagueId);
+  const standings = rankRows(rows, getSleeperUserId(h));
+  const freshness = freshnessFor(h, "rosters", now);
+  const ids = new Set<string>();
+  for (const r of rows) {
+    for (const col of [r.players_json, r.starters_json, r.reserve_json, r.taxi_json]) {
+      for (const id of parseList(col)) ids.add(id);
+    }
+  }
+  ids.delete("0");
+  const shared = { players: readPlayers(h, [...ids]), byes: readByeWeeks(h, league.season) };
+  const byId = new Map(rows.map((r) => [r.roster_id, r] as const));
+  const teams: AllTeamRostersRow[] = [];
+  for (const st of standings) {
+    const row = byId.get(st.rosterId);
+    if (row === undefined) continue;
+    const detail = buildTeamDetail(h, league, row, st, freshness, shared);
+    teams.push({
+      rosterId: st.rosterId,
+      teamName: st.teamName,
+      isMine: st.isMine,
+      players: detail.players.map((p) => ({
+        playerId: p.playerId,
+        name: p.name,
+        position: p.position,
+        nflTeam: p.nflTeam,
+        slot: p.slot,
+      })),
+    });
+  }
+  return { ok: true, data: { teams, freshness } };
 }
 
 /**
