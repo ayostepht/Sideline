@@ -34,14 +34,35 @@ function hostOf(value: string | null): string | null {
 
 /**
  * Guard for every mutating route (POST, PATCH, PUT, DELETE). Returns an error result to send, or
- * null when the request may proceed. Blocks cross-origin browser writes (Origin host differs from
- * Host or X-Forwarded-Host) with 403, and non-JSON bodies with 415 (a plain-form or text/plain
- * POST needs no CORS preflight, so the media type check closes that gap). A missing Origin is
- * allowed. All current clients send `Content-Type: application/json`, so no route is exempt.
+ * null when the request may proceed. Order of checks:
+ * 1. `Sec-Fetch-Site` (Fetch Metadata). Browsers compute it from the real URL, so a reverse proxy
+ *    that rewrites Host (and sends no X-Forwarded-Host) cannot distort it. `same-origin` and
+ *    `none` skip the Origin/Host comparison; `cross-site` and `same-site` get 403 (a sibling
+ *    subdomain is a different app).
+ * 2. Otherwise (header absent or unknown: non-browser clients, old browsers) the Origin host must
+ *    match Host or X-Forwarded-Host, else 403. A missing Origin is allowed.
+ * 3. Non-JSON bodies get 415 (a plain-form or text/plain POST needs no CORS preflight, so the
+ *    media type check closes that gap). Runs in every case after the origin check.
+ * A 403 logs one warn line (Sec-Fetch-Site, Origin, Host, X-Forwarded-Host only) so proxy setups
+ * can be diagnosed from container logs. All current clients send `Content-Type: application/json`.
  */
 export function guardMutation(request: Request): ApiResult | null {
   const origin = request.headers.get("origin");
-  if (origin !== null) {
+  const secFetchSite = request.headers.get("sec-fetch-site")?.trim().toLowerCase() ?? null;
+  const deny = (): ApiResult => {
+    getLogger().warn(
+      {
+        secFetchSite: request.headers.get("sec-fetch-site"),
+        origin,
+        host: request.headers.get("host"),
+        xForwardedHost: request.headers.get("x-forwarded-host"),
+      },
+      "cross-origin write blocked",
+    );
+    return errorResult(403, "cross_origin", "Cross-origin requests are not allowed.");
+  };
+  if (secFetchSite === "cross-site" || secFetchSite === "same-site") return deny();
+  if (secFetchSite !== "same-origin" && secFetchSite !== "none" && origin !== null) {
     const originHost = hostOf(origin);
     const allowed = new Set<string>();
     const host = request.headers.get("host") ?? new URL(request.url).host;
@@ -51,7 +72,7 @@ export function guardMutation(request: Request): ApiResult | null {
       for (const h of forwarded.split(",")) allowed.add(h.trim().toLowerCase());
     }
     if (originHost === null || !allowed.has(originHost)) {
-      return errorResult(403, "cross_origin", "Cross-origin requests are not allowed.");
+      return deny();
     }
   }
   const mediaType = (request.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase();

@@ -70,6 +70,62 @@ describe("guardMutation", () => {
   });
 });
 
+describe("guardMutation Sec-Fetch-Site", () => {
+  const proxied = {
+    ...JSON_CT,
+    origin: "http://sideline.example.com",
+    host: "192.168.1.5:3000",
+  };
+  it("allows same-origin even when a proxy rewrote Host", () => {
+    expect(guardMutation(req({ ...proxied, "sec-fetch-site": "same-origin" }))).toBeNull();
+  });
+  it("allows same-origin with Origin null", () => {
+    expect(
+      guardMutation(req({ ...JSON_CT, origin: "null", "sec-fetch-site": "same-origin" })),
+    ).toBeNull();
+  });
+  it("blocks cross-site even when Origin matches Host", () => {
+    const r = guardMutation(
+      req({
+        ...JSON_CT,
+        origin: "http://app.local:3000",
+        host: "app.local:3000",
+        "sec-fetch-site": "cross-site",
+      }),
+    );
+    expect(r?.status).toBe(403);
+    expect(r?.body).toMatchObject({ error: { code: "cross_origin" } });
+  });
+  it("blocks same-site", () => {
+    expect(guardMutation(req({ ...proxied, "sec-fetch-site": "same-site" }))?.status).toBe(403);
+  });
+  it("allows none", () => {
+    expect(guardMutation(req({ ...JSON_CT, "sec-fetch-site": "none" }))).toBeNull();
+  });
+  it("still returns 415 for same-origin text/plain", () => {
+    expect(
+      guardMutation(req({ "content-type": "text/plain", "sec-fetch-site": "same-origin" }))?.status,
+    ).toBe(415);
+  });
+  it("falls back to Origin vs Host for an unknown value", () => {
+    expect(guardMutation(req({ ...proxied, "sec-fetch-site": "weird" }))?.status).toBe(403);
+  });
+  it("cross-site POST to a route does not write", async () => {
+    tmp = useTempDb({ migrated: true });
+    const res = await syncRun(
+      new Request("http://app.local:3000/api/sync/run", {
+        method: "POST",
+        headers: { ...JSON_CT, "sec-fetch-site": "cross-site" },
+        body: JSON.stringify({ job: "all" }),
+      }),
+    );
+    expect(res.status).toBe(403);
+    const h = tmp.handle;
+    if (h === null) throw new Error("handle");
+    expect(h.sqlite.prepare("select count(*) as n from sync_requests").get()).toEqual({ n: 0 });
+  });
+});
+
 describe("mutating routes are guarded and do not write", () => {
   const evil = { ...JSON_CT, origin: "http://evil.example", host: "app.local:3000" };
   const text = { "content-type": "text/plain" };
