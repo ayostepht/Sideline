@@ -35,6 +35,7 @@ export const SEED_TABLES = [
   "trending",
   "schedule",
   "nfl_state",
+  "player_news",
 ] as const;
 
 export interface SeedDeps {
@@ -94,6 +95,25 @@ async function seedIdentity(
   }
 }
 
+/**
+ * The sanitized Sleeper players fixture carries no `espn_id`, so the player_news job finds nothing
+ * to fetch. Give one rostered fixture player (Patrick Mahomes, who the recorded ESPN news is about)
+ * his public ESPN athlete id so a second run of the real job stores the recorded notes and articles.
+ */
+export const NEWS_SEED_PLAYER_ID = "4046";
+export const NEWS_SEED_ESPN_ID = "3139477";
+
+function setNewsSeedEspnId(dbPath: string): void {
+  const db = openDb(dbPath);
+  try {
+    db.sqlite
+      .prepare("UPDATE players SET espn_id = ? WHERE player_id = ?")
+      .run(NEWS_SEED_ESPN_ID, NEWS_SEED_PLAYER_ID);
+  } finally {
+    db.sqlite.close();
+  }
+}
+
 /** Full worker sync (every job in ALL_ORDER) against recorded fixtures. Returns an exit code. */
 export async function runSeed(deps: SeedDeps): Promise<number> {
   const dir = deps.fixturesDir ?? FIXTURES_DIR;
@@ -133,6 +153,18 @@ export async function runSeed(deps: SeedDeps): Promise<number> {
         sleep: () => Promise.resolve(),
         out: deps.out,
       });
+      if (code === 0) {
+        setNewsSeedEspnId(dbPathFromDataDir(config.dataDir));
+        code = await runSyncCli(["--once", "--job=player_news"], {
+          config,
+          registry: createJobRegistry(createAllJobs({ espn: { fetch: fixtureFetch } })),
+          limiter: deps.limiter ?? new RateLimiter(),
+          logger: deps.logger ?? pino({ level: "silent" }),
+          now,
+          sleep: () => Promise.resolve(),
+          out: deps.out,
+        });
+      }
     } finally {
       unregisterLeaguePoints();
       unregisterDefenseVsPosition();
