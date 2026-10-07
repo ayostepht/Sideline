@@ -30,7 +30,8 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
 
 ## 3. In flight
 
-- Nothing dispatched yet. Planning committed on `phase/7b-selective` (ADR-022, PLAN.md 5.4 AUTO-1, 5.9 TRADE-3..5, new 5.10 WX-1..5, section 8 multi-user, PROGRESS.md "Phase 7b task table"). Baseline `pnpm verify` on 2026-10-07: 1638 passed.
+- **P7b.1 dispatched** (backend-engineer, 2026-10-07). If the session died, check `git status` for partial edits in `packages/shared`, `apps/web/lib/server/lineup.ts` and `api-handlers.ts`, then verify or re-dispatch. Design note: `LineupMode` stays 3 values so the frontend's `Record<LineupMode>` maps compile; the new `LineupModeChoice` adds `auto`. The `weather` job name moved to P7b.2 because the worker's `JOB_TABLES` is exhaustive.
+- Before that, Planning committed on `phase/7b-selective` (ADR-022, PLAN.md 5.4 AUTO-1, 5.9 TRADE-3..5, new 5.10 WX-1..5, section 8 multi-user, PROGRESS.md "Phase 7b task table"). Baseline `pnpm verify` on 2026-10-07: 1638 passed.
 
 ## 4. Next steps (in order)
 
