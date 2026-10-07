@@ -38,6 +38,10 @@ Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progre
 
 Remove an item when it is done; the archive keeps history.
 
+### Found during Phase 7a
+
+- **e2e clock time bomb (pre-existing, fails on `main` 77af184 too):** LINEUP-FLOW-5 fails on all 3 projects because the fixture's week-4 kickoffs (2026-10-02..06) are now in the past, so `isLocked(info, now)` (`packages/core/src/optimizer/locks.ts:25`, real `now` from `apps/web/lib/server/lineup.ts` ~442/571) locks every starter. Other clock-dependent e2e specs may follow. Fix: test-only `SIDELINE_NOW` override in lib/server, ignored in production (backend), set in `playwright.config.ts` webServer env (qa); or shift seeded kickoffs relative to now (qa). A `fix/e2e-clock` worktree at 77af184 exists (not created by this session; left alone). Will block the Phase 7a e2e run (P7.7) unless fixed first.
+
 ### Carried from Phase 6
 
 Full detail and fully-fixed history: `docs/archive/progress-phase6.md`.
