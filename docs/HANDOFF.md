@@ -30,7 +30,8 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Steph requested it 2026-10-06 and chose ESPN news, a pop-up with its own URL, and CDN headshots. Batch A dispatched: P7.1 (backend), P7.2 (sleeper-data), P7.3 (frontend). Task table in `docs/PROGRESS.md`. If the session died, check uncommitted files in those agents' paths.
+- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Done: P7.1 (`30e45e4`), P7.2 (`e4fa039`). In flight: P7.3 (frontend, pop-up plus names), P7.5 (sleeper-data, espn_id plus news job; also fixes the red worker typecheck/test that P7.1's new job name caused). P7.4 (backend DTO) waits for P7.3 to land (shared contract rule). Then P7.6, P7.7, reviews.
+- The running `pnpm dev:worker` predates migration 0002; restart it after P7.5 lands so it migrates.
 
 ## 4. Next steps (in order)
 
