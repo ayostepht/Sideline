@@ -36,7 +36,8 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 | P7b.7g | Trades cold-load: measure and fix the server path; batched roster read (UX M3, code m4) | backend-engineer | 4c | P7b.7f | TRADE-4 | Done | 1 | 5e8d30b |
 | P7b.10f | Trades and Auto UX fixes: touch popovers, 44px targets, Suspense streaming, before/after grid, selection chips, card actions (UX M1-M3, m1-m4; code m5, n1) | frontend-engineer | 4c | P7b.10 | TRADE-3..5, AUTO-1 | Done | 1 | 552d802 |
 | P7b.11 | UI: weather chips on Lineup, player card Next opponents, Matchup | frontend-engineer | 5 | P7b.9 | WX-4, WX-5 | In progress | 0 | |
-| P7b.13 | Screens route list adds Trades; `fixtures:check` applies the ADR-018 URL exemption and handles binary false positives | devops-engineer | 5 | none | tooling | In progress | 0 | |
+| P7b.13 | Screens route list adds Trades; `fixtures:check` applies the ADR-018 URL exemption and handles binary false positives | devops-engineer | 5 | none | tooling | Done (routes by devops; checker by sleeper-data as P7b.13b) | 1 | 43e8f14, b0f67ad |
+| P7b.3g | Finder variety: at most 2 suggestions per give set and per get set (UX re-check m4) | analytics-engineer | 5 | P7b.3f | TRADE-2 | In progress | 0 | |
 | P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Planned | 0 | |
 
 After each batch: code-reviewer (and ux-reviewer for UI batches 4 and 5). One combined mini-gate for Auto, Trades and weather after batch 5 (changed 2026-10-07 to save tokens; the e2e for all three land in P7b.12). Release v1.3.0.
@@ -55,7 +56,6 @@ Remove an item when it is done; the archive keeps history.
 
 ### Found during Phase 7b
 
-- **`pnpm fixtures:check` reports 8 pre-existing leaks on main** (README.md, docs/DECISIONS.md, docs/HANDOFF.md, docs/self-hosting.md, unraid/sideline.xml at `name#0`, plus three G2 screenshots at `name#10`). Most likely the ADR-018 GitHub-handle URLs the commit-time scan already strips, plus OCR or binary false positives in old screenshots. The checker needs the same URL exemption (devops-engineer). Not introduced by Phase 7b.
 - **nflverse sometimes tags London games with the home team's `stadium_id`** (2026 JAX at Tottenham carries `JAX00`), so the weather lookup would use Jacksonville's forecast. Fix candidate: also store and match nflverse `stadium` name (P7b.4 report, `docs/sleeper-api-notes.md`).
 - **`readOutdoorGamesBetween` compares ISO strings** (P7b.6 report): a kickoff stored as `...:00Z` (no millis) sorts after the same instant written `...:00.000Z`, so it could drop out at the window's upper edge. nflverse rows are stored with `.000Z`, so the risk is low. Normalize in db (backend-engineer).
 - **Route JS after Batch 4c:** Trades 200,441 B, Lineup 197,613 B (was 178,893 at G4; the popover added about 12 KB), Waivers 199,044 B. Lineup and Waivers have about 3% headroom. Candidate: lazy-load `components/info-popover.tsx` (frontend-engineer). All under the 204,800 B hard cap, over the 170 KB soft target. Waivers has about 2.8% headroom.
