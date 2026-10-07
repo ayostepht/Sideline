@@ -1,4 +1,5 @@
 import type { MatchupSwingPlayer } from "@sideline/shared";
+import { PlayerLink } from "../../../../../components/player-link";
 import { Badge } from "../../../../../components/ui/badge";
 import { cn } from "../../../../../lib/client/cn";
 
@@ -28,11 +29,13 @@ function swingPts(varianceContribution: number): string {
  * and how much they could swing the score, so that is what the row shows.
  */
 function SwingPlayerRow({
+  playerId,
   name,
   yours,
   opponentTeamName,
   swing,
 }: {
+  playerId: string;
   name: string;
   yours: boolean;
   opponentTeamName: string;
@@ -41,13 +44,15 @@ function SwingPlayerRow({
   return (
     <div
       className={cn(
-        "flex min-h-11 w-full min-w-0 items-center gap-2 rounded-control border-l-4 px-2 py-1 md:max-w-2xl",
+        "relative flex min-h-11 w-full min-w-0 items-center gap-2 rounded-control border-l-4 px-2 py-1 transition-colors hover:bg-muted md:max-w-2xl",
         yours ? "border-primary bg-accent-soft" : "border-transparent",
       )}
     >
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="truncate text-base font-medium leading-5" title={name}>
-          {name}
+          <PlayerLink playerId={playerId} stretch>
+            {name}
+          </PlayerLink>
         </span>
         <Badge variant={yours ? "you" : "neutral"} className="w-fit">
           {yours ? "You" : opponentTeamName}
@@ -80,6 +85,7 @@ export function SwingPlayersList({
       {players.map((p) => (
         <li key={p.playerId} data-testid="matchup-swing-row">
           <SwingPlayerRow
+            playerId={p.playerId}
             name={p.name}
             yours={p.rosterId === yourRosterId}
             opponentTeamName={opponentTeamName}

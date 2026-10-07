@@ -1,6 +1,7 @@
 import type { PlayerDetailResponse } from "@sideline/shared";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { DialogTitle } from "../../../../../components/ui/dialog";
 import { DataFreshness } from "../../../../../components/data-freshness";
 import { InjuryBadge } from "../../../../../components/injury-badge";
 import { PositionBadge } from "../../../../../components/position-badge";
@@ -47,10 +48,14 @@ export function PlayerDetailView({
   player,
   now,
   backHref,
+  inModal = false,
 }: {
   player: PlayerDetailResponse;
   now: Date;
-  backHref: string;
+  /** Omitted in the pop-up, where the close button replaces the back link. */
+  backHref?: string;
+  /** Renders the name as the dialog title (must sit inside a Dialog). */
+  inModal?: boolean;
 }) {
   const { scoring, usage, consistency, momentum } = player;
   const weeklySeries = sortedWeeklySeries(scoring.weeklySeries);
@@ -59,16 +64,27 @@ export function PlayerDetailView({
   return (
     <div className="flex flex-col gap-3" data-testid="player-detail">
       <div>
-        <Link
-          href={backHref}
-          className="-ml-1 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-link underline-offset-4 hover:underline"
-          data-testid="player-back-link"
-        >
-          <ChevronLeft className="size-4" aria-hidden />
-          Players
-        </Link>
+        {backHref !== undefined ? (
+          <Link
+            href={backHref}
+            className="-ml-1 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-link underline-offset-4 hover:underline"
+            data-testid="player-back-link"
+          >
+            <ChevronLeft className="size-4" aria-hidden />
+            Players
+          </Link>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
-          <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight">{player.name}</h1>
+          {inModal ? (
+            <DialogTitle
+              asChild
+              className="min-w-0 break-words pr-0 text-2xl font-bold tracking-tight"
+            >
+              <h1>{player.name}</h1>
+            </DialogTitle>
+          ) : (
+            <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight">{player.name}</h1>
+          )}
           <PositionBadge position={player.position} />
           <InjuryBadge status={player.injuryStatus} />
         </div>

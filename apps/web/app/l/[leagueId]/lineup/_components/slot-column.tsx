@@ -62,6 +62,7 @@ export function SlotColumn({
             <div key={`${slot.slotType}-${i}-${player.playerId}`} data-testid={`${testid}-row`}>
               <PlayerRow
                 name={player.name}
+                playerId={player.playerId}
                 position={player.position}
                 team={player.nflTeam}
                 injuryStatus={player.injuryStatus}

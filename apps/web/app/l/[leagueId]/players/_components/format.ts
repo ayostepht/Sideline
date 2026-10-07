@@ -69,10 +69,7 @@ export function buildPlayersHref(
   return `${leagueBase(leagueId)}/players${qs ? `?${qs}` : ""}`;
 }
 
-/** Path to a player's detail page. */
-export function playerHref(leagueId: string, playerId: string): string {
-  return `${leagueBase(leagueId)}/players/${encodeURIComponent(playerId)}`;
-}
+export { playerHref } from "../../../../../lib/client/nav";
 
 /** One decimal place, or an em-dash-free "No data" placeholder for null (no games played). */
 export function formatPpg(n: number | null): string {

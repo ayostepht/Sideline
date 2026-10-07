@@ -138,3 +138,8 @@ export function switchLeagueHref(
   const week = parseWeek(new URLSearchParams(search).get("week"));
   return `${to}${rest}${week === null ? "" : `?week=${week}`}`;
 }
+
+/** Path to a player's detail page (opens as a pop-up from inside the app). */
+export function playerHref(leagueId: string, playerId: string): string {
+  return `/l/${encodeURIComponent(leagueId)}/players/${encodeURIComponent(playerId)}`;
+}

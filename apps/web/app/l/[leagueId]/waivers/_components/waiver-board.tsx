@@ -7,6 +7,8 @@ import { useMemo, useRef, useState } from "react";
 import { EmptyState, ErrorState } from "../../../../../components/empty-state";
 import { InjuryBadge } from "../../../../../components/injury-badge";
 import { MatchupGrade } from "../../../../../components/matchup-grade";
+import { PlayerLink } from "../../../../../components/player-link";
+import { teamLabel } from "../../../../../components/team-label";
 import { PositionBadge } from "../../../../../components/position-badge";
 import { TrendIndicator } from "../../../../../components/trend-indicator";
 import { Button } from "../../../../../components/ui/button";
@@ -385,14 +387,20 @@ function CandidateTable({
                 <td className="max-w-xs px-3 py-2">
                   <span className="flex min-w-0 flex-col gap-1">
                     <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate font-medium" title={c.name}>
+                      <PlayerLink
+                        playerId={c.playerId}
+                        title={c.name}
+                        className="-my-1.5 truncate py-1.5 font-medium"
+                      >
                         {c.name}
-                      </span>
+                      </PlayerLink>
                       <InjuryBadge status={c.injuryStatus} />
                     </span>
                     <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                       <PositionBadge position={c.position} />
-                      <span>{c.nflTeam ?? "Free agent"}</span>
+                      {teamLabel(c.position, c.nflTeam) ? (
+                        <span>{teamLabel(c.position, c.nflTeam)}</span>
+                      ) : null}
                     </span>
                     {meta.competing.length > 0 || meta.priority !== undefined ? (
                       <span className="flex flex-wrap items-center gap-1.5">
@@ -452,14 +460,20 @@ function CandidateCards({
             <div className="flex items-start justify-between gap-2">
               <span className="flex min-w-0 flex-col gap-1">
                 <span className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-base font-medium" title={c.name}>
+                  <PlayerLink
+                    playerId={c.playerId}
+                    title={c.name}
+                    className="-my-2 truncate py-2 text-base font-medium"
+                  >
                     {c.name}
-                  </span>
+                  </PlayerLink>
                   <InjuryBadge status={c.injuryStatus} />
                 </span>
                 <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                   <PositionBadge position={c.position} />
-                  <span>{c.nflTeam ?? "Free agent"}</span>
+                  {teamLabel(c.position, c.nflTeam) ? (
+                    <span>{teamLabel(c.position, c.nflTeam)}</span>
+                  ) : null}
                 </span>
               </span>
               <span className="shrink-0 text-right">
