@@ -29,6 +29,9 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | P7.5b | Review fixes: ESPN circuit breaker (M1), entity decode, attribution, dup espn ids | sleeper-data-engineer | B | Done | 1 | 259506e |
 | P7.6a | Player card: headshot, weekly table, news, refresh on open | frontend-engineer | C | Done | 1 | 0c04c89 |
 | P7.6b | Search opens pop-up, team on swing/riser rows, review m5/m6, header title | frontend-engineer | C | Done | 1 | 08c76f6 |
+| P7.8a | Review M1/m1: news fetch-attempt marker, count helper in db | backend-engineer | D | Dispatched | 1 | |
+| P7.8b | Worker records news fetch attempts | sleeper-data-engineer | D | Open | 0 | |
+| P7.8c | Review M3/m2/m5/n1 + UX findings + nav highlight in pop-up | frontend-engineer | D | Open | 0 | |
 | P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Open | 0 | |
 
 ## Earlier phases
@@ -44,6 +47,7 @@ Remove an item when it is done; the archive keeps history.
 - P7.4 left the new `PlayerDetailResponse`/`MatchupSwingPlayer` fields optional (server always sets them) so existing UI test literals compile; tighten to required once P7.6 updates those literals (backend).
 - `projectedPts` in weekly rows comes from `league_player_week_points.proj_pts` (stored projection scored by the recompute hook), not strictly the last pre-kickoff snapshot.
 - No persisted "fetched, no news" marker: players with zero ESPN news re-queue a refresh on each pop-up open (bounded by dedupe and the 20-pending cap).
+- Weekly rows use the player's current team for past opponents/byes; traded players show wrong past opponents (review m3, known limit). Optional test for `state === null` (m4).
 - P7.6b follow-ups (frontend): sidebar/tab highlight reads "Players" while the pop-up is open (`isNavActive` uses the real pathname; use `titlePathname`); the week selector's `router.replace(pathname)` would navigate to `/players/<id>?week=` if used while the pop-up is open; focus after closing a pop-up opened from search lands on body.
 - Fixture-mode ESPN per-player feed always returns athlete 3139477; only a fixture player with that espn id gets per-player news in screens/e2e (P7.7 note).
 
