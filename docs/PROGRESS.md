@@ -20,10 +20,10 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 
 | ID | Title | Agent | Batch | Depends on | Reqs | Status | Attempts | Commit |
 |---|---|---|---|---|---|---|---|---|
-| P7b.1 | Shared contracts: `LineupModeChoice` (adds `auto`), `resolvedMode`/`modeReason` plus server shim; trade evaluate/finder DTOs; weather DTO and `weatherFlags` | backend-engineer | 1 | none | AUTO-1, TRADE-1..5, WX-3, WX-4 | In progress | 0 | |
-| P7b.2 | DB: migration 0005 `game_weather` table, upsert and read helpers; `weather` sync job name and 3 h cadence in `shared/sync.ts` (orchestrator adds the worker `JOB_TABLES` entry as an integration fix) | backend-engineer | 2 | P7b.1 | WX-3 | Planned | 0 | |
-| P7b.3 | Core `trade/`: evaluate (multi-player swap, drop rule, ROS lineup delta), fairness label, finder enumeration and prefilter, perf tests | analytics-engineer | 2 | P7b.1 | TRADE-1..4 | Planned | 0 | |
-| P7b.4 | Providers: Open-Meteo client (zod), static stadium table, flag thresholds, recorded fixture | sleeper-data-engineer | 2 | P7b.1 | WX-1, WX-2, WX-4 | Planned | 0 | |
+| P7b.1 | Shared contracts: `LineupModeChoice` (adds `auto`), `resolvedMode`/`modeReason` plus server shim; trade evaluate/finder DTOs; weather DTO and `weatherFlags` | backend-engineer | 1 | none | AUTO-1, TRADE-1..5, WX-3, WX-4 | Done | 1 | 7f5ac4c |
+| P7b.2 | DB: migration 0005 `game_weather` table and `schedule.stadium_id`, upsert and read helpers; `weather` sync job name and 3 h cadence in `shared/sync.ts` (orchestrator adds the worker `JOB_TABLES` entry as an integration fix) | backend-engineer | 2 | P7b.1 | WX-3 | In progress | 0 | |
+| P7b.3 | Core `trade/`: evaluate (multi-player swap, drop rule, ROS lineup delta), fairness label, finder enumeration and prefilter, perf tests | analytics-engineer | 2 | P7b.1 | TRADE-1..4 | In progress | 0 | |
+| P7b.4 | Providers: Open-Meteo client (zod), static stadium table, flag thresholds, recorded fixture | sleeper-data-engineer | 2 | P7b.1 | WX-1, WX-2, WX-4 | In progress | 0 | |
 | P7b.5 | Server: Auto mode in `getLineup` (reads `getMatchup`), default mode, Home card follows | backend-engineer | 3 | P7b.1 | AUTO-1 | Planned | 0 | |
 | P7b.6 | Worker: `weather` job (outdoor/open games next 7 days, every 3 h, degrades) | sleeper-data-engineer | 3 | P7b.2, P7b.4 | WX-1, WX-3 | Planned | 0 | |
 | P7b.7 | Server: trade data functions and API routes (evaluate, finder, same-seed playoff deltas, export ROS values from roster-strength) | backend-engineer | 3 | P7b.3 | TRADE-1..4 | Planned | 0 | |
