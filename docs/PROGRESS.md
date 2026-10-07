@@ -33,6 +33,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | P7.8b | Worker records news fetch attempts | sleeper-data-engineer | D | Done | 1 | 4aac7d0 |
 | P7.8c | Code review M3/m2/m5/n1 + UX M1-M4/m1/m2/m4/n1 + nav highlight in pop-up | frontend-engineer | D | Done | 1 | 2a0b262 |
 | P7.8d | Fix intermittent focus return on Escape (PLAYERCARD-3) | frontend-engineer | E | Done | 1 | 3ee5490 |
+| P7.9 | e2e: Back/Forward, second player from pop-up, leave via link in pop-up (re-review M1) | qa-engineer | F | Dispatched | 1 | |
 | P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Done | 1 | 89830e3 |
 
 ## Earlier phases
@@ -52,6 +53,7 @@ Remove an item when it is done; the archive keeps history.
 - Flaky perf timing: `packages/core` `lineup-impact.perf.test.ts` (1039 ms vs 1000 ms budget) and `recommend.perf.test.ts` failed once each under parallel agent load during Phase 7a, passing on rerun. Same contention pattern as the G4/G5 lesson; watch, do not loosen.
 - UX m3: mixed chip weights on the player card; chart label lacks a unit (frontend). UX m5: Waivers is ~14,800 px tall at 390 with no pagination (frontend, pre-existing).
 - From P7.7: `pnpm test:a11y`'s `--grep UI2` filter doesn't narrow the run (devops). The e2e seed has no ESPN news or espn ids; `e2e/helpers/news.ts` writes rows directly (a seeded news row would be cleaner, sleeper-data). `tests/property/optimizer.property.test.ts` failed once in `pnpm verify` without a captured seed; if it recurs, keep the printed seed (analytics).
+- Fix-round re-review minors (`docs/reviews/2026-10-06-p7-fixround-code.md`): m2 clear focus trigger on non-modal navigation (frontend); m3 short cooldown for failed news fetches (backend); m4 PLAYERCARD-7 uses `window.next.router` (qa); n1 possible duplicate count formatter (frontend).
 - P7.6b follow-ups (frontend): sidebar/tab highlight reads "Players" while the pop-up is open (`isNavActive` uses the real pathname; use `titlePathname`); the week selector's `router.replace(pathname)` would navigate to `/players/<id>?week=` if used while the pop-up is open; focus after closing a pop-up opened from search lands on body.
 - Fixture-mode ESPN per-player feed always returns athlete 3139477; only a fixture player with that espn id gets per-player news in screens/e2e (P7.7 note).
 
