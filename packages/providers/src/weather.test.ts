@@ -172,13 +172,13 @@ describe("fetchKickoffForecast", () => {
     expect(same.urls).toHaveLength(1);
   });
 
-  it("maps HTTP 400 to out_of_range", async () => {
+  it("maps HTTP 400 for an in-range date to bad_request", async () => {
     const r = await fetchKickoffForecast({
       ...base,
       kickoffUtc: "2026-10-11T17:00:00Z",
       fetch: fx({ error: true }, 400).fetch,
     });
-    expect(r).toMatchObject({ ok: false, reason: "out_of_range" });
+    expect(r).toMatchObject({ ok: false, reason: "bad_request" });
   });
 });
 

@@ -16,7 +16,13 @@ export interface KickoffForecast {
 }
 
 export type ForecastFailure =
-  "out_of_range" | "invalid_kickoff" | "network" | "parse" | "no_hour" | "no_data";
+  | "out_of_range"
+  | "bad_request" // HTTP 400 for an in-range date: a request bug, counts as a failure
+  | "invalid_kickoff"
+  | "network"
+  | "parse"
+  | "no_hour"
+  | "no_data";
 
 export type ForecastResult =
   | { ok: true; forecast: KickoffForecast }
@@ -90,7 +96,7 @@ export async function fetchKickoffForecast(args: KickoffForecastArgs): Promise<F
       signal: ctrl.signal,
     });
     if (res.status === 400) {
-      return { ok: false, reason: "out_of_range", message: "Open-Meteo HTTP 400" };
+      return { ok: false, reason: "bad_request", message: "Open-Meteo HTTP 400" };
     }
     if (!res.ok) {
       return { ok: false, reason: "network", message: `Open-Meteo HTTP ${res.status}` };

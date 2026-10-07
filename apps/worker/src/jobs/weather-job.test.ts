@@ -195,6 +195,24 @@ describe("weather job", () => {
     expect(s.weather("g4")).toBeUndefined();
   });
 
+  it("counts HTTP 400 for in-range games toward the failure cap", async () => {
+    const s = setup();
+    const homes = ["GB", "CHI", "BUF", "CIN", "TB"];
+    upsertSchedule(
+      s.db,
+      homes.map((h, i) => game(`g${i}`, h, `2026-10-08T1${i}:00:00Z`, "outdoors")),
+    );
+    let calls = 0;
+    const bad: FetchFn = () => {
+      calls++;
+      return Promise.resolve(new Response("{}", { status: 400 }));
+    };
+    const r = await weatherJob({ fetch: bad, limiter: instant }).run(s.ctx());
+    expect(calls).toBe(WEATHER_MAX_CONSECUTIVE_FAILURES);
+    expect(r.status).toBe("skipped");
+    expect(s.weather("g4")).toBeUndefined();
+  });
+
   it("a thrown fetch error degrades instead of failing", async () => {
     const s = setup();
     upsertSchedule(s.db, [game("g1", "GB", "2026-10-08T17:00:00Z", "outdoors")]);
