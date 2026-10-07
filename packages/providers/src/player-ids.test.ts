@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { type FetchFn, getPlayerIdCrosswalk } from "./index.js";
+import { gzipping } from "./player-ids.js";
 
 const CSV = [
   "name,espn_id,position,sleeper_id,gsis_id",
@@ -43,6 +44,37 @@ describe("getPlayerIdCrosswalk", () => {
       ["1007", "777"],
     ]);
     expect(r.meta.warnings.join(" ")).toContain("1006");
+  });
+
+  it("drops every sleeper id sharing one espn id, with one warning", async () => {
+    const csv = "espn_id,sleeper_id\n5,10\n5,11\n5,12\n6,13\n";
+    const s = await setup(() => new Response(csv));
+    const r = await s.run();
+    if (!r.ok) throw new Error(r.message);
+    expect([...r.data.entries()]).toEqual([["13", "6"]]);
+    expect(r.meta.warnings.filter((w) => w.includes("espn id 5"))).toHaveLength(1);
+  });
+
+  it("gzip wrapper builds fresh headers keeping only etag and last-modified", async () => {
+    const wrapped = gzipping(() =>
+      Promise.resolve(
+        new Response("a,b\n1,2\n", {
+          headers: {
+            "content-length": "9",
+            "content-encoding": "identity",
+            "content-type": "text/csv",
+            etag: '"abc"',
+            "last-modified": "Wed, 01 Oct 2026 00:00:00 GMT",
+          },
+        }),
+      ),
+    );
+    const res = await wrapped("http://x");
+    expect(res.headers.get("content-length")).toBeNull();
+    expect(res.headers.get("content-encoding")).toBeNull();
+    expect(res.headers.get("content-type")).toBeNull();
+    expect(res.headers.get("etag")).toBe('"abc"');
+    expect(res.headers.get("last-modified")).toBe("Wed, 01 Oct 2026 00:00:00 GMT");
   });
 
   it("fails cleanly on HTTP 500", async () => {

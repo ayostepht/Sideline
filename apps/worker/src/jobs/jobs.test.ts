@@ -314,20 +314,24 @@ describe("T1.5b players", () => {
     expect(h.headers.at(-1)?.get("if-none-match")).toBeNull();
   });
 
-  it("refetches inside the 20h guard when no stored player has an ESPN id, skips when one does", async () => {
+  it("bypasses the 20h guard with zero ESPN ids only when the last fetch is 6h+ old, never in a loop", async () => {
     const h = harness();
     await h.run("players");
     h.calls.length = 0;
     h.clock.advance(2 * 3_600_000);
+    expect(await h.run("players")).toMatchObject({ status: "skipped", calls: 0 });
+    expect(h.calls).toEqual([]);
+    h.clock.advance(5 * 3_600_000); // 7h since the fetch
     const bypass = await h.run("players");
     expect(bypass.calls).toBe(1);
     expect(h.calls).toEqual(["/v1/players/nfl"]);
-    h.db.sqlite.prepare("UPDATE players SET espn_id = '123' WHERE player_id = 'r1'").run();
+    // Immediately again: the fetch just refreshed the marker, so exactly one fetch total.
     h.calls.length = 0;
-    h.clock.advance(2 * 3_600_000);
-    const skipped = await h.run("players");
-    expect(skipped).toMatchObject({ status: "skipped", calls: 0 });
+    expect(await h.run("players")).toMatchObject({ status: "skipped", calls: 0 });
     expect(h.calls).toEqual([]);
+    h.db.sqlite.prepare("UPDATE players SET espn_id = '123' WHERE player_id = 'r1'").run();
+    h.clock.advance(7 * 3_600_000);
+    expect(await h.run("players")).toMatchObject({ status: "skipped", calls: 0 });
   });
 
   it("warns when a fantasy position drops past the threshold and not below it", async () => {

@@ -41,6 +41,11 @@ import { scheduleTeamCode } from "./team-code.js";
  * 20h still blocks a second fetch the same day.
  */
 export const PLAYERS_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
+/**
+ * When no stored player has an ESPN id, the guard may be bypassed once to upgrade old rows, but only
+ * if the last fetch is at least this old. One upgrade retry, never a refetch loop.
+ */
+export const PLAYERS_BYPASS_MIN_INTERVAL_MS = 6 * 60 * 60 * 1000;
 /** A fantasy position losing more than this share of stored players logs a warning. */
 export const POSITION_DROP_THRESHOLD = 0.1;
 /** Positions with fewer stored players than this are too small to judge. */
@@ -53,9 +58,10 @@ export function playersJob(deps: SleeperJobDeps): Job {
     name: "players",
     async run(ctx) {
       const last = readPlayersFetchedAt(ctx.db);
-      if (last !== null && ctx.now().getTime() - Date.parse(last) < PLAYERS_MIN_INTERVAL_MS) {
+      const age = last === null ? null : ctx.now().getTime() - Date.parse(last);
+      if (age !== null && age < PLAYERS_MIN_INTERVAL_MS) {
         const c = countPlayersWithEspnId(ctx.db);
-        if (c.players === 0 || c.withEspnId > 0) {
+        if (c.players === 0 || c.withEspnId > 0 || age < PLAYERS_BYPASS_MIN_INTERVAL_MS) {
           return { rowsChanged: 0, status: "skipped", note: `players fetched at ${last}` };
         }
         ctx.logger.info(

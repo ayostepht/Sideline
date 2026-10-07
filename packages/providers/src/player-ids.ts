@@ -22,12 +22,18 @@ const ID = z.string().regex(/^\d+$/);
 const Row = z.object({ sleeper_id: z.string(), espn_id: z.string() });
 
 /** The shared asset cache stores gzip; this source serves plain CSV, so compress it on the way in. */
-function gzipping(fetchFn: FetchFn): FetchFn {
+export function gzipping(fetchFn: FetchFn): FetchFn {
   return async (url, init) => {
     const res = await fetchFn(url, init);
     if (!res.ok) return res;
     const body = gzipSync(Buffer.from(await res.arrayBuffer()));
-    return new Response(body, { status: res.status, headers: res.headers });
+    // Fresh headers: the original content-length/content-encoding describe the plain body.
+    const headers = new Headers();
+    for (const h of ["etag", "last-modified"]) {
+      const v = res.headers.get(h);
+      if (v !== null) headers.set(h, v);
+    }
+    return new Response(body, { status: res.status, headers });
   };
 }
 
@@ -71,11 +77,27 @@ export async function getPlayerIdCrosswalk(
       else out.set(sleeper.data, espn.data);
     }
     for (const id of conflicts) out.delete(id);
+    // Reverse conflict: one espn_id claimed by several sleeper_ids. Drop all of them.
+    const byEspn = new Map<string, Set<string>>();
+    for (const [sleeper, espn] of out) {
+      const set = byEspn.get(espn) ?? new Set<string>();
+      set.add(sleeper);
+      byEspn.set(espn, set);
+    }
+    const sharedEspn: string[] = [];
+    for (const [espn, sleepers] of byEspn) {
+      if (sleepers.size < 2) continue;
+      sharedEspn.push(espn);
+      for (const id of sleepers) out.delete(id);
+    }
     const warnings = [...r.warnings];
     if (conflicts.size > 0) {
       warnings.push(
         `player ids: dropped ${conflicts.size} sleeper ids with conflicting espn ids (${[...conflicts].slice(0, 5).join(", ")})`,
       );
+    }
+    for (const espn of sharedEspn) {
+      warnings.push(`player ids: espn id ${espn} shared by multiple sleeper ids, all dropped`);
     }
     return {
       ok: true,
