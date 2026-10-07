@@ -26,6 +26,7 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | P7.3 | Pop-up via intercepting route, clickable names app-wide, team subline | frontend-engineer | A | Done | 1 | 5080504 |
 | P7.4 | DTO (weekly rows, headshot, news) + getPlayerDetail + CSP | backend-engineer | B | Dispatched | 1 | |
 | P7.5 | Persist espn_id; news worker job (scheduled + on-demand) | sleeper-data-engineer | B | Done | 1 | 1e9fa59 |
+| P7.5b | Review fixes: ESPN circuit breaker (M1), entity decode, attribution, dup espn ids | sleeper-data-engineer | B | Dispatched | 1 | |
 | P7.6 | Player card: headshot, weekly table, news section | frontend-engineer | C | Open | 0 | |
 | P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Open | 0 | |
 
