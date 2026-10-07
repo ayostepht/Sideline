@@ -62,6 +62,7 @@ Remove an item when it is done; the archive keeps history.
 - **For P7b.12 (qa) and devops:** `e2e/nav.spec.ts` needs Trades in the More sheet list; `scripts/screens/routes.json` lacks `/trades`; the Analyzer's evaluate, live region and prefilled auto-evaluate are untested in a browser (no jsdom in unit tests).
 - **Batch 4 review minors m1 to m5, n1** (`docs/reviews/2026-10-07-p7b-batch4-code.md`): require the `weather` fields; `synthesizeUnavailable` placeholder fields; 3-hour hash bucket; Analyzer's per-team `getTeamDetail` calls; Analyzer URL not mirrored after filtering bad ids.
 - **Cold Trades Finder is about 0.8 s, and 75% of that is the 10 top-N playoff sims** (P7b.7g). Options if it matters on real data: a batched or shared-draw `simulatePlayoffOddsBatch` in core (analytics-engineer), or prewarming the finder cache after a sync.
+- **Trades UX re-check m5** (`docs/reviews/2026-10-07-p7b-batch4-ux-recheck.md`): Analyzer result card headers have different heights at 1280, so the grids misalign (frontend).
 - **Batch 1-2 review minors m4, m5** (`docs/reviews/2026-10-07-p7b-batch12-code.md`): the finder's give pool favors my top players over surplus-position players (tuning); the duplicate perf assertion in `finder.perf.test.ts`.
 - **`fast-check` is a root devDependency but not a `packages/core` one**; P7b.3 used a seeded loop instead. Add it to core if property tests there are wanted (devops-engineer).
 
