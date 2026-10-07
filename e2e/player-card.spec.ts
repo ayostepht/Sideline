@@ -221,8 +221,9 @@ test.describe("Player pop-up navigation sequences (ADR-019 amendment, P7.9)", ()
     page,
   }) => {
     await openFrom(page, e);
-    // Documented: the pop-up has no links to other players or teams, only the close button.
-    await expect(page.getByTestId("player-modal").getByRole("link")).toHaveCount(0);
+    // Documented: the pop-up has no in-app links to other players or teams, only the close button.
+    // External ESPN news links (target=_blank) may appear when another test seeded news for e.
+    await expect(page.getByTestId("player-modal").locator(`a[href^="/l/"]`)).toHaveCount(0);
     await softPush(page, `${L}/players/${NEWSLESS_ID}`);
     await expect(page).toHaveURL(playerUrl(NEWSLESS_ID));
     await expect(page.getByRole("dialog", { name: NEWSLESS_NAME })).toBeVisible();
