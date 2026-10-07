@@ -203,7 +203,8 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 - **LINEUP-2** Exact solve as maximum-weight bipartite assignment (Hungarian algorithm) between slots and eligible rostered players (excluding IR and taxi). Weight is the player's value under the selected mode.
 - **LINEUP-3** Locks: a starter whose game has kicked off stays in their slot; a bench player whose game has kicked off cannot be moved in. Kickoff comes from nflverse; without it, the ADR-002 fallback lock times apply and reasons mark the lock as approximate.
 - **LINEUP-4** Availability: Out, IR, Suspended, or bye means value 0 and never recommended. Doubtful multiplies value by 0.25; Questionable by 0.9. Constants are configurable and always shown in reasons.
-- **LINEUP-5** Modes: Projected (median), Safe (floor), Upside (ceiling). P1: Auto mode picks Upside when weekly win probability is below 35% and Safe above 65%.
+- **LINEUP-5** Modes: Projected (median), Safe (floor), Upside (ceiling). P1: Auto mode picks Upside when weekly win probability is below 35% and Safe above 65% (ADR-022).
+  - **AUTO-1** Auto is the default mode. It reads the matchup win probability computed from the current Sleeper starters at the median (never from the Auto lineup itself), falls back to Projected when there is no opponent, and returns `resolvedMode` plus a `modeReason` the UI shows.
 - **LINEUP-6** Output: optimal assignment, current assignment, swap list (in, out, slot), projected point delta, per-player reasons (projection, matchup grade, status, bye, lock), and an issues list (empty slot, inactive starter, unknown slot type).
 - **LINEUP-7** Performance: under 50 ms for any roster of 30 or fewer players.
 - **LINEUP-8** Invariants (property tests): output is always a valid lineup; locked players never move; optimal value is at least the current lineup's value and at least the value of any randomly generated valid lineup.
@@ -249,6 +250,17 @@ All functions are pure. Inputs are passed explicitly (including "now" and RNG se
 
 - **TRADE-1** Evaluate a proposed trade by the change in each team's ROS optimal lineup projection (not raw player sums) and the change in playoff odds.
 - **TRADE-2** Trade finder: suggest 1-for-1 and 2-for-1 trades where both teams' ROS optimal lineups improve, using complementary positional needs from LEAGUE-4.
+- **TRADE-3** Analyzer input: my team and one other team, 1 to 3 players per side, no draft picks. A team receiving extra players drops its lowest-ROS-value non-reserve player per extra player (shown as a reason). Playoff odds before and after use the same seed (ADR-022).
+- **TRADE-4** Fairness label (Fair, Leans you, Lopsided) from the other team's ROS lineup gain versus mine, with documented, configurable cutoffs. It is a signal, not an acceptance prediction. The finder ranks by the other team's gain, then mine, and computes playoff odds only for the top 10. Under 2 s for a 12-team league.
+- **TRADE-5** Trades is its own nav item (`/l/[leagueId]/trades`, Analyzer and Finder tabs; in the More sheet on mobile).
+
+### 5.10 Weather (WX, P1)
+
+- **WX-1** Worker job `weather` fetches Open-Meteo forecasts for games in the next 7 days whose `roof` is `outdoors` or `open`, every 3 hours. Domes and closed roofs are labeled Indoors without a fetch.
+- **WX-2** A static stadium table maps home team (and nflverse `stadium_id` for neutral and international sites) to latitude and longitude.
+- **WX-3** Stored per game: kickoff-hour temperature (F), wind and gusts (mph), precipitation probability (%), precipitation type, fetch time. Failures degrade to "No forecast".
+- **WX-4** Flags: wind 15 mph or more or gusts 25 or more; precipitation probability 50% or more; temperature 25 F or below. Named constants.
+- **WX-5** Context only (ADR-014, ADR-022): weather never changes projections, lineup values or sims. Shown on Lineup rows, the player card's Next opponents and Matchup.
 
 ## 6. UX and UI specification
 
@@ -320,7 +332,8 @@ Web app manifest and icons; installable on iOS and Android in v1. Offline mode s
 
 - **P0, in-season MVP (Phases 0 to 4):** data sync; scoring engine with validation; projections; lineup optimizer and Lineup page; Waivers (Lineup Impact, Waiver Score, rolling-priority advisor WAIVER-6); Players and trends; League basics; Home; Docker beta.
 - **P0, v1.0 (Phases 5 and 6):** matchup win probability; power rankings, luck, playoff odds; hardening; auth; PWA install; docs.
-- **P1:** notifications via self-hosted Web Push to the installed iPhone PWA (VAPID keys generated locally, no paid service; Sunday-morning lineup issue alert, inactive starter alert); trade analyzer and finder; Auto lineup mode; weekly backtest job in the worker; weather; league history across seasons via `previous_league_id`; offline caching; "view as team" switcher for leaguemates.
+- **P1:** notifications via self-hosted Web Push to the installed iPhone PWA (VAPID keys generated locally, no paid service; Sunday-morning lineup issue alert, inactive starter alert); trade analyzer and finder; Auto lineup mode; weekly backtest job in the worker; weather; league history across seasons via `previous_league_id`; offline caching. ("View as team" was dropped in favor of multi-user support, ADR-022.)
+- **Near future (after Phase 7b):** multi-user support: each person gets their own login, Sleeper identity and team, replacing the single shared `APP_PASSWORD`. Not scoped yet.
 - **P2:** FAAB bid recommender (WAIVER-5, ADR-003); 2027 draft assistant; dynasty and keeper values; other platforms; opt-in LLM weekly recap.
 
 ## 9. Phased build plan
@@ -448,7 +461,9 @@ Tasks were split for size in ADR-009 (T2.0 and T2.0b added; T2.1, T2.2, T2.3 and
 
 ### Phase 7: P1 backlog
 
-Suggested order: notifications (Home Assistant webhook first, then ntfy and Discord), trade analyzer and finder, Auto lineup mode, weekly backtest job, league history, weather, offline caching, "view as team". Each feature follows the same brief, verify, review cycle and ends with a mini-gate (universal checks plus UI checks).
+**Phase 7b (selective, ADR-022):** Auto lineup (AUTO-1), trade analyzer and finder (TRADE-1 to TRADE-5), weather (WX-1 to WX-5), on branch `phase/7b-selective`, tasks P7b.1 to P7b.12 in `docs/PROGRESS.md`. Notifications are deferred; the rest of the list stays for later.
+
+Suggested order: notifications (Home Assistant webhook first, then ntfy and Discord), trade analyzer and finder, Auto lineup mode, weekly backtest job, league history, weather, offline caching. Each feature follows the same brief, verify, review cycle and ends with a mini-gate (universal checks plus UI checks).
 
 ## 10. QA gates and test strategy
 
@@ -538,7 +553,7 @@ Listed under each phase in section 9.
 All answered on 2026-10-01 (see DECISIONS.md ADR-000 and ADR-003):
 
 1. Username and league: provided; stored only in the gitignored `.env` (`SLEEPER_USERNAME`, `DEFAULT_LEAGUE_ID`), never in tracked files.
-2. Leaguemates: Steph only for now, possibly one leaguemate later. Single shared `APP_PASSWORD`; "view as team" stays P1.
+2. Leaguemates: Steph only for now, possibly one leaguemate later. Single shared `APP_PASSWORD`; "view as team" stays P1. (Superseded 2026-10-07, ADR-022: multi-user support is the next roadmap item instead.)
 3. App name: Sideline.
 4. Subdomain: `sleeper.beantech.site` (behind Nginx Proxy Manager, TLS terminated at the proxy). Unraid is x86_64: deployable images are `linux/amd64`.
 5. Notifications (P1): Web Push to the installed iPhone PWA.

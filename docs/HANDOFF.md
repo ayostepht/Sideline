@@ -4,7 +4,7 @@ Single source for resuming after a session limit or `/clear`. The orchestrator u
 
 Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills missing `players.espn_id` from DynastyProcess's crosswalk (ADR-021; Sleeper had ESPN ids for only 46 of 155 rostered players), players-guard bypass when no ESPN ids are stored (6h cooldown), and the player card's Next opponents section (next 4 weeks, DvP grades, context only per ADR-014). v1.2.0 earlier today: news sync fix, usage_week persisted, RotoWire notes lead the news. Remote: `origin` is https://github.com/ayostepht/Sideline (public).
 
-**This is a clean point to `/clear`.** Phase 7 (P1 backlog) planning is the natural next step, but has not started -- do not begin it without Steph's go-ahead, since this is new scope beyond what she's approved so far.
+**Phase 7b (selective) is planned, not started** (ADR-022, branch `phase/7b-selective`): Auto lineup (default mode), trade analyzer and finder (own nav item), weather (Open-Meteo, context only). Steph approved the scope and answered every product question on 2026-10-07. Notifications are skipped; "view as team" is dropped; multi-user support is the next roadmap item after 7b. v1.2.1 is deployed on Steph's Unraid.
 
 ## 1. Resume in five steps
 
@@ -30,16 +30,14 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
 
 ## 3. In flight
 
-- Nothing. fix/news-ids merged and released as v1.2.1 (NEWS-IDS-1..4, OPP-1..3; reviews `docs/reviews/2026-10-07-news-ids-{code,ux}.md`; Minors in the PROGRESS backlog). Verified: `pnpm verify` 1638 passed, full e2e + a11y 465 passed. On Steph's Unraid: after updating, run `--job=player_ids` then `--job=player_news` via the in-container CLI (`cd /app/worker && setpriv --reuid=$PUID --regid=$PGID --clear-groups node node_modules/tsx/dist/cli.mjs src/cli/sync.ts --once --job=...`), or wait for the 04:45 cron. Steph's next idea: an opt-in AI-written weekly outlook (explore with her first; costs money; PLAN.md lists LLM recap as P2).
-- Nothing. Phase 7a (player card, ADR-020) done: every player name opens a pop-up (intercepting route, own URL), team under names, headshots from sleepercdn, a week-by-week table, ESPN news via the worker (`player_news`, `player_news_fetches`, migrations 0002 and 0003). History: `docs/archive/progress-phase7a.md`; reviews `docs/reviews/2026-10-06-p7-*`. Merge resolution: FIX-CLOCK kept ADR-019, the player card became ADR-020 (branch commits say ADR-019).
-- Merged main: `pnpm verify` 1586 passed; full e2e 465 passed (LINEUP-FLOW-5 green via the pinned game clock).
-- News on real data appears after the next daily `/players/nfl` sync fills `players.espn_id`.
+- Nothing dispatched yet. Planning committed on `phase/7b-selective` (ADR-022, PLAN.md 5.4 AUTO-1, 5.9 TRADE-3..5, new 5.10 WX-1..5, section 8 multi-user, PROGRESS.md "Phase 7b task table"). Baseline `pnpm verify` on 2026-10-07: 1638 passed.
 
 ## 4. Next steps (in order)
 
-1. **Unraid deploy in progress (2026-10-06).** Repo is public at github.com/ayostepht/Sideline; CI publishes `ghcr.io/ayostepht/sideline`. Template fixed [OPS-1]. Steph's to-dos: set the GHCR package Public, install via `my-sideline.xml` (v1.1.1 is now the latest tag). No APP_PASSWORD: it sits behind NPM + Authentik.
-2. **Remaining Phase 7 (P1 backlog) planning is the natural next step** (7a player card is done), per PLAN.md section 9's suggested order: notifications (Home Assistant webhook first, then ntfy and Discord), trade analyzer and finder, Auto lineup mode, weekly backtest job, league history, weather, offline caching, "view as team." Each follows the same brief/verify/review cycle and ends with a mini-gate. **Do not start Phase 7 without Steph's explicit go-ahead** -- PLAN.md only has a suggested feature order, not a task table, so the first real step is planning it (likely an Explore pass plus an ADR, same precedent as every prior phase).
-3. Restarting `pnpm dev:lan`/`pnpm dev:worker` is no longer withheld -- both are running now at Steph's request. Stop them only for a gate-affecting run (section 2's standing lesson), and restart after.
+1. **Batch 1: P7b.1** (backend-engineer, shared contracts for all three features). Write the brief from PROGRESS.md's task table, ADR-022 and PLAN.md AUTO-1, TRADE-1..5, WX-1..5. Exploration facts to pass along: `LineupModeSchema` is in `packages/shared/src/api/lineup.ts:6-7`, and `LineupResponseSchema` is strict; `ReasonSchema` is in `packages/shared/src/reason.ts`; sync job names and cadences are in `packages/shared/src/sync.ts`.
+2. Then Batches 2 to 5 per the task table, with code review after every batch, UX review after batches 4 and 5, and mini-gates (Auto after batch 4; Trades and weather after batch 5). Release v1.3.0.
+3. Exploration facts for later briefs: `getMatchup` (`apps/web/lib/server/matchup.ts`) sims the current Sleeper starters at the median, cached `matchup-sim:${rosterId}`, about 10 ms; the Lineup page doesn't call it today, but Home does. Roster strength `rosValueFor` and `rosValueByPlayer` (`apps/web/lib/server/roster-strength.ts:166,248`) are internal and need exporting for trades. `simulatePlayoffOdds` (`packages/core/src/league/playoff-odds.ts:131`) inputs are built in `league-intelligence.ts:255-299`. The heatmap is keyed by slot type (FLEX included). The `schedule` table has `roof` but no stadium/coords, and nflverse games.csv has `stadium_id`. Worker job template: `apps/worker/src/jobs/player-ids-job.ts`. The next migration is 0005.
+4. `pnpm dev:lan` and `pnpm dev:worker` may be running for Steph's testing; stop them before any gate-affecting run.
 
 ## 5. Briefs
 

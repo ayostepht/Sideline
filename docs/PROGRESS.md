@@ -12,6 +12,28 @@
 | 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
 | 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` (merged) | Done, G6 PASS 2026-10-04 (Steph approved). **v1.0.0 released.** |
 | 7a Player card (ADR-020) | reviews plus full e2e | `phase/7-player-card` (merged) | Done 2026-10-06, released v1.1.0 |
+| 7b Selective: Auto lineup, trades, weather (ADR-022) | mini-gate per feature | `phase/7b-selective` | Planned 2026-10-07, not started |
+
+## Phase 7b task table (ADR-022)
+
+Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) land first.
+
+| ID | Title | Agent | Batch | Depends on | Reqs | Status | Attempts | Commit |
+|---|---|---|---|---|---|---|---|---|
+| P7b.1 | Shared contracts: `auto` mode, `resolvedMode`/`modeReason`; trade evaluate/finder DTOs; weather DTO; `weather` sync job name and cadence | backend-engineer | 1 | none | AUTO-1, TRADE-1..5, WX-1, WX-3 | Planned | 0 | |
+| P7b.2 | DB: migration 0005 `game_weather` table, upsert and read helpers | backend-engineer | 2 | P7b.1 | WX-3 | Planned | 0 | |
+| P7b.3 | Core `trade/`: evaluate (multi-player swap, drop rule, ROS lineup delta), fairness label, finder enumeration and prefilter, perf tests | analytics-engineer | 2 | P7b.1 | TRADE-1..4 | Planned | 0 | |
+| P7b.4 | Providers: Open-Meteo client (zod), static stadium table, flag thresholds, recorded fixture | sleeper-data-engineer | 2 | P7b.1 | WX-1, WX-2, WX-4 | Planned | 0 | |
+| P7b.5 | Server: Auto mode in `getLineup` (reads `getMatchup`), default mode, Home card follows | backend-engineer | 3 | P7b.1 | AUTO-1 | Planned | 0 | |
+| P7b.6 | Worker: `weather` job (outdoor/open games next 7 days, every 3 h, degrades) | sleeper-data-engineer | 3 | P7b.2, P7b.4 | WX-1, WX-3 | Planned | 0 | |
+| P7b.7 | Server: trade data functions and API routes (evaluate, finder, same-seed playoff deltas, export ROS values from roster-strength) | backend-engineer | 3 | P7b.3 | TRADE-1..4 | Planned | 0 | |
+| P7b.8 | UI: Auto in the mode toggle, default, "Auto chose ..." reason | frontend-engineer | 4 | P7b.5 | AUTO-1 | Planned | 0 | |
+| P7b.9 | Server: weather reads joined into lineup reasons, next-opponents and matchup data | backend-engineer | 4 | P7b.2, P7b.6 | WX-4, WX-5 | Planned | 0 | |
+| P7b.10 | UI: Trades route and nav item (Analyzer and Finder tabs, mobile More sheet) | frontend-engineer | 4 | P7b.7 | TRADE-3..5 | Planned | 0 | |
+| P7b.11 | UI: weather chips on Lineup, player card Next opponents, Matchup | frontend-engineer | 5 | P7b.9 | WX-4, WX-5 | Planned | 0 | |
+| P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Planned | 0 | |
+
+After each batch: code-reviewer (and ux-reviewer for UI batches 4 and 5). Mini-gates: Auto after batch 4, Trades and weather after batch 5. Release v1.3.0.
 
 ## Resume point
 
