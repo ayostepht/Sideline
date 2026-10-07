@@ -15,6 +15,7 @@ export const SYNC_JOB_NAMES = [
   "backfill_2025",
   "nflverse",
   "player_news",
+  "weather",
 ] as const;
 export const SyncJobNameSchema = z.enum(SYNC_JOB_NAMES);
 export type SyncJobName = (typeof SYNC_JOB_NAMES)[number];
@@ -133,4 +134,5 @@ export const SYNC_CADENCE_MS: Record<SyncJobName, number | null> = {
   backfill_2025: null,
   nflverse: 24 * HOUR_MS,
   player_news: 30 * MIN_MS,
+  weather: 3 * HOUR_MS,
 };

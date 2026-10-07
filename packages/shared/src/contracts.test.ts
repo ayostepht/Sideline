@@ -303,7 +303,7 @@ describe("Transaction defaults", () => {
 
 describe("sync and waiver helpers", () => {
   it("lists all job names", () => {
-    expect(SYNC_JOB_NAMES).toHaveLength(14);
+    expect(SYNC_JOB_NAMES).toHaveLength(15);
   });
   it("SyncRunRequestBody defaults job to all", () => {
     expect(SyncRunRequestBodySchema.parse({})).toEqual({ job: "all" });

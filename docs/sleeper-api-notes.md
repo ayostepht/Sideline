@@ -714,3 +714,9 @@ nflverse `stadium_id` caveats (games.csv checked 2026-10-07): international ids 
 ```
 
 Fixture: `tests/fixtures/open-meteo/forecast.json` (48 hourly rows, real, no personal data).
+
+## 2026-10-07: Open-Meteo forecast range and the weather job (P7b.6)
+
+- Open-Meteo serves whole UTC days, today (day 0) through day 15. `fetchKickoffForecast` skips a kickoff outside that by UTC calendar day without fetching (`out_of_range`), and maps an HTTP 400 (what the API returns for an out-of-range date) to the same reason.
+- The `weather` job (every 3 h) covers games from football now to +7 days. `dome` and `closed` roofs are stored as `indoors` with no fetch; a failed fetch keeps any existing row, else writes `unavailable`. It stops after 3 consecutive failures.
+- Fixture DB: `apps/worker/src/fixture-weather.ts` serves synthetic Open-Meteo responses (wind at CHI, rain at BUF, cold at CIN, HTTP 500 at PHI, mild elsewhere). The seed pins the game clock to 2026-10-02T12:00:00Z.

@@ -36,7 +36,10 @@ export const SEED_TABLES = [
   "schedule",
   "nfl_state",
   "player_news",
+  "game_weather",
 ] as const;
+
+export const FIXTURE_GAME_CLOCK = "2026-10-02T12:00:00Z";
 
 export interface SeedDeps {
   env: Record<string, string | undefined>;
@@ -118,7 +121,12 @@ function setNewsSeedEspnId(dbPath: string): void {
 export async function runSeed(deps: SeedDeps): Promise<number> {
   const dir = deps.fixturesDir ?? FIXTURES_DIR;
   const manifest = readManifest(dir);
-  const config = loadConfig({ ...deps.env, DEFAULT_LEAGUE_ID: manifest.leagueId });
+  // The weather job reads football "now" from the game clock (ADR-019); pin it to the e2e time.
+  const config = loadConfig({
+    SIDELINE_GAME_CLOCK: FIXTURE_GAME_CLOCK,
+    ...deps.env,
+    DEFAULT_LEAGUE_ID: manifest.leagueId,
+  });
   const fixtureFetch = createFixtureFetch(dir);
   // Belt and braces: anything that reaches for the global fetch fails loudly too.
   const realFetch = globalThis.fetch;
@@ -145,6 +153,7 @@ export async function runSeed(deps: SeedDeps): Promise<number> {
             sleeper: { fetch: fixtureFetch },
             nflverse: { fetch: fixtureFetch },
             espn: { fetch: fixtureFetch },
+            weather: { fetch: fixtureFetch, limiter: { acquire: () => Promise.resolve() } },
           }),
         ),
         limiter: deps.limiter ?? new RateLimiter(),

@@ -150,10 +150,35 @@ describe("fetchKickoffForecast", () => {
     expect(s.urls).toHaveLength(0);
     const edge = await fetchKickoffForecast({
       ...base,
-      kickoffUtc: "2026-10-23T12:00:00Z",
+      kickoffUtc: "2026-10-22T23:00:00Z",
       fetch: fx(fixture).fetch,
     });
     expect(edge.ok || edge.reason !== "out_of_range").toBe(true);
+  });
+
+  it("allows day +15, rejects +16 and any earlier UTC day without fetching", async () => {
+    const day15 = fx(fixture);
+    await fetchKickoffForecast({ ...base, kickoffUtc: "2026-10-22T00:00:00Z", fetch: day15.fetch });
+    expect(day15.urls).toHaveLength(1);
+    for (const kickoffUtc of ["2026-10-23T00:00:00Z", "2026-10-06T23:59:00Z"]) {
+      const s = fx(fixture);
+      const r = await fetchKickoffForecast({ ...base, kickoffUtc, fetch: s.fetch });
+      expect(r, kickoffUtc).toEqual({ ok: false, reason: "out_of_range" });
+      expect(s.urls).toHaveLength(0);
+    }
+    // Earlier the same UTC day still fetches.
+    const same = fx(fixture);
+    await fetchKickoffForecast({ ...base, kickoffUtc: "2026-10-07T01:00:00Z", fetch: same.fetch });
+    expect(same.urls).toHaveLength(1);
+  });
+
+  it("maps HTTP 400 to out_of_range", async () => {
+    const r = await fetchKickoffForecast({
+      ...base,
+      kickoffUtc: "2026-10-11T17:00:00Z",
+      fetch: fx({ error: true }, 400).fetch,
+    });
+    expect(r).toMatchObject({ ok: false, reason: "out_of_range" });
   });
 });
 

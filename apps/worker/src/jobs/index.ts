@@ -3,6 +3,7 @@ import type { SleeperJobDeps } from "./common.js";
 import { backfillJob, playersJob, projectionsJob, statsJob, trendingJob } from "./data-jobs.js";
 import { playerIdsJob, type PlayerIdsJobDeps } from "./player-ids-job.js";
 import { playerNewsJob, type PlayerNewsJobDeps } from "./player-news-job.js";
+import { weatherJob, type WeatherJobDeps } from "./weather-job.js";
 import { nflverseJob, type NflverseJobDeps } from "./nflverse-job.js";
 import {
   leagueJob,
@@ -46,6 +47,7 @@ export const registeredJobs: Job[] = [
   nflverseJob(),
   playerIdsJob(),
   playerNewsJob(),
+  weatherJob(),
 ];
 
 /** Every job, with injected fetches (tests and db:seed:fixtures). */
@@ -54,11 +56,13 @@ export function createAllJobs(deps: {
   nflverse?: NflverseJobDeps;
   espn?: PlayerNewsJobDeps;
   playerIds?: PlayerIdsJobDeps;
+  weather?: WeatherJobDeps;
 }): Job[] {
   return [
     ...createSleeperJobs(deps.sleeper ?? {}, deps.nflverse ?? {}),
     nflverseJob(deps.nflverse ?? {}),
     playerIdsJob(deps.playerIds ?? {}),
     playerNewsJob(deps.espn ?? {}),
+    weatherJob(deps.weather ?? {}),
   ];
 }

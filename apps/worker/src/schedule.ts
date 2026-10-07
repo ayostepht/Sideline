@@ -29,6 +29,7 @@ export const DEFAULT_CADENCES: Cadences = {
   projections: { every: everyOf("projections") },
   nflverse: { cron: "0 5 * * *" },
   player_news: { every: everyOf("player_news") },
+  weather: { every: everyOf("weather") },
 };
 
 /** Applies `config.syncCron` overrides (cron expressions replace the default cadence). */

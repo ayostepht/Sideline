@@ -61,7 +61,9 @@ export interface KickoffForecastArgs {
 export async function fetchKickoffForecast(args: KickoffForecastArgs): Promise<ForecastResult> {
   const kickoffMs = Date.parse(args.kickoffUtc);
   if (Number.isNaN(kickoffMs)) return { ok: false, reason: "invalid_kickoff" };
-  if (kickoffMs - args.now.getTime() > MAX_FORECAST_DAYS * 86_400_000) {
+  // Open-Meteo serves whole UTC days: today (day 0) through day 15. Anything else is skipped.
+  const dayDiff = Math.floor(kickoffMs / 86_400_000) - Math.floor(args.now.getTime() / 86_400_000);
+  if (dayDiff < 0 || dayDiff > MAX_FORECAST_DAYS - 1) {
     return { ok: false, reason: "out_of_range" };
   }
   const hourStart = new Date(Math.floor(kickoffMs / 3_600_000) * 3_600_000);
@@ -87,6 +89,9 @@ export async function fetchKickoffForecast(args: KickoffForecastArgs): Promise<F
       headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
       signal: ctrl.signal,
     });
+    if (res.status === 400) {
+      return { ok: false, reason: "out_of_range", message: "Open-Meteo HTTP 400" };
+    }
     if (!res.ok) {
       return { ok: false, reason: "network", message: `Open-Meteo HTTP ${res.status}` };
     }

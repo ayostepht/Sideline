@@ -24,6 +24,51 @@ describe("fixture fetch", () => {
   });
 });
 
+describe("db:seed:fixtures weather", () => {
+  it("stores the six weather cases for the pinned fixture week, deterministically", async () => {
+    const dir = tempDataDir();
+    const run = (): Promise<number> =>
+      runSeed({ env: { DATA_DIR: dir }, out: () => undefined, limiter: fast() });
+    expect(await run()).toBe(0);
+    const db = openDb(dbPathFromDataDir(dir));
+    const rows = db.sqlite.prepare("SELECT * FROM game_weather ORDER BY game_id").all() as Array<
+      Record<string, unknown>
+    >;
+    const by = (id: string): Record<string, unknown> | undefined =>
+      rows.find((r) => r["game_id"] === id);
+    // wind: CHI, precip: BUF, cold: CIN, clean: TB, indoors: MIN (dome), unavailable: PHI.
+    expect(by("2026_04_NYJ_CHI")).toMatchObject({ status: "forecast", wind_mph: 21, gust_mph: 33 });
+    expect(by("2026_04_NE_BUF")).toMatchObject({
+      status: "forecast",
+      precip_probability: 80,
+      precip_type: "rain",
+    });
+    expect(by("2026_04_JAX_CIN")).toMatchObject({ status: "forecast", temperature_f: 21 });
+    expect(by("2026_04_GB_TB")).toMatchObject({
+      status: "forecast",
+      wind_mph: 6,
+      precip_type: "none",
+    });
+    expect(by("2026_04_MIA_MIN")).toMatchObject({ status: "indoors", temperature_f: null });
+    expect(by("2026_04_LA_PHI")).toMatchObject({ status: "unavailable", fetched_at: null });
+    // Kicked off before the pinned clock: not stored.
+    expect(by("2026_04_PIT_CLE")).toBeUndefined();
+    const before = JSON.stringify(rows);
+    expect(await run()).toBe(0);
+    const again = db.sqlite.prepare("SELECT * FROM game_weather ORDER BY game_id").all();
+    const strip = (r: Record<string, unknown>): Record<string, unknown> => ({
+      ...r,
+      fetched_at: null,
+      updated_at: null,
+    });
+    expect(JSON.stringify(again.map((r) => strip(r as Record<string, unknown>)))).toBe(
+      JSON.stringify(rows.map(strip)),
+    );
+    expect(before.length).toBeGreaterThan(0);
+    db.sqlite.close();
+  }, 60_000);
+});
+
 describe("db:seed:fixtures", () => {
   it("seeds every table with no network, and a second run changes zero rows", async () => {
     const dir = tempDataDir();
