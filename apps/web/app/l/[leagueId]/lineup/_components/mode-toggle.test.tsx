@@ -13,6 +13,18 @@ describe("ModeToggle", () => {
     expect(html.match(/aria-current/g)).toHaveLength(1);
   });
 
+  it("shows a hint and a 44px info button when Auto has no reason", () => {
+    const html = renderToStaticMarkup(<ModeToggle leagueId="L" week={5} mode="auto" />);
+    expect(html).toContain("Auto picks your mode from your win odds.");
+    const info = html.match(/<button [^>]*lineup-auto-info[^>]*>/)?.[0] ?? "";
+    expect(info).toContain('aria-label="What does Auto do?"');
+    expect(info).toContain("size-11");
+    expect(html).not.toContain("title=");
+    const safe = renderToStaticMarkup(<ModeToggle leagueId="L" week={5} mode="safe" />);
+    expect(safe).not.toContain("lineup-auto-hint");
+    expect(html).toContain("min-h-11");
+  });
+
   it("renders the reason line only when a reason is given", () => {
     const none = renderToStaticMarkup(<ModeToggle leagueId="L" week={5} mode="auto" />);
     expect(none).not.toContain("lineup-auto-reason");

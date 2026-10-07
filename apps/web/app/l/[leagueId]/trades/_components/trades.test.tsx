@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { AnalyzerErrorView, AnalyzerResult } from "./analyzer-result";
 import { PlayerPicker, type AnalyzerPlayer } from "./analyzer";
-import { evaluation, suggestion } from "./fixtures";
+import { evaluation, impact, suggestion } from "./fixtures";
 import {
   buildEvaluateUrl,
   buildTradesQuery,
@@ -30,13 +30,53 @@ describe("SuggestionCard", () => {
     expect(html).toContain("You give");
     expect(html).toContain("You get");
     expect(html).toContain("Your best lineup");
-    expect(html).toContain("+8.4 pts");
-    expect(html).toContain("+6.1 pts");
-    expect(html).toContain("Playoffs 41% to 47%");
+    expect(html).toContain("+8.4");
+    expect(html).toContain("+6.1");
+    expect(html).toContain("Before");
+    expect(html).toContain("Playoffs");
+    expect(html).toContain("41%");
+    expect(html).toContain("47%");
     expect(html).toContain('data-testid="trade-fairness"');
     expect(html).toContain(">Fair<");
     expect(html).toContain("Both teams gain about the same");
-    expect(html).toContain("With Team Three");
+    expect(html.match(/With Team Three/g)).toHaveLength(1);
+  });
+
+  it("never shows Top pick or the accent on a lopsided suggestion", () => {
+    const html = card(suggestion({ fairness: "lopsided" }), true);
+    expect(html).not.toContain("trade-top-pick");
+    expect(html).not.toContain("border-primary");
+    expect(html).not.toContain("data-top");
+  });
+
+  it("has a fairness info button and a 44px, button-styled Open in Analyzer link", () => {
+    const html = card();
+    const info = html.match(/<button [^>]*trade-fairness-info[^>]*>/)?.[0] ?? "";
+    expect(info).toContain('aria-label="What does fairness mean?"');
+    expect(info).toContain("size-11");
+    const link = html.match(/<a [^>]*trade-open-analyzer[^>]*>/)?.[0] ?? "";
+    expect(link).toContain("min-h-11");
+    expect(link).toContain("bg-card");
+  });
+
+  it("shows a down arrow and text for negative changes, also for playoff drops", () => {
+    const html = card(
+      suggestion({
+        mine: impact({
+          rosLineupDelta: -3.2,
+          rosLineupAfter: 96.8,
+          playoffPctBefore: 0.96,
+          playoffPctAfter: 0.95,
+          playoffPctDelta: -0.01,
+        }),
+      }),
+    );
+    expect(html).toContain('data-change="down"');
+    expect(html).toContain("lucide-arrow-down");
+    expect(html).toContain("-3.2");
+    expect(html).toContain("-1%");
+    expect(html).toContain("Down ");
+    expect(html).toContain("tabular-nums");
   });
 
   it("links to the analyzer with the trade prefilled", () => {
@@ -106,6 +146,10 @@ describe("PlayerPicker", () => {
     expect(html).toContain(">Taxi<");
     const dBox = html.match(/<input[^>]*data-player-id="d"[^>]*>/)?.[0] ?? "";
     expect(dBox).toContain("disabled");
+    expect(html).toContain('data-testid="analyzer-give-chips"');
+    expect(html).toContain('aria-label="Remove Aa"');
+    expect(html).not.toContain("max-h-80 overflow-y-auto");
+    expect(html).toContain("md:overflow-y-auto");
     const bBox = html.match(/<input[^>]*data-player-id="b"[^>]*>/)?.[0] ?? "";
     expect(bBox).not.toContain("disabled");
   });
@@ -117,8 +161,11 @@ describe("AnalyzerResult", () => {
       <AnalyzerResult result={evaluation()} theirTeamName="Team Three" />,
     );
     expect(html).toContain('data-testid="analyzer-result"');
-    expect(html).toContain("Playoffs 41% to 47%");
+    expect(html).toContain("47%");
     expect(html).toContain("Playoff odds are not available in the offseason.");
+    const lineupInfo = html.match(/<button [^>]*trade-lineup-info[^>]*>/)?.[0] ?? "";
+    expect(lineupInfo).toContain("aria-label=");
+    expect(lineupInfo).toContain("size-11");
     expect(html).toContain("They drop Gamma Tight to make room.");
     expect(html).toContain(">Fair<");
     expect(html).toContain("Team Three");

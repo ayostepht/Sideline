@@ -1,6 +1,7 @@
 "use client";
 
 import type { TradeEvaluateResponse } from "@sideline/shared";
+import { X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PositionBadge } from "../../../../../components/position-badge";
 import { Button } from "../../../../../components/ui/button";
@@ -47,6 +48,9 @@ export function PlayerPicker({
   testid: string;
 }) {
   const full = selected.length >= TRADE_MAX_PER_SIDE;
+  const chosen = selected
+    .map((id) => players.find((p) => p.playerId === id))
+    .filter((p): p is AnalyzerPlayer => p !== undefined);
   return (
     <fieldset className="min-w-0" data-testid={testid}>
       <legend className="text-sm font-semibold">
@@ -55,10 +59,29 @@ export function PlayerPicker({
           ({selected.length} of {TRADE_MAX_PER_SIDE})
         </span>
       </legend>
+      {chosen.length > 0 ? (
+        <ul className="mt-1 flex flex-wrap gap-1" data-testid={`${testid}-chips`}>
+          {chosen.map((p) => (
+            <li key={p.playerId}>
+              <button
+                type="button"
+                onClick={() => onToggle(p.playerId)}
+                aria-label={`Remove ${p.name}`}
+                data-testid="analyzer-chip"
+                data-player-id={p.playerId}
+                className="inline-flex min-h-11 max-w-full items-center gap-1 rounded-control border bg-muted px-3 text-sm font-medium hover:bg-border"
+              >
+                <span className="min-w-0 truncate">{p.name}</span>
+                <X className="size-4 shrink-0" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {players.length === 0 ? (
         <p className="mt-1 text-sm text-muted-foreground">No players on this roster.</p>
       ) : (
-        <ul className="mt-1 max-h-80 overflow-y-auto rounded-control border">
+        <ul className="mt-1 rounded-control border md:max-h-80 md:overflow-y-auto">
           {players.map((p) => {
             const checked = selected.includes(p.playerId);
             const disabled = full && !checked;
@@ -112,10 +135,9 @@ export function Analyzer({
     initial.other !== null && others.some((t) => t.rosterId === initial.other)
       ? initial.other
       : null;
+  const cleanedGive = initial.give.filter((id) => mine?.players.some((p) => p.playerId === id));
   const [other, setOther] = useState<number | null>(validInitialOther);
-  const [give, setGive] = useState<string[]>(() =>
-    initial.give.filter((id) => mine?.players.some((p) => p.playerId === id)),
-  );
+  const [give, setGive] = useState<string[]>(cleanedGive);
   const [get, setGet] = useState<string[]>(() => {
     const t = others.find((x) => x.rosterId === validInitialOther);
     return initial.get.filter((id) => t?.players.some((p) => p.playerId === id));
@@ -166,8 +188,13 @@ export function Analyzer({
   useEffect(() => {
     if (autoRan.current) return;
     autoRan.current = true;
+    // If invalid ids were dropped from the URL selection, mirror the cleaned one back once.
+    if (buildTradesQuery("analyzer", initial) !== buildTradesQuery("analyzer", selection)) {
+      mirror(selection);
+    }
     if (url !== null && initial.give.length > 0) void evaluate(url);
-    // Runs once on mount by design.
+    // Intentionally runs once on mount: it reads the first render's selection, and later
+    // changes are handled by the event handlers. The react-hooks lint rule is not configured in this repo, so no disable comment is needed.
   }, []);
 
   if (mine === null) return null;
