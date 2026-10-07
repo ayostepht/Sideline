@@ -42,7 +42,7 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 | P7b.14 | Players detail route over the hard JS cap (220,112 B vs 204,800 B, was 193,914 B at G4) | frontend-engineer | 5 | none | PLAN 6.6 budgets | Done | 1 | a6eb37c |
 | P7b.13c | `pnpm screens` pins the game clock like e2e and refuses stale builds | devops-engineer | 5 | none | tooling | Done | 1 | 5c9bcf3 |
 | P7b.10g | Trades soft-navigation title lost (WCAG 2.4.2, TRADE-2b); LINEUP-FLOW-4 mobile-pixel blank not-found flake (3/10) | frontend-engineer | 5 | P7b.13d | Leak-check URL exemption matches only the exact handle segment (Batch 5 review M1) | sleeper-data-engineer | 5 | P7b.13b | privacy | Done | 1 | ac0aa42 |
-| P7b.14f | Lazy-load robustness (review M2, M3, m1, m2) and the LINEUP-FLOW-4 blank 404 regression from a6eb37c | frontend-engineer | 5 | P7b.14 | UI1, UI2 | In progress | 0 | |
+| P7b.14f | Lazy-load robustness (review M2, M3, m1, m2) and the LINEUP-FLOW-4 blank 404 regression from a6eb37c | frontend-engineer | 5 | P7b.14 | UI1, UI2 | Done (eager WhySheet on Lineup; FLOW-4 200/200) | 1 | f86f84b |
 | P7b.12 | TRADE-5, UI2 | Done (title); FLOW-4 bisected to a6eb37c, moved to P7b.14f | 1 | 33767f1 |
 | P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Done (531 passed; TRADE-2b red pending P7b.10g) | 1 | af9c331 |
 
@@ -71,6 +71,8 @@ Remove an item when it is done; the archive keeps history.
 - **Trades UX re-check m5** (`docs/reviews/2026-10-07-p7b-batch4-ux-recheck.md`): Analyzer result card headers have different heights at 1280, so the grids misalign (frontend).
 - **Batch 5 review minors m3, m4, m5, n1** (`docs/reviews/2026-10-07-p7b-batch5-code.md`): wall-clock bounds in `trades.perf.test.ts`; finder pools multi-position players under the alphabetically first surplus position; stale-build check counts test files; weather threshold mirror test could compare key sets.
 - **Soft navigation before hydration wipes `<head>`** (P7b.10g diagnosis, pre-existing): Trades works around it with `PageTitle`; other routes lack per-page titles but kept "Sideline" in 28/28 checks. Root cause not found.
+- **Weather chip icon still comes from label text** (Batch 5 review m2): add an optional structured `kind` to the WEATHER reason (backend-engineer, `ReasonSchema`), then drop `kindFromLabel` (frontend).
+- **Root cause of the blank Lineup 404 with a lazy WhySheet is unknown** (P7b.14f): Lineup uses `WhySheetEager` (+14 KB, 187,330 B). The lazy WhySheet could still race on other 404 routes; none has blanked so far.
 - **Batch 1-2 review minors m4, m5** (`docs/reviews/2026-10-07-p7b-batch12-code.md`): the finder's give pool favors my top players over surplus-position players (tuning); the duplicate perf assertion in `finder.perf.test.ts`.
 - **`fast-check` is a root devDependency but not a `packages/core` one**; P7b.3 used a seeded loop instead. Add it to core if property tests there are wanted (devops-engineer).
 
