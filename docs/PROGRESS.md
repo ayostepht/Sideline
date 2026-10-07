@@ -12,7 +12,7 @@
 | 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
 | 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` (merged) | Done, G6 PASS 2026-10-04 (Steph approved). **v1.0.0 released.** |
 | 7a Player card (ADR-020) | reviews plus full e2e | `phase/7-player-card` (merged) | Done 2026-10-06, released v1.1.0 |
-| 7b Selective: Auto lineup, trades, weather (ADR-022) | mini-gate per feature | `phase/7b-selective` | Planned 2026-10-07, not started |
+| 7b Selective: Auto lineup, trades, weather (ADR-022) | G7b (combined mini-gate) | `phase/7b-selective` | G7b PASS 2026-10-07 (`docs/gates/G7b.md`); awaiting Steph's release approval for v1.3.0 |
 
 ## Phase 7b task table (ADR-022)
 

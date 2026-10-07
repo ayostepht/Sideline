@@ -50,7 +50,8 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
   - UI4: Trades screenshot `networkidle` timeout.
   - UI3: Lighthouse transferred script over 204,800 B on Lineup 212,925, Waivers 212,498, Players 206,465. Lazy chunks still count.
 - P7b.G1: `02c1f2d` (integration Open-Meteo mock) and `0b6a286` (the gate server now pins `SIDELINE_GAME_CLOCK`). P7b.G2: `cf2c583` (load-on-intent; lighter error boundaries; no viewport prefetch). **Second gate run:** U1, U2a, U2b, U3a, U4, UI3 and UI4 PASS. UI1/UI2 failed 18 tests, all popover/sheet tests (TRADE-4, AUTO-1b, WX-5, gallery `?open=why`), a regression from `cf2c583`: the placeholder lacks `aria-haspopup`, and `?open=why` never loads.
-- **In flight:** P7b.G3 (frontend fix). Then a third full gate run, then `docs/gates/G7b.md`, then the v1.3.0 proposal.
+- P7b.G3 `b499617`. **G7b PASS** on the third run (`docs/gates/G7b.md`): 10 passed, U3c skipped; e2e 548, a11y 552.
+- **Waiting on Steph:** v1.3.0 release approval (merge `phase/7b-selective` to main, tag `v1.3.0` and `gate-G7b`, push to origin so CI publishes the image). Also confirm ADR-022 item 7a. The dev server and worker are stopped; restart only if she asks.
 - **Weather e2e facts for P7b.12** (fixture DB, clock pinned at 2026-10-02T12:00:00Z, roster 1, week 4):
   - NYJ 11576, 12517, 13330 in `2026_04_NYJ_CHI`: wind flag, "Wind 21 mph".
   - BUF 4983 in `2026_04_NE_BUF`: precip, "Rain likely (80%)".
