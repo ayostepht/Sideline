@@ -16,6 +16,7 @@ export function TradesTabs({ leagueId, tab }: { leagueId: string; tab: TradesTab
           <Link
             key={t.key}
             href={tradesHref(leagueId, t.key)}
+            prefetch={false}
             aria-current={t.key === tab ? "page" : undefined}
             data-testid={`trades-tab-${t.key}`}
             className={cn(

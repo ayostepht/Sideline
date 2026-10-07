@@ -1,6 +1,6 @@
 "use client";
 
-import { ErrorState } from "../components/empty-state";
+import { ErrorStateLite } from "../components/error-state-lite";
 
 export default function RootError({
   retry,
@@ -11,7 +11,7 @@ export default function RootError({
   return (
     <main className="mx-auto max-w-xl p-3">
       <h1 className="sr-only">Sideline</h1>
-      <ErrorState
+      <ErrorStateLite
         title="Something went wrong"
         detail="Sideline hit a problem loading this page. Try again."
         onRetry={retry}

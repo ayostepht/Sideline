@@ -34,6 +34,7 @@ export function PlayersList({
             <li key={p.playerId}>
               <Link
                 href={playerHref(leagueId, p.playerId)}
+                prefetch={false}
                 data-testid="players-row"
                 className="flex min-h-11 items-center gap-2 px-3 py-2 hover:bg-muted active:bg-border"
               >
@@ -96,6 +97,7 @@ export function PlayersList({
                     {/* The after element stretches the link over the whole row. */}
                     <Link
                       href={playerHref(leagueId, p.playerId)}
+                      prefetch={false}
                       className="relative flex min-h-11 items-center gap-2 after:absolute after:inset-0 after:content-['']"
                     >
                       <PositionBadge position={p.position} />

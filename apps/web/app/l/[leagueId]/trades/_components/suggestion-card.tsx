@@ -79,6 +79,7 @@ export function SuggestionCard({
         </div>
         <Link
           href={href}
+          prefetch={false}
           data-testid="trade-open-analyzer"
           className={cn(buttonVariants({ variant: "outline", size: "md" }), "shrink-0")}
         >

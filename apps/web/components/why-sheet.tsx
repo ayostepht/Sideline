@@ -99,7 +99,7 @@ const DEFAULT_TRIGGER = (
 type TriggerProps = { onClick?: (e: MouseEvent) => void; "aria-expanded"?: boolean };
 
 /**
- * The sheet code (Radix dialog) loads after hydration to keep route JS small. Until then the
+ * The sheet code (Radix dialog) loads on first hover, focus or touch to keep route JS small. Until then the
  * trigger renders as a plain button; a tap before the code arrives opens the sheet on load (and
  * reports `onOpenChange(true)` in controlled mode). Focus on the trigger is kept across the swap.
  * If the code fails to load, a tap expands the numbers inline instead.
@@ -108,7 +108,10 @@ export function WhySheet(props: WhySheetProps) {
   const host = useRef<HTMLSpanElement>(null);
   const hadFocus = useRef(false);
   const [tapped, setTapped] = useState(false);
+  // Load on intent (hover, focus, touch) so pages that never open it do not download the code.
+  const [intent, setIntent] = useState(false);
   const { mod, failed } = useLazyModule(loader, {
+    enabled: intent || tapped,
     onBeforeSwap: () => {
       hadFocus.current = host.current?.contains(document.activeElement) ?? false;
     },
@@ -143,7 +146,14 @@ export function WhySheet(props: WhySheetProps) {
       : trigger;
     body = (
       <>
-        {triggerEl}
+        <span
+          className="contents"
+          onPointerOver={() => setIntent(true)}
+          onPointerDown={() => setIntent(true)}
+          onFocus={() => setIntent(true)}
+        >
+          {triggerEl}
+        </span>
         {failed && tapped ? (
           <div role="region" aria-label={props.title} data-testid="why-inline">
             <WhyBody summary={props.summary} reasons={props.reasons} />

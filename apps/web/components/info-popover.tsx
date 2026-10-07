@@ -60,15 +60,18 @@ export function InfoPopoverFallback({ label, text, testid }: InfoPopoverProps) {
 
 /**
  * Tap-to-open explanation. Works on touch, keyboard and screen readers (Escape closes, focus
- * returns to the button). The popover code (Radix popover and positioning) loads after hydration
- * to keep route JS small. A tap before it arrives opens the popover on load, and focus on the
+ * returns to the button). The popover code (Radix popover and positioning) loads on first hover, focus
+ * or touch to keep route JS small. A tap before it arrives opens the popover on load, and focus on the
  * button is kept across the swap. If the code fails to load, the text expands inline instead.
  */
 export function InfoPopover(props: InfoPopoverProps) {
   const host = useRef<HTMLSpanElement>(null);
   const hadFocus = useRef(false);
   const [tapped, setTapped] = useState(false);
+  // Load on intent (hover, focus, touch) so pages that never open it do not download the code.
+  const [intent, setIntent] = useState(false);
   const { mod, failed } = useLazyModule(loader, {
+    enabled: intent || tapped,
     onBeforeSwap: () => {
       hadFocus.current = host.current?.contains(document.activeElement) ?? false;
     },
@@ -84,7 +87,16 @@ export function InfoPopover(props: InfoPopoverProps) {
   } else if (failed) {
     body = <InfoPopoverFallback {...props} />;
   } else {
-    body = <InfoButton label={props.label} testid={props.testid} onClick={() => setTapped(true)} />;
+    body = (
+      <InfoButton
+        label={props.label}
+        testid={props.testid}
+        onPointerEnter={() => setIntent(true)}
+        onPointerDown={() => setIntent(true)}
+        onFocus={() => setIntent(true)}
+        onClick={() => setTapped(true)}
+      />
+    );
   }
   return (
     <span ref={host} className="inline-flex">
