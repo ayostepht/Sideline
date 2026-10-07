@@ -43,7 +43,13 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
 - P7b.9f `188e6fe` (no server bug), P7b.13c `5c9bcf3` (screens clock pin), P7b.14 `a6eb37c` (lazy Radix; every route under the cap). Verify 1807 passed.
 - **P7b.12 done** `af9c331`: e2e on `E2E_PORT=3400` gave 531 passed, 3 failed (TRADE-2b on desktop and iphone, the Trades soft-nav title bug; LINEUP-FLOW-4 mobile-pixel flake), 18 not run. The orchestrator was denied permission to stop Steph's dev servers; Steph was asked to stop them (and stray agent servers on PIDs 7748 and 11365) before the final gate.
 - Batch 5 code review: CHANGES REQUIRED (`docs/reviews/2026-10-07-p7b-batch5-code.md`). M1 fixed in `ac0aa42`. P7b.10g `33767f1` fixed the Trades title.
-- P7b.14f `f86f84b` done (verify 1817 passed). Final Batch 5 UX review: APPROVE (`docs/reviews/2026-10-07-p7b-batch5-ux.md`; a11y 548/548 on port 3300). **Waiting on Steph** to stop her dev servers. Next: the combined mini-gate. Steph must stop `pnpm dev:lan` and `pnpm dev:worker` and the stray servers first. Run `pnpm verify`, full e2e plus a11y on port 3000, `fixtures:check`, coverage and route sizes, and write the report to `docs/gates/G7b.md`. Then propose v1.3.0 to Steph (merge `phase/7b-selective` to main, tag, push only if she asks).
+- Steph approved stopping the orphaned `pnpm dev:lan` and `pnpm dev:worker` (started by an earlier session); they are stopped and port 3000 is free. Do not restart them unless she asks.
+- **First 7b gate run (2026-10-07): FAIL.** Passed: U1, U2a, U3a, U4, U3b. Failed:
+  - U2b: `sync-failures.integration` gets an MSW unhandled request, probably the weather job.
+  - UI1/UI2: LINEUP-FLOW-5 and WX-4d/4e fail on all projects; they passed at `af9c331`.
+  - UI4: Trades screenshot `networkidle` timeout.
+  - UI3: Lighthouse transferred script over 204,800 B on Lineup 212,925, Waivers 212,498, Players 206,465. Lazy chunks still count.
+- **In flight:** P7b.G1 (qa: triage U2b/UI1/UI2 on port 3400, bisect from `af9c331`) and P7b.G2 (frontend: cut real transferred script, remove zod from client code, fix the Trades network-busy issue). Then rerun `pnpm gate` and write `docs/gates/G7b.md`.
 - **Weather e2e facts for P7b.12** (fixture DB, clock pinned at 2026-10-02T12:00:00Z, roster 1, week 4):
   - NYJ 11576, 12517, 13330 in `2026_04_NYJ_CHI`: wind flag, "Wind 21 mph".
   - BUF 4983 in `2026_04_NE_BUF`: precip, "Rain likely (80%)".
