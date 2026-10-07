@@ -42,7 +42,8 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
 - Done since Batch 4c: Trades UX re-check APPROVE (`docs/reviews/2026-10-07-p7b-batch4-ux-recheck.md`), P7b.13 `43e8f14` and P7b.13b `b0f67ad` (`fixtures:check` now passes), P7b.3g `07c6b36`, P7b.11 `bf3a290` (weather chips, verified on the gallery only).
 - P7b.9f `188e6fe` (no server bug), P7b.13c `5c9bcf3` (screens clock pin), P7b.14 `a6eb37c` (lazy Radix; every route under the cap). Verify 1807 passed.
 - **P7b.12 done** `af9c331`: e2e on `E2E_PORT=3400` gave 531 passed, 3 failed (TRADE-2b on desktop and iphone, the Trades soft-nav title bug; LINEUP-FLOW-4 mobile-pixel flake), 18 not run. The orchestrator was denied permission to stop Steph's dev servers; Steph was asked to stop them (and stray agent servers on PIDs 7748 and 11365) before the final gate.
-- **In flight:** P7b.10g (frontend: title bug plus the FLOW-4 flake, comparing against `cd266e7`) and the Batch 5 code review (`8fc0ddb..HEAD`). Next: the Batch 5 UX review (Lineup weather, Matchup, player card, Trades), the combined mini-gate, then a v1.3.0 release proposal to Steph.
+- Batch 5 code review: CHANGES REQUIRED (`docs/reviews/2026-10-07-p7b-batch5-code.md`). M1 fixed in `ac0aa42`. P7b.10g `33767f1` fixed the Trades title.
+- **In flight:** P7b.14f (frontend: lazy-load M2, M3, m1, m2, plus the LINEUP-FLOW-4 blank 404, bisected to `a6eb37c`'s lazy WhySheet; fallback is an eager WhySheet on Lineup only). Next: the Batch 5 UX review (Lineup weather, Matchup, player card, Trades), the combined mini-gate (Steph stops her dev servers first), then a v1.3.0 release proposal.
 - **Weather e2e facts for P7b.12** (fixture DB, clock pinned at 2026-10-02T12:00:00Z, roster 1, week 4):
   - NYJ 11576, 12517, 13330 in `2026_04_NYJ_CHI`: wind flag, "Wind 21 mph".
   - BUF 4983 in `2026_04_NE_BUF`: precip, "Rain likely (80%)".
