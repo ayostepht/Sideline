@@ -33,7 +33,8 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | P7.8b | Worker records news fetch attempts | sleeper-data-engineer | D | Done | 1 | 4aac7d0 |
 | P7.8c | Code review M3/m2/m5/n1 + UX M1-M4/m1/m2/m4/n1 + nav highlight in pop-up | frontend-engineer | D | Done | 1 | 2a0b262 |
 | P7.8d | Fix intermittent focus return on Escape (PLAYERCARD-3) | frontend-engineer | E | Done | 1 | 3ee5490 |
-| P7.9 | e2e: Back/Forward, second player from pop-up, leave via link in pop-up (re-review M1) | qa-engineer | F | Dispatched | 1 | |
+| P7.9 | e2e: Back/Forward, second player from pop-up, leave via link in pop-up (re-review M1) | qa-engineer | F | Done | 1 | cada111 |
+| P7.10 | Focus to main when leaving an open pop-up by soft navigation (PLAYERCARD-19) | frontend-engineer | F | Dispatched | 1 | |
 | P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Done | 1 | 89830e3 |
 
 ## Earlier phases
