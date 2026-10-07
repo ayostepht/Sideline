@@ -40,7 +40,8 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
 - Batch 4 code review: APPROVE (minors in the backlog). UX review: CHANGES REQUIRED, 3 Majors (`docs/reviews/2026-10-07-p7b-batch4-ux.md`). ADR-022 item 7a amends the finder ranking: exclude Lopsided, rank by the smaller gain. **Tell Steph about 7a; she may overrule.**
 - **Batch 4c done**: P7b.3f `2f594b5`, P7b.7g `5e8d30b`, P7b.10f `552d802`. Verify 1788 passed.
 - Done since Batch 4c: Trades UX re-check APPROVE (`docs/reviews/2026-10-07-p7b-batch4-ux-recheck.md`), P7b.13 `43e8f14` and P7b.13b `b0f67ad` (`fixtures:check` now passes), P7b.3g `07c6b36`, P7b.11 `bf3a290` (weather chips, verified on the gallery only).
-- P7b.9f `188e6fe`: no server bug (stale build plus unpinned screens clock); regression test added. **In flight:** P7b.14 (frontend, Players detail over the hard JS cap) and P7b.13c (devops, pin `SIDELINE_GAME_CLOCK` in `pnpm screens` and detect stale builds). Then P7b.12 (qa), the Batch 5 code and UX reviews, and the combined mini-gate (stop dev servers first).
+- P7b.9f `188e6fe` (no server bug), P7b.13c `5c9bcf3` (screens clock pin), P7b.14 `a6eb37c` (lazy Radix; every route under the cap). Verify 1807 passed.
+- **P7b.12 (qa) dispatched** on a free port (E2E_PORT override), because port 3000 is Steph's dev server. **The orchestrator's attempt to stop Steph's dev servers was denied by the permission classifier.** Steph was asked to stop `pnpm dev:lan` and `pnpm dev:worker`, plus stray agent servers on ports 3200 (PID 7748) and 3917 (PID 11365), before the final gate run. After P7b.12: the Batch 5 code and UX reviews, then the combined mini-gate, then a release proposal (v1.3.0).
 - **Weather e2e facts for P7b.12** (fixture DB, clock pinned at 2026-10-02T12:00:00Z, roster 1, week 4):
   - NYJ 11576, 12517, 13330 in `2026_04_NYJ_CHI`: wind flag, "Wind 21 mph".
   - BUF 4983 in `2026_04_NE_BUF`: precip, "Rain likely (80%)".
