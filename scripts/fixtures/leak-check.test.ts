@@ -144,4 +144,23 @@ describe("findLeaks ADR-018 URL handles and images", () => {
     expect(findLeaks([{ path: "s/zed.png", text: bytes }], fakeIds, opts)).toHaveLength(1);
     expect(findLeaks([{ path: "s/shot.txt", text: bytes }], fakeIds, opts)).toHaveLength(1);
   });
+
+  it("exempts only an exact handle segment", () => {
+    const ok = [{ path: "a.md", text: "github.com/zed/repo ghcr.io/zed/img" }];
+    expect(findLeaks(ok, fakeIds, opts)).toEqual([]);
+    const longer = collectIdentifiers(syntheticRaw(), REAL.leagueId, { names: [FAKE, "zedx"] });
+    const hit = findLeaks([{ path: "a.md", text: "github.com/zedx" }], longer, opts);
+    expect(hit.some((l) => l.category === "name" && longer.names[l.index] === "zedx")).toBe(true);
+    const tan = collectIdentifiers(syntheticRaw(), REAL.leagueId, { names: [FAKE, "zedtanner"] });
+    const hit2 = findLeaks([{ path: "a.md", text: "github.com/zedtanner" }], tan, opts);
+    expect(hit2.some((l) => tan.names[l.index] === "zedtanner")).toBe(true);
+  });
+
+  it("stripping does not join adjacent text into a match or hide one", () => {
+    const joined = collectIdentifiers(syntheticRaw(), REAL.leagueId, { names: ["abcdef"] });
+    const text = "abcgithub.com/zed/ghcr.io/zeddef abc github.com/zed def";
+    expect(findLeaks([{ path: "a.md", text }], joined, opts)).toEqual([]);
+    const real = findLeaks([{ path: "a.md", text: "github.com/zed/x abcdef" }], joined, opts);
+    expect(real).toHaveLength(1);
+  });
 });

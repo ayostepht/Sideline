@@ -83,8 +83,11 @@ function stripAllowedUrls(text: string, handles: readonly string[]): string {
     if (h.length === 0) continue;
     const escaped = h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     out = out.replace(
-      new RegExp(`(github\\.com|raw\\.githubusercontent\\.com|ghcr\\.io)/${escaped}`, "gi"),
-      "",
+      new RegExp(
+        `(?<![A-Za-z0-9_.-])(github\\.com|raw\\.githubusercontent\\.com|ghcr\\.io)/${escaped}(?![A-Za-z0-9_.-])`,
+        "gi",
+      ),
+      " ",
     );
   }
   return out;
