@@ -1,5 +1,10 @@
-import { readNflState, upsertSchedule } from "@sideline/db";
-import { createNflverseProvider, type FetchFn, type NflverseProvider } from "@sideline/providers";
+import { readNflState, upsertSchedule, upsertUsageWeek } from "@sideline/db";
+import {
+  createNflverseProvider,
+  type FetchFn,
+  type NflverseProvider,
+  type PlayerRef,
+} from "@sideline/providers";
 import type { ScheduleGame } from "@sideline/shared";
 import { fallbackKickoffUtc } from "../kickoff.js";
 import type { Job, JobContext, JobResult } from "../types.js";
@@ -70,12 +75,83 @@ export async function syncScheduleForSeason(
   };
 }
 
+function makeProvider(ctx: JobContext, deps: NflverseJobDeps): NflverseProvider {
+  return (
+    deps.provider?.(ctx) ??
+    createNflverseProvider({
+      enabled: true,
+      dataDir: ctx.config.dataDir,
+      now: () => ctx.now(),
+      ...(deps.fetch ? { fetch: deps.fetch } : {}),
+    })
+  );
+}
+
+function readPlayerRefs(ctx: JobContext): PlayerRef[] {
+  const rows = ctx.db.sqlite
+    .prepare("SELECT player_id, full_name, team, position, gsis_id FROM players")
+    .all() as {
+    player_id: string;
+    full_name: string;
+    team: string | null;
+    position: string | null;
+    gsis_id: string | null;
+  }[];
+  return rows.map((r) => ({
+    playerId: r.player_id,
+    fullName: r.full_name,
+    team: r.team,
+    position: r.position,
+    gsisId: r.gsis_id,
+  }));
+}
+
+/**
+ * Downloads nflverse weekly stats and snap counts for one season (through the provider's
+ * download cache), joins them to Sleeper players, and upserts `usage_week` in one short
+ * transaction. Never throws: any problem logs a warning and returns zero rows so the schedule
+ * sync that precedes it is unaffected.
+ */
+export async function syncUsageForSeason(
+  ctx: JobContext,
+  deps: NflverseJobDeps,
+  season: number,
+): Promise<{ rowsChanged: number; note: string }> {
+  if (!ctx.config.enableNflverse) return { rowsChanged: 0, note: "usage: nflverse off" };
+  try {
+    const players = readPlayerRefs(ctx);
+    if (players.length === 0) {
+      ctx.logger.warn({ season }, "usage skipped: no players stored yet");
+      return { rowsChanged: 0, note: "usage: no players stored yet" };
+    }
+    const res = await makeProvider(ctx, deps).getUsage(season, undefined, players);
+    if (!res.ok) {
+      ctx.logger.warn({ season, reason: res.reason, message: res.message }, "usage degraded");
+      return { rowsChanged: 0, note: `usage degraded: ${res.reason}` };
+    }
+    for (const w of res.meta.warnings) ctx.logger.warn({ warning: w }, "nflverse usage warning");
+    // No network inside the transaction.
+    const out = ctx.db.sqlite.transaction(() => upsertUsageWeek(ctx.db, res.data)).immediate();
+    return { rowsChanged: out.rowsChanged, note: `${res.data.length} usage rows` };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    ctx.logger.warn({ season, message }, "usage degraded");
+    return { rowsChanged: 0, note: "usage degraded: error" };
+  }
+}
+
 export function nflverseJob(deps: NflverseJobDeps = {}): Job {
   return {
     name: "nflverse",
     async run(ctx) {
       const season = readNflState(ctx.db)?.season ?? ctx.now().getUTCFullYear();
-      return syncScheduleForSeason(ctx, deps, season);
+      const sched = await syncScheduleForSeason(ctx, deps, season);
+      const usage = await syncUsageForSeason(ctx, deps, season);
+      return {
+        ...sched,
+        rowsChanged: sched.rowsChanged + usage.rowsChanged,
+        note: [sched.note, usage.note].filter(Boolean).join("; "),
+      };
     },
   };
 }

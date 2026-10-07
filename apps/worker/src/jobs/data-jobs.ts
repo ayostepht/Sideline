@@ -31,12 +31,15 @@ import {
   weekCursor,
   type SleeperJobDeps,
 } from "./common.js";
-import { syncScheduleForSeason, type NflverseJobDeps } from "./nflverse-job.js";
+import { syncScheduleForSeason, syncUsageForSeason, type NflverseJobDeps } from "./nflverse-job.js";
 import { scheduleTeamCode } from "./team-code.js";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-/** `/players/nfl` is fetched at most once per this window. */
-export const PLAYERS_MIN_INTERVAL_MS = DAY_MS;
+/**
+ * `/players/nfl` is fetched at most once per this window. 20h, not 24h: the 04:30 cron can finish
+ * minutes later one day than the last, and a full 24h guard then skipped the next day's run.
+ * 20h still blocks a second fetch the same day.
+ */
+export const PLAYERS_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 /** A fantasy position losing more than this share of stored players logs a warning. */
 export const POSITION_DROP_THRESHOLD = 0.1;
 /** Positions with fewer stored players than this are too small to judge. */
@@ -244,6 +247,10 @@ function scheduleAlreadyStored(ctx: JobContext, season: number): boolean {
  * ETags to keep large bodies out of http_cache. Historical projections get no pregame snapshots
  * (their fetch time is after kickoff by definition).
  */
+function countRows(ctx: JobContext, sql: string, ...params: unknown[]): number {
+  return (ctx.db.sqlite.prepare(sql).get(...params) as { n: number }).n;
+}
+
 export function backfillJob(deps: SleeperJobDeps, nflverseDeps: NflverseJobDeps = {}): Job {
   return {
     name: "backfill_2025",
@@ -256,7 +263,13 @@ export function backfillJob(deps: SleeperJobDeps, nflverseDeps: NflverseJobDeps 
       const statWeeks = all.filter((w) => !have.stats.has(w));
       const projWeeks = all.filter((w) => !have.proj.has(w));
       const scheduleAlready = scheduleAlreadyStored(ctx, BACKFILL_SEASON);
-      if (statWeeks.length === 0 && projWeeks.length === 0 && scheduleAlready) {
+      const usageAlready =
+        !ctx.config.enableNflverse ||
+        // Usage joins to the players directory; with none stored there is nothing to do yet.
+        countRows(ctx, "SELECT COUNT(*) AS n FROM players") === 0 ||
+        countRows(ctx, "SELECT COUNT(*) AS n FROM usage_week WHERE season = ?", BACKFILL_SEASON) >
+          0;
+      if (statWeeks.length === 0 && projWeeks.length === 0 && scheduleAlready && usageAlready) {
         return { rowsChanged: 0, status: "skipped", note: "2025 data already present" };
       }
       let rowsChanged = 0;
@@ -267,6 +280,11 @@ export function backfillJob(deps: SleeperJobDeps, nflverseDeps: NflverseJobDeps 
         const sched = await syncScheduleForSeason(ctx, nflverseDeps, BACKFILL_SEASON);
         rowsChanged += sched.rowsChanged;
         scheduleNote = `schedule: ${sched.note ?? "synced"}`;
+      }
+      if (!usageAlready) {
+        const usage = await syncUsageForSeason(ctx, nflverseDeps, BACKFILL_SEASON);
+        rowsChanged += usage.rowsChanged;
+        scheduleNote += `; ${usage.note}`;
       }
       const client = makeClient(ctx, deps);
       const stats = await syncStats(ctx, client, BACKFILL_SEASON, "regular", statWeeks, false);

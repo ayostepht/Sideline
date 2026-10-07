@@ -295,17 +295,17 @@ describe("T1.5b idempotency and call accounting", () => {
 });
 
 describe("T1.5b players", () => {
-  it("skips the network within 24h of the last fetch and sends no ETag after", async () => {
+  it("skips the network within 20h of the last fetch, runs after 23h50m (cron jitter), no ETag", async () => {
     const h = harness();
     const first = await h.run("players");
     expect(first.calls).toBe(1);
     expect(h.headers[0]?.get("if-none-match")).toBeNull();
     h.calls.length = 0;
-    h.clock.advance(23 * 3_600_000);
+    h.clock.advance(2 * 3_600_000);
     const skipped = await h.run("players");
     expect(skipped).toMatchObject({ status: "skipped", rowsChanged: 0, calls: 0 });
     expect(h.calls).toEqual([]);
-    h.clock.advance(2 * 3_600_000);
+    h.clock.advance(21 * 3_600_000 + 50 * 60_000); // 23h50m since the first fetch
     const again = await h.run("players");
     expect(again.calls).toBe(1);
     expect(h.calls).toEqual(["/v1/players/nfl"]);

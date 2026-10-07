@@ -1,3 +1,5 @@
+import { upsertPlayers } from "@sideline/db";
+import type { Player } from "@sideline/shared";
 import { RateLimiter, createCallCounter } from "@sideline/sleeper";
 import type { NflverseProvider } from "@sideline/providers";
 import type { ScheduleGame } from "@sideline/shared";
@@ -91,7 +93,7 @@ describe("T1.5c nflverse job", () => {
         }) as unknown as NflverseProvider,
     });
     const res = await job.run(s.ctx);
-    expect(res.note).toBe("degraded: kaput");
+    expect(res.note).toMatch(/^degraded: kaput/);
   });
 
   it("failure does not stop other jobs, and the outcome is not failed", async () => {
@@ -170,5 +172,74 @@ describe("T1.5c nflverse job", () => {
       { id: "g1", k: "2026-10-16T00:00:00.000Z", a: 1 },
       { id: "g2", k: "2026-10-18T17:00:00.000Z", a: 1 },
     ]);
+  });
+});
+
+function allgeier(): Player {
+  return {
+    playerId: "9999",
+    fullName: "Tyler Allgeier",
+    firstName: "Tyler",
+    lastName: "Allgeier",
+    position: "RB",
+    fantasyPositions: ["RB"],
+    team: "ARI",
+    status: null,
+    injuryStatus: null,
+    injuryBodyPart: null,
+    active: true,
+    age: null,
+    yearsExp: null,
+    depthChartOrder: null,
+    searchRank: null,
+    gsisId: "00-0037263",
+    espnId: null,
+  };
+}
+
+const usageRows = (db: ReturnType<typeof tempDb>): number =>
+  (db.sqlite.prepare("SELECT COUNT(*) AS n FROM usage_week").get() as { n: number }).n;
+
+describe("FIX-SYNC-USAGE nflverse job persists usage_week", () => {
+  it("writes usage rows with expected values; a second run changes nothing", async () => {
+    const s = setup();
+    upsertPlayers(s.db, [allgeier()], s.clock.now().toISOString());
+    const job = nflverseJob({ fetch: createFixtureFetch() });
+    const first = await job.run(s.ctx);
+    expect(first.note).toMatch(/usage rows/);
+    expect(usageRows(s.db)).toBeGreaterThan(0);
+    const row = s.db.sqlite
+      .prepare(
+        "SELECT snap_pct AS snap, carries, target_share AS ts FROM usage_week WHERE player_id = '9999' AND season = 2026 AND week = 1",
+      )
+      .get() as { snap: number; carries: number; ts: number };
+    expect(row.snap).toBe(0.59);
+    expect(row.carries).toBe(17);
+    expect(row.ts).toBeCloseTo(0.0541, 3);
+    expect((await job.run(s.ctx)).rowsChanged).toBe(0);
+  });
+
+  it("usage failure warns and leaves the schedule sync succeeding", async () => {
+    const s = setup();
+    upsertPlayers(s.db, [allgeier()], s.clock.now().toISOString());
+    const warns: string[] = [];
+    const ctx = {
+      ...s.ctx,
+      logger: { ...silent, warn: (_o: unknown, m?: string) => void warns.push(String(m)) },
+    } as unknown as JobContext;
+    const real = createFixtureFetch();
+    const job = nflverseJob({
+      fetch: (input, init) =>
+        String(input).includes("stats_player")
+          ? Promise.reject(new Error("offline"))
+          : real(input, init),
+    });
+    const res = await job.run(ctx);
+    expect(res.status).toBeUndefined();
+    expect(res.rowsChanged).toBe(272);
+    expect(res.note).toMatch(/usage degraded/);
+    expect(count(s.db)).toBe(272);
+    expect(usageRows(s.db)).toBe(0);
+    expect(warns.some((m) => m.includes("usage degraded"))).toBe(true);
   });
 });
