@@ -300,6 +300,8 @@ describe("T1.5b players", () => {
     const first = await h.run("players");
     expect(first.calls).toBe(1);
     expect(h.headers[0]?.get("if-none-match")).toBeNull();
+    // A stored ESPN id keeps the guard in force (no ids at all would bypass it).
+    h.db.sqlite.prepare("UPDATE players SET espn_id = '123' WHERE player_id = 'r1'").run();
     h.calls.length = 0;
     h.clock.advance(2 * 3_600_000);
     const skipped = await h.run("players");
@@ -310,6 +312,22 @@ describe("T1.5b players", () => {
     expect(again.calls).toBe(1);
     expect(h.calls).toEqual(["/v1/players/nfl"]);
     expect(h.headers.at(-1)?.get("if-none-match")).toBeNull();
+  });
+
+  it("refetches inside the 20h guard when no stored player has an ESPN id, skips when one does", async () => {
+    const h = harness();
+    await h.run("players");
+    h.calls.length = 0;
+    h.clock.advance(2 * 3_600_000);
+    const bypass = await h.run("players");
+    expect(bypass.calls).toBe(1);
+    expect(h.calls).toEqual(["/v1/players/nfl"]);
+    h.db.sqlite.prepare("UPDATE players SET espn_id = '123' WHERE player_id = 'r1'").run();
+    h.calls.length = 0;
+    h.clock.advance(2 * 3_600_000);
+    const skipped = await h.run("players");
+    expect(skipped).toMatchObject({ status: "skipped", calls: 0 });
+    expect(h.calls).toEqual([]);
   });
 
   it("warns when a fantasy position drops past the threshold and not below it", async () => {

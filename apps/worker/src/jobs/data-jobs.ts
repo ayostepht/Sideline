@@ -53,7 +53,17 @@ export function playersJob(deps: SleeperJobDeps): Job {
     async run(ctx) {
       const last = readPlayersFetchedAt(ctx.db);
       if (last !== null && ctx.now().getTime() - Date.parse(last) < PLAYERS_MIN_INTERVAL_MS) {
-        return { rowsChanged: 0, status: "skipped", note: `players fetched at ${last}` };
+        // TODO(NEWS-IDS-3): use countPlayersWithEspnId
+        const c = ctx.db.sqlite
+          .prepare("SELECT COUNT(*) AS players, COUNT(espn_id) AS withEspnId FROM players")
+          .get() as { players: number; withEspnId: number };
+        if (c.players === 0 || c.withEspnId > 0) {
+          return { rowsChanged: 0, status: "skipped", note: `players fetched at ${last}` };
+        }
+        ctx.logger.info(
+          { last, players: c.players },
+          "players: refetching inside the guard window because no stored player has an ESPN id",
+        );
       }
       const client = makeClient(ctx, deps);
       checkAbort(ctx);
