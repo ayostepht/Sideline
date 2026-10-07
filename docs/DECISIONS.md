@@ -27,6 +27,7 @@ Read this list at session start. Open a full ADR below only when a task touches 
 - **Phase 6 plan (ADR-017):** T6.1 (auth HOST-8 plus security headers plus structured logging, backend-engineer, `apps/web/middleware.ts` plus `lib/server`) stays one task; its login PAGE is split out as T6.1c (frontend-engineer, ownership: `apps/web/app/` non-api pages belong to frontend, depends on T6.1's API contract). T6.3 splits into T6.3a (PWA manifest/icons), T6.3b (preseason/offseason states), T6.3c (League UX polish: desktop density, "You" markers, pluralization). Batch A: T6.1, T6.2 (Docker/self-hosting), T6.3a. Batch B: T6.1c, T6.3b, T6.3c. Batch C (unchanged from PLAN): T6.4/T6.5/T6.6 in parallel. Batch D: T6.7 fix round, skipped (Batch C returned zero Blocker/Major findings). G6 keeps its human checkpoint (release approval before tagging `v1.0.0`) regardless of how autonomously the rest of the phase runs.
 - **Game clock (ADR-019):** football "now" (locks, freshness, matchup, waivers, players) comes from `gameNow()`, overridable only by env `SIDELINE_GAME_CLOCK` (strict ISO UTC, validated at boot). Auth, sessions, rate limits, sync timestamps, health heartbeat and logs always use real time. e2e pins it to the fixture time 2026-10-02T12:00:00Z.
 - **Player card (ADR-020):** pop-up via intercepting route with its own URL; headshots from sleepercdn.com in the browser (CSP img-src); news from ESPN's unofficial feed, worker-only, zod-validated, degrades to "No recent news". Tasks P7.1..P7.10. No `@modal` catch-all route (endless prefetch loop on Next 16.3.8).
+- **Player id crosswalk (ADR-021):** missing `players.espn_id` values are filled daily from DynastyProcess's public `db_playerids.csv` (job `player_ids`); never overwrites a Sleeper-provided id; conflicting duplicates are dropped. RotoWire notes from ESPN's feed are `player_news.kind='note'` and lead the card.
 
 ## ADR-000: Process, privacy, and ownership decisions for Phase 0
 
@@ -502,3 +503,19 @@ Numbering note: written on `phase/7-player-card` as ADR-019 while FIX-CLOCK took
 **Consequences:** a new external dependency that may break without notice; it is isolated behind zod and degrades quietly. News freshness depends on the worker cadence.
 
 **Amendment (2026-10-06, P7.8c):** no `@modal/[...catchAll]` route. With it, Next 16.3.8 re-prefetched linked routes in an endless loop (pages never reached network idle). `PlayerModal` instead renders nothing once the pathname is no longer a player path. `PlayerLink` uses `prefetch={false}` so long player lists don't prefetch one route per name. Revisit if Next changes parallel-route soft-navigation behavior.
+
+## ADR-021: ESPN id crosswalk from DynastyProcess; RotoWire notes lead the news
+
+Date: 2026-10-07
+
+**Context.** After v1.2.0, Steph's live server showed news only for a few players. Sleeper's `/players/nfl` has `espn_id` for 6,736 of 12,229 players, and for only 46 of the 155 players rostered in her league (most newer players are blank). Separately, ESPN's per-player feed carries RotoWire notes (`type: "Rotowire"`): a news line plus fantasy analysis, the same content Sleeper shows in-app. Steph asked for that kind of blurb and chose ESPN's text over an LLM summary for now (an opt-in AI weekly outlook will be explored later).
+
+**Decision**
+
+1. **RotoWire notes.** Store ESPN items as `player_news.kind` `note` or `article` (migration 0004). Notes keep up to 1500 chars of analysis. A stored note is never downgraded by a later article upsert. The card leads with the newest note as a "Latest" block (NEWS-KIND-1..3, NEWS-UI, NEWS-UI-2).
+2. **Id crosswalk.** A new daily worker job `player_ids` downloads `https://raw.githubusercontent.com/dynastyprocess/data/master/files/db_playerids.csv` (free, public GitHub, about 2 to 3 MB, cached 24h in DATA_DIR) and fills only null `players.espn_id` values. It never overwrites a Sleeper id. A sleeper_id mapped to two different espn ids is dropped with a warning. The daily players upsert keeps filled ids (`keepIfNull`). A live check covered all 144 non-DEF rostered players, with zero conflicts against Sleeper's ids.
+3. **Players guard.** The `/players/nfl` guard is 20h (not 24h) so the daily cron can't skip alternate days. It is bypassed when players are stored but none has an ESPN id (an upgrade from a version that predates the column).
+
+**Alternatives considered:** ESPN athlete search by name (fragile, many calls); nflverse players file (sparser Sleeper ids); name matching against ESPN feed athletes (collisions).
+
+**Consequences:** a second unofficial external source. It is isolated behind zod and the asset cache, and a failure leaves ids as they were. Team defenses get no news (ESPN has none for them).
