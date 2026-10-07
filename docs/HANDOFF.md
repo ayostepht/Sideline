@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/6-hardening` merged to `main`, tagged both `gate-G6` and `v1.0.0` (commit `fd56f10`). All six phases of PLAN.md are now shipped. Remote: `origin` is https://github.com/ayostepht/Sideline (public). Steph pushes; the orchestrator does not push unless asked.
+Last updated: 2026-10-06. **v1.1.0 released** (player card, Phase 7a, ADR-020; plus FIX-CLOCK, ADR-019). `phase/7-player-card` merged to `main` (`b153b3d`) and pushed with tag `v1.1.0`. Earlier: v1.0.0 (G6) and v1.0.1. Remote: `origin` is https://github.com/ayostepht/Sideline (public).
 
 **This is a clean point to `/clear`.** Phase 7 (P1 backlog) planning is the natural next step, but has not started -- do not begin it without Steph's go-ahead, since this is new scope beyond what she's approved so far.
 
@@ -30,15 +30,14 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- **Phase 7a player card (ADR-020), branch `phase/7-player-card`.** All tasks done through P7.8d `3ee5490`. Fix-round re-review (`docs/reviews/2026-10-06-p7-fixround-code.md`) found one Major test gap; P7.9 `cada111` added PLAYERCARD-15..20; PLAYERCARD-19 exposed a focus bug (leaving an open pop-up by soft navigation drops focus to body). P7.10 frontend fix in flight. Then present to Steph; merge to main is her call.
-- **Dev servers are STOPPED** for P7.10 (port 3000). Restart `pnpm dev:lan` and `pnpm dev:worker` (logs in /tmp/sideline-*-dev.log) when it reports.
-- **Blocker for P7.7, waiting on Steph:** pre-existing e2e clock time bomb (PROGRESS "Found during Phase 7a"). Asked whether the existing `fix/e2e-clock` worktree is hers/another session's, or whether to fix it here.
-- Dev worker restarted 2026-10-06 after P7.5 (migration 0002 applied). espn_ids fill on the next daily players sync.
+- Nothing. Phase 7a (player card, ADR-020) done: every player name opens a pop-up (intercepting route, own URL), team under names, headshots from sleepercdn, a week-by-week table, ESPN news via the worker (`player_news`, `player_news_fetches`, migrations 0002 and 0003). History: `docs/archive/progress-phase7a.md`; reviews `docs/reviews/2026-10-06-p7-*`. Merge resolution: FIX-CLOCK kept ADR-019, the player card became ADR-020 (branch commits say ADR-019).
+- Merged main: `pnpm verify` 1586 passed; full e2e 465 passed (LINEUP-FLOW-5 green via the pinned game clock).
+- News on real data appears after the next daily `/players/nfl` sync fills `players.espn_id`.
 
 ## 4. Next steps (in order)
 
-1. **Unraid deploy in progress (2026-10-06).** Repo is public at github.com/ayostepht/Sideline; CI publishes `ghcr.io/ayostepht/sideline`. Template fixed [OPS-1]. Steph's to-dos: set the GHCR package Public, push the template commit and the `v1.0.0` tag, install via `my-sideline.xml`. No APP_PASSWORD: it sits behind NPM + Authentik.
-2. **Phase 7 (P1 backlog) planning is the natural next step**, per PLAN.md section 9's suggested order: notifications (Home Assistant webhook first, then ntfy and Discord), trade analyzer and finder, Auto lineup mode, weekly backtest job, league history, weather, offline caching, "view as team." Each follows the same brief/verify/review cycle and ends with a mini-gate. **Do not start Phase 7 without Steph's explicit go-ahead** -- PLAN.md only has a suggested feature order, not a task table, so the first real step is planning it (likely an Explore pass plus an ADR, same precedent as every prior phase).
+1. **Unraid deploy in progress (2026-10-06).** Repo is public at github.com/ayostepht/Sideline; CI publishes `ghcr.io/ayostepht/sideline`. Template fixed [OPS-1]. Steph's to-dos: set the GHCR package Public, install via `my-sideline.xml` (v1.1.0 is now the latest tag). No APP_PASSWORD: it sits behind NPM + Authentik.
+2. **Remaining Phase 7 (P1 backlog) planning is the natural next step** (7a player card is done), per PLAN.md section 9's suggested order: notifications (Home Assistant webhook first, then ntfy and Discord), trade analyzer and finder, Auto lineup mode, weekly backtest job, league history, weather, offline caching, "view as team." Each follows the same brief/verify/review cycle and ends with a mini-gate. **Do not start Phase 7 without Steph's explicit go-ahead** -- PLAN.md only has a suggested feature order, not a task table, so the first real step is planning it (likely an Explore pass plus an ADR, same precedent as every prior phase).
 3. Restarting `pnpm dev:lan`/`pnpm dev:worker` is no longer withheld -- both are running now at Steph's request. Stop them only for a gate-affecting run (section 2's standing lesson), and restart after.
 
 ## 5. Briefs
