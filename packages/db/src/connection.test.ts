@@ -36,6 +36,7 @@ const TABLES = [
   "matchups",
   "transactions",
   "schedule",
+  "game_weather",
   "usage_week",
   "trending",
   "sync_runs",

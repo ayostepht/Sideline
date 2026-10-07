@@ -15,4 +15,5 @@ export const EXPECTED_MIGRATIONS: readonly ExpectedMigration[] = [
   { tag: "0002_material_leader", when: 1791331056794 },
   { tag: "0003_illegal_omega_sentinel", when: 1791332889609 },
   { tag: "0004_lonely_maelstrom", when: 1791382107449 },
+  { tag: "0005_eager_nick_fury", when: 1791390315378 },
 ];

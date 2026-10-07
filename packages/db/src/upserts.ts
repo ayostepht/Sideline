@@ -463,11 +463,15 @@ const SCHEDULE: TableSpec = {
     "total_line",
     "home_score",
     "away_score",
+    "stadium_id",
   ],
   keys: ["season", "game_id"],
 };
 
-export function upsertSchedule(h: DbHandle, rows: readonly ScheduleGame[]): UpsertResult {
+/** A schedule row plus the optional nflverse stadium id (missing writes null). */
+export type ScheduleUpsertRow = ScheduleGame & { stadiumId?: string | null };
+
+export function upsertSchedule(h: DbHandle, rows: readonly ScheduleUpsertRow[]): UpsertResult {
   return runUpsert(h, SCHEDULE, rows, (g) => [
     g.season,
     g.week,
@@ -482,6 +486,63 @@ export function upsertSchedule(h: DbHandle, rows: readonly ScheduleGame[]): Upse
     g.totalLine,
     g.homeScore,
     g.awayScore,
+    g.stadiumId ?? null,
+  ]);
+}
+
+const GAME_WEATHER: TableSpec = {
+  table: "game_weather",
+  columns: [
+    "season",
+    "game_id",
+    "week",
+    "kickoff_utc",
+    "status",
+    "temperature_f",
+    "wind_mph",
+    "gust_mph",
+    "precip_probability",
+    "precip_type",
+    "fetched_at",
+    "updated_at",
+  ],
+  keys: ["season", "game_id"],
+  // A refetch with identical values is not a change (ADR-005).
+  volatile: ["fetched_at", "updated_at"],
+};
+
+export interface GameWeatherUpsertRow {
+  season: number;
+  week: number;
+  gameId: string;
+  kickoffUtc: string;
+  status: "forecast" | "indoors" | "unavailable";
+  temperatureF: number | null;
+  windMph: number | null;
+  gustMph: number | null;
+  precipProbability: number | null;
+  precipType: "none" | "rain" | "snow" | "mixed" | null;
+  fetchedAt: string | null;
+  updatedAt: string;
+}
+
+export function upsertGameWeather(
+  h: DbHandle,
+  rows: readonly GameWeatherUpsertRow[],
+): UpsertResult {
+  return runUpsert(h, GAME_WEATHER, rows, (w) => [
+    w.season,
+    w.gameId,
+    w.week,
+    w.kickoffUtc,
+    w.status,
+    w.temperatureF,
+    w.windMph,
+    w.gustMph,
+    w.precipProbability,
+    w.precipType,
+    w.fetchedAt,
+    w.updatedAt,
   ]);
 }
 

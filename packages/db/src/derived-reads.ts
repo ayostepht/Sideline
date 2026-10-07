@@ -6,11 +6,17 @@
  * T4.5b/T4.5c's waivers and players data functions (PLAN 4.5, ADR-015 T4.5a) so neither has to
  * depend on drizzle-orm or read tables directly.
  */
-import { and, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, eq, gt, gte, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
-import type { SeasonType } from "@sideline/shared";
+import {
+  GameWeatherSchema,
+  weatherFlags,
+  type GameWeather,
+  type SeasonType,
+} from "@sideline/shared";
 import type { DbHandle } from "./connection.js";
 import {
+  gameWeather,
   leagues,
   leaguePlayerWeekPoints,
   matchups,
@@ -778,4 +784,85 @@ export function readTeamSchedule(
     })),
     populatedWeeks: new Set(weekRows.map((r) => r.week)),
   };
+}
+
+export interface ScheduleWindowGame {
+  season: number;
+  week: number;
+  gameId: string;
+  kickoffUtc: string;
+  home: string;
+  away: string;
+  roof: string | null;
+  stadiumId: string | null;
+}
+
+/**
+ * Schedule rows with a known kickoff in `[fromUtc, toUtc]` (inclusive, ISO 8601 UTC strings), all
+ * roofs, ordered by kickoff. Despite the name the worker decides which are indoors (WX-2).
+ */
+export function readOutdoorGamesBetween(
+  h: DbHandle,
+  window: { fromUtc: string; toUtc: string },
+): ScheduleWindowGame[] {
+  const rows = h.db
+    .select({
+      season: schedule.season,
+      week: schedule.week,
+      gameId: schedule.gameId,
+      kickoffUtc: schedule.kickoffUtc,
+      home: schedule.home,
+      away: schedule.away,
+      roof: schedule.roof,
+      stadiumId: schedule.stadiumId,
+    })
+    .from(schedule)
+    .where(and(gte(schedule.kickoffUtc, window.fromUtc), lte(schedule.kickoffUtc, window.toUtc)))
+    .orderBy(asc(schedule.kickoffUtc), asc(schedule.gameId))
+    .all();
+  const out: ScheduleWindowGame[] = [];
+  for (const r of rows) {
+    if (r.kickoffUtc !== null) out.push({ ...r, kickoffUtc: r.kickoffUtc });
+  }
+  return out;
+}
+
+/** Stored forecasts for the given games, with `flags` derived from the shared thresholds. */
+export function readGameWeather(
+  h: DbHandle,
+  query: { season: number; gameIds: readonly string[] },
+): GameWeather[] {
+  if (query.gameIds.length === 0) return [];
+  const out: GameWeather[] = [];
+  for (let i = 0; i < query.gameIds.length; i += 500) {
+    const rows = h.db
+      .select()
+      .from(gameWeather)
+      .where(
+        and(
+          eq(gameWeather.season, query.season),
+          inArray(gameWeather.gameId, query.gameIds.slice(i, i + 500)),
+        ),
+      )
+      .all();
+    for (const r of rows) {
+      out.push(
+        GameWeatherSchema.parse({
+          season: r.season,
+          week: r.week,
+          gameId: r.gameId,
+          kickoffUtc: r.kickoffUtc,
+          status: r.status,
+          temperatureF: r.temperatureF,
+          windMph: r.windMph,
+          gustMph: r.gustMph,
+          precipProbability: r.precipProbability,
+          precipType: r.precipType,
+          flags: weatherFlags(r),
+          fetchedAt: r.fetchedAt,
+        }),
+      );
+    }
+  }
+  return out;
 }
