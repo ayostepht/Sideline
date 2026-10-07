@@ -32,6 +32,9 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 | P7b.6f | Open-Meteo HTTP 400 counts as a failure, not out of range (m4) | sleeper-data-engineer | 4 | P7b.6 | WX-1 | Done | 1 | 58c64ac |
 | P7b.9 | Server: weather reads joined into lineup reasons, next-opponents and matchup data; review m1 (`keepIfNull: ["stadium_id"]` in the SCHEDULE upsert spec) | backend-engineer | 4 | P7b.2, P7b.6 | WX-4, WX-5 | Done | 1 | 571ba04 |
 | P7b.10 | UI: Trades route and nav item (Analyzer and Finder tabs, mobile More sheet) | frontend-engineer | 4 | P7b.7 | TRADE-3..5 | Done | 1 | 8fc0ddb |
+| P7b.3f | Finder: exclude Lopsided, rank by the smaller gain (ADR-022 7a, UX M1); surplus-position give pool (m4); dedupe perf assertion (m5) | analytics-engineer | 4c | P7b.3 | TRADE-2, TRADE-4 | In progress | 0 | |
+| P7b.7g | Trades cold-load: measure and fix the server path; batched roster read (UX M3, code m4) | backend-engineer | 4c | P7b.7f | TRADE-4 | In progress | 0 | |
+| P7b.10f | Trades and Auto UX fixes: touch popovers, 44px targets, Suspense streaming, before/after grid, selection chips, card actions (UX M1-M3, m1-m4; code m5, n1) | frontend-engineer | 4c | P7b.10 | TRADE-3..5, AUTO-1 | In progress | 0 | |
 | P7b.11 | UI: weather chips on Lineup, player card Next opponents, Matchup | frontend-engineer | 5 | P7b.9 | WX-4, WX-5 | Planned | 0 | |
 | P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Planned | 0 | |
 
