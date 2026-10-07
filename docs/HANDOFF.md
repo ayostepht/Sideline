@@ -40,7 +40,15 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
 - Batch 4 code review: APPROVE (minors in the backlog). UX review: CHANGES REQUIRED, 3 Majors (`docs/reviews/2026-10-07-p7b-batch4-ux.md`). ADR-022 item 7a amends the finder ranking: exclude Lopsided, rank by the smaller gain. **Tell Steph about 7a; she may overrule.**
 - **Batch 4c done**: P7b.3f `2f594b5`, P7b.7g `5e8d30b`, P7b.10f `552d802`. Verify 1788 passed.
 - Done since Batch 4c: Trades UX re-check APPROVE (`docs/reviews/2026-10-07-p7b-batch4-ux-recheck.md`), P7b.13 `43e8f14` and P7b.13b `b0f67ad` (`fixtures:check` now passes), P7b.3g `07c6b36`, P7b.11 `bf3a290` (weather chips, verified on the gallery only).
-- **In flight:** P7b.9f (backend: fixture weather rows exist, e.g. week 4 `2026_04_NYJ_CHI` wind 21, and roster 1 starts NYJ, BUF, CIN and MIN players, but nothing renders) and P7b.14 (frontend: Players detail 220,112 B is over the 204,800 B hard cap). Then P7b.12 (qa e2e and a11y), the Batch 5 code and UX reviews, and the combined mini-gate (stop dev servers first).
+- P7b.9f `188e6fe`: no server bug (stale build plus unpinned screens clock); regression test added. **In flight:** P7b.14 (frontend, Players detail over the hard JS cap) and P7b.13c (devops, pin `SIDELINE_GAME_CLOCK` in `pnpm screens` and detect stale builds). Then P7b.12 (qa), the Batch 5 code and UX reviews, and the combined mini-gate (stop dev servers first).
+- **Weather e2e facts for P7b.12** (fixture DB, clock pinned at 2026-10-02T12:00:00Z, roster 1, week 4):
+  - NYJ 11576, 12517, 13330 in `2026_04_NYJ_CHI`: wind flag, "Wind 21 mph".
+  - BUF 4983 in `2026_04_NE_BUF`: precip, "Rain likely (80%)".
+  - JAX/CIN 12490, 9224 in `2026_04_JAX_CIN`: cold, "Cold: 21°F".
+  - MIN 11792, 5849, DEF "MIN" in `2026_04_MIA_MIN`: indoors, no chips.
+  - DAL 3294, 8137 and DET 11646, 7547: forecast with no flags, no chips.
+  - `/players/4046` (KC, `2026_04_KC_LV`): Indoors in Next opponents.
+  - `2026_04_LA_PHI` is unavailable; no roster 1 player is in it.
 - Before that, Planning committed on `phase/7b-selective` (ADR-022, PLAN.md 5.4 AUTO-1, 5.9 TRADE-3..5, new 5.10 WX-1..5, section 8 multi-user, PROGRESS.md "Phase 7b task table"). Baseline `pnpm verify` on 2026-10-07: 1638 passed.
 
 ## 4. Next steps (in order)
