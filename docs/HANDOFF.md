@@ -30,8 +30,8 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** All tasks done through P7.8d `3ee5490` (focus race fixed; PLAYERCARD-3 990/990). `pnpm verify` green (1563 tests). Only known e2e failure: LINEUP-FLOW-5 (pre-existing clock issue). In flight: final code re-review of 08c76f6..3ee5490. Then present to Steph; merge to main is her call.
-- Dev servers restarted after P7.8d (`pnpm dev:lan`, `pnpm dev:worker`).
+- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** All tasks done through P7.8d `3ee5490`. Fix-round re-review (`docs/reviews/2026-10-06-p7-fixround-code.md`) found one Major test gap; P7.9 qa in flight (Back/Forward, second player from pop-up, leave via link, focus on open). If P7.9 finds an app bug, send it to frontend-engineer with the repro. Then present to Steph; merge to main is her call.
+- **Dev servers are STOPPED** for P7.9 (port 3000). Restart `pnpm dev:lan` and `pnpm dev:worker` (logs in /tmp/sideline-*-dev.log) when it reports.
 - **Blocker for P7.7, waiting on Steph:** pre-existing e2e clock time bomb (PROGRESS "Found during Phase 7a"). Asked whether the existing `fix/e2e-clock` worktree is hers/another session's, or whether to fix it here.
 - Dev worker restarted 2026-10-06 after P7.5 (migration 0002 applied). espn_ids fill on the next daily players sync.
 
