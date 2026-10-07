@@ -139,6 +139,49 @@ export const PlayerMomentumSchema = z.strictObject({
 });
 export type PlayerMomentum = z.infer<typeof PlayerMomentumSchema>;
 
+/** P7.4: one row of the player pop-up's weekly table, newest week first. */
+export const PlayerWeekRowSchema = z.strictObject({
+  week: z.number().int(),
+  /** Opponent team abbreviation; null on a bye or when the schedule is unknown. */
+  opponent: z.string().nullable(),
+  /** Null on a bye or when the schedule is unknown. */
+  isHome: z.boolean().nullable(),
+  isBye: z.boolean(),
+  /** League-scored points; null means no stats that week (did not play). */
+  actualPts: z.number().nullable(),
+  /** League-scored projection from the stored pre-kickoff snapshot; null when none. */
+  projectedPts: z.number().nullable(),
+  /** Rank at the player's position league-wide that week (1 = best); null without stats. */
+  positionRank: z.number().int().nullable(),
+  isBoom: z.boolean(),
+  isBust: z.boolean(),
+  /** True for the current week when it has partial stats. */
+  inProgress: z.boolean(),
+});
+export type PlayerWeekRow = z.infer<typeof PlayerWeekRowSchema>;
+
+export const PlayerNewsItemSchema = z.strictObject({
+  id: z.string(),
+  headline: z.string(),
+  summary: z.string().nullable(),
+  /** http(s) only; anything else is mapped to null server-side. */
+  url: z.string().nullable(),
+  source: z.string(),
+  publishedAt: z.string(),
+});
+export type PlayerNewsItem = z.infer<typeof PlayerNewsItemSchema>;
+
+export const PlayerNewsSchema = z.strictObject({
+  items: z.array(PlayerNewsItemSchema),
+  /** Latest fetch time of any stored news for this player; null when never fetched. */
+  lastFetchedAt: z.string().nullable(),
+});
+export type PlayerNews = z.infer<typeof PlayerNewsSchema>;
+
+/** Response of POST /api/l/[leagueId]/players/[playerId]/news/refresh (HTTP 202). */
+export const PlayerNewsRefreshResponseSchema = z.strictObject({ queued: z.boolean() });
+export type PlayerNewsRefreshResponse = z.infer<typeof PlayerNewsRefreshResponseSchema>;
+
 export const PlayerDetailResponseSchema = z.strictObject({
   playerId: z.string(),
   name: z.string(),
@@ -157,5 +200,11 @@ export const PlayerDetailResponseSchema = z.strictObject({
   signalReasons: z.array(ReasonSchema),
   momentum: PlayerMomentumSchema,
   freshness: FreshnessSchema,
+  /** P7.4 (optional in the type so existing literals compile; the server always sets all three).
+   * Headshot URL from `playerHeadshotUrl`, null for a DEF without a team. */
+  headshotUrl: z.string().nullable().optional(),
+  /** Weeks 1 through the latest completed week (plus the current week if it has stats), newest first. */
+  weekly: z.array(PlayerWeekRowSchema).optional(),
+  news: PlayerNewsSchema.optional(),
 });
 export type PlayerDetailResponse = z.infer<typeof PlayerDetailResponseSchema>;

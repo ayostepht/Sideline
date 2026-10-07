@@ -293,6 +293,8 @@ export function getMatchup(
       name: nameOf.get(s.playerId) ?? s.playerId,
       rosterId: Number(s.rosterId),
       varianceContribution: s.varianceContribution,
+      nflTeam: teamOf.get(s.playerId) ?? null,
+      position: positionOf.get(s.playerId) ?? null,
     })),
     freshness: computeFreshness(
       lastSuccessAt(h, "rosters"),

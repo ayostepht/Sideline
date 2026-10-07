@@ -170,6 +170,16 @@ export function readPlayerNews(
     .all();
 }
 
+/** Latest `fetched_at` over all stored news for a player; null when none. Uses `player_news_player_idx`. */
+export function readPlayerNewsLastFetchedAt(h: DbHandle, playerId: string): string | null {
+  const row = h.db
+    .select({ m: sql<string | null>`max(${playerNews.fetchedAt})` })
+    .from(playerNews)
+    .where(eq(playerNews.playerId, playerId))
+    .get();
+  return row?.m ?? null;
+}
+
 /** player_id to ESPN id for players with a non-null ESPN id; all players when `playerIds` is omitted. */
 export function readPlayerEspnIds(h: DbHandle, playerIds?: readonly string[]): Map<string, string> {
   const out = new Map<string, string>();

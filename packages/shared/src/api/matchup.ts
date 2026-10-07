@@ -28,6 +28,9 @@ export const MatchupSwingPlayerSchema = z.strictObject({
   name: z.string(),
   rosterId: z.number().int(),
   varianceContribution: z.number(),
+  /** P7.4 (optional in the type so existing literals compile; the server always sets both). */
+  nflTeam: z.string().nullable().optional(),
+  position: z.string().nullable().optional(),
 });
 export type MatchupSwingPlayer = z.infer<typeof MatchupSwingPlayerSchema>;
 
