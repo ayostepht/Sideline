@@ -27,6 +27,7 @@ import {
   usageEmptyMessage,
   USAGE_FIELD_LABEL,
 } from "./format";
+import { NextOpponentsBody } from "./next-opponents";
 import { NewsSection } from "./news-section";
 import { WeeklyTable } from "./weekly-table";
 
@@ -263,9 +264,7 @@ export function PlayerDetailView({
       </Section>
 
       <Section id="opponents" title="Next opponents">
-        <p className="text-sm text-muted-foreground">
-          Matchup grades for upcoming opponents aren't available yet.
-        </p>
+        <NextOpponentsBody nextOpponents={player.nextOpponents} position={player.position} />
       </Section>
     </div>
   );

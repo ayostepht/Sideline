@@ -23,6 +23,7 @@ const JOB_LABELS: Record<string, string> = {
   projections: "Projections",
   backfill_2025: "Last season history",
   nflverse: "Extra NFL data",
+  player_ids: "Player ID links",
 };
 
 type JobState = "running" | "failed" | "never" | "stale" | "ok";
