@@ -1,10 +1,30 @@
 "use client";
 
 import { useParams, usePathname, useRouter } from "next/navigation";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { isPlayerDetailPath } from "../lib/client/nav";
-import { isModalMounted, restoreTriggerFocus, trackModalMount } from "../lib/client/focus-return";
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
+import { trackModalMount } from "../lib/client/focus-return";
+
+type Impl = typeof import("./player-modal-impl");
+
+let loaded: Impl | undefined;
+
+/** Loads the Radix dialog code after hydration so it stays out of every route's first load. */
+function useImpl(enabled: boolean): Impl | undefined {
+  const [impl, setImpl] = useState<Impl | undefined>(() => loaded);
+  useEffect(() => {
+    if (!enabled || impl) return;
+    let live = true;
+    void import("./player-modal-impl").then((m) => {
+      loaded = m;
+      if (live) setImpl(m);
+    });
+    return () => {
+      live = false;
+    };
+  }, [enabled, impl]);
+  return impl;
+}
 
 /**
  * Pop-up shell for the intercepted player route. Bottom sheet on phones, centered dialog from 768px.
@@ -30,30 +50,20 @@ export function PlayerModal({
     trackModalMount(true);
     return () => trackModalMount(false);
   }, [visible]);
-  if (!visible) return null;
+  const impl = useImpl(visible);
+  if (!visible || !impl) return null;
   return (
-    <Dialog open onOpenChange={(open) => !open && router.back()}>
-      <DialogContent
-        data-testid="player-modal"
-        aria-describedby={undefined}
-        onCloseAutoFocus={(e) => {
-          // The loading pop-up hands over to the loaded one: that is not a close, keep the trigger.
-          if (isModalMounted()) {
-            e.preventDefault();
-            return;
-          }
-          if (restoreTriggerFocus()) e.preventDefault();
-        }}
-        className="inset-x-0 bottom-0 top-auto flex max-h-[92dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col overflow-y-auto rounded-b-none p-4 pt-12 md:inset-auto md:left-1/2 md:top-1/2 md:max-h-[85dvh] md:max-w-[720px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-b-card md:p-5 md:pt-12"
-      >
-        {loadingLabel ? (
-          <>
-            <DialogTitle className="sr-only">{loadingLabel}</DialogTitle>
-            <DialogDescription className="sr-only">Loading</DialogDescription>
-          </>
-        ) : null}
-        {children}
-      </DialogContent>
-    </Dialog>
+    <impl.PlayerModalImpl loadingLabel={loadingLabel} onClose={() => router.back()}>
+      {children}
+    </impl.PlayerModalImpl>
   );
+}
+
+/** The player name heading for the pop-up. Plain heading until the dialog code has loaded. */
+export function PlayerModalTitle({ children }: { children: ReactNode }) {
+  const impl = useImpl(true);
+  if (!impl) {
+    return <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight">{children}</h1>;
+  }
+  return <impl.PlayerModalTitle>{children}</impl.PlayerModalTitle>;
 }

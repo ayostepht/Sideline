@@ -1,7 +1,7 @@
 import type { GameWeather, Reason } from "@sideline/shared";
-import { WEATHER_THRESHOLDS } from "@sideline/shared";
 import { CloudRain, Info, CloudSnow, Home, Snowflake, Thermometer, Wind } from "lucide-react";
 import { cn } from "../lib/client/cn";
+import { CLIENT_WEATHER_THRESHOLDS } from "../lib/client/weather-thresholds";
 
 export const WEATHER_NOTE = "Weather is for context. It does not change projections.";
 
@@ -34,10 +34,10 @@ export function weatherChipsFromWeather(w: GameWeather | null | undefined): Weat
   if (!w || w.status !== "forecast") return [];
   const out: WeatherChipData[] = [];
   if (w.flags.includes("wind")) {
-    if (w.windMph !== null && w.windMph >= WEATHER_THRESHOLDS.windMph) {
+    if (w.windMph !== null && w.windMph >= CLIENT_WEATHER_THRESHOLDS.windMph) {
       out.push({ kind: "wind", label: `Wind ${Math.round(w.windMph)} mph` });
     }
-    if (w.gustMph !== null && w.gustMph >= WEATHER_THRESHOLDS.gustMph) {
+    if (w.gustMph !== null && w.gustMph >= CLIENT_WEATHER_THRESHOLDS.gustMph) {
       out.push({ kind: "wind", label: `Gusts ${Math.round(w.gustMph)} mph` });
     }
   }

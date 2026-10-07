@@ -2,18 +2,19 @@
 
 import type { Reason } from "@sideline/shared";
 import { ArrowDown, ArrowUp, HelpCircle } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useState,
+  type ComponentType,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { cn } from "../lib/client/cn";
 import { formatImpact, formatProjectedPoints, formatReasonValue } from "./reason-format";
 import { Button } from "./ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "./ui/sheet";
 
 export interface WhyBodyProps {
   summary?: { label: string; value: string | number } | undefined;
@@ -85,46 +86,42 @@ export interface WhySheetProps extends WhyBodyProps {
   defaultOpen?: boolean;
 }
 
-export function WhySheet({
-  title,
-  summary,
-  reasons,
-  trigger,
-  open,
-  onOpenChange,
-  defaultOpen,
-}: WhySheetProps) {
-  const [inner, setInner] = useState(defaultOpen ?? false);
-  const descId = useId();
-  const isOpen = open ?? inner;
-  return (
-    <Sheet
-      open={isOpen}
-      onOpenChange={(o) => {
-        setInner(o);
-        onOpenChange?.(o);
-      }}
-    >
-      <SheetTrigger asChild>
-        {trigger ?? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-h-11 gap-1 px-2"
-            data-testid="why-trigger"
-          >
-            <HelpCircle className="size-4" aria-hidden />
-            Why?
-          </Button>
-        )}
-      </SheetTrigger>
-      <SheetContent aria-describedby={descId} data-testid="why-sheet">
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription id={descId}>The numbers behind this pick.</SheetDescription>
-        </SheetHeader>
-        <WhyBody summary={summary} reasons={reasons} />
-      </SheetContent>
-    </Sheet>
-  );
+let loaded: ComponentType<WhySheetProps> | undefined;
+
+const DEFAULT_TRIGGER = (
+  <Button variant="ghost" size="sm" className="min-h-11 gap-1 px-2" data-testid="why-trigger">
+    <HelpCircle className="size-4" aria-hidden />
+    Why?
+  </Button>
+);
+
+/**
+ * The sheet code (Radix dialog) loads after hydration to keep route JS small. Until then the
+ * trigger renders as a plain button; a tap before the code arrives opens the sheet on load.
+ */
+export function WhySheet(props: WhySheetProps) {
+  const [Impl, setImpl] = useState<ComponentType<WhySheetProps> | undefined>(() => loaded);
+  const [tapped, setTapped] = useState(false);
+  useEffect(() => {
+    if (Impl) return;
+    let live = true;
+    void import("./why-sheet-impl").then((m) => {
+      loaded = m.default;
+      if (live) setImpl(() => m.default);
+    });
+    return () => {
+      live = false;
+    };
+  }, [Impl]);
+  if (Impl) return <Impl {...props} defaultOpen={props.defaultOpen === true || tapped} />;
+  const onTap = (e: MouseEvent): void => {
+    e.preventDefault();
+    setTapped(true);
+  };
+  const trigger = props.trigger ?? DEFAULT_TRIGGER;
+  return isValidElement(trigger)
+    ? cloneElement(trigger as ReactElement<{ onClick?: (e: MouseEvent) => void }>, {
+        onClick: onTap,
+      })
+    : trigger;
 }
