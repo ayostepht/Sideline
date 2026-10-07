@@ -117,3 +117,31 @@ describe("whole pipeline output", () => {
     }
   });
 });
+
+describe("findLeaks ADR-018 URL handles and images", () => {
+  const FAKE = "zed";
+  const fakeIds = collectIdentifiers(syntheticRaw(), REAL.leagueId, { names: [FAKE] });
+  const opts = { urlHandles: [FAKE] };
+
+  it("allows the handle inside github, raw.githubusercontent and ghcr URLs", () => {
+    const text = [
+      "https://GitHub.com/zed/repo",
+      "https://raw.githubusercontent.com/Zed/repo/main/x",
+      "ghcr.io/ZED/sideline",
+    ].join("\n");
+    expect(findLeaks([{ path: "README.md", text }], fakeIds, opts)).toEqual([]);
+  });
+
+  it("flags the handle elsewhere in text, and without the option", () => {
+    const text = "see github.com/zed/repo\nowner: zed";
+    expect(findLeaks([{ path: "a.md", text }], fakeIds, opts)).toHaveLength(1);
+    expect(findLeaks([{ path: "a.md", text: "github.com/zed/repo" }], fakeIds)).toHaveLength(1);
+  });
+
+  it("does not match image bytes, but still checks the image path", () => {
+    const bytes = Buffer.from([0x89, 0x50, 0x20, 0x7a, 0x65, 0x64, 0x20, 0x01]).toString("utf8");
+    expect(findLeaks([{ path: "s/shot.png", text: bytes }], fakeIds, opts)).toEqual([]);
+    expect(findLeaks([{ path: "s/zed.png", text: bytes }], fakeIds, opts)).toHaveLength(1);
+    expect(findLeaks([{ path: "s/shot.txt", text: bytes }], fakeIds, opts)).toHaveLength(1);
+  });
+});
