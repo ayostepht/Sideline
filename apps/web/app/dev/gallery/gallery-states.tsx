@@ -1,3 +1,4 @@
+import type { GameWeather } from "@sideline/shared";
 import { Inbox, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { DataFreshness } from "../../../components/data-freshness";
@@ -13,9 +14,29 @@ import { Sparkline } from "../../../components/sparkline";
 import { StaleBanner } from "../../../components/stale-banner";
 import { Button } from "../../../components/ui/button";
 import { Card } from "../../../components/ui/card";
+import { WeatherChips, WeatherLine } from "../../../components/weather";
+import { WeatherInfo } from "../../../components/weather-info";
 import { WhyBody } from "../../../components/why-sheet";
 import { Section } from "./gallery-core";
 import { ago, FEW_REASONS, GALLERY_NOW, MANY_REASONS } from "./gallery-data";
+
+function gw(p: Partial<GameWeather>): GameWeather {
+  return {
+    season: 2026,
+    week: 5,
+    gameId: "g",
+    kickoffUtc: "2026-10-04T17:00:00.000Z",
+    status: "forecast",
+    temperatureF: null,
+    windMph: null,
+    gustMph: null,
+    precipProbability: null,
+    precipType: null,
+    flags: [],
+    fetchedAt: null,
+    ...p,
+  };
+}
 
 export function GalleryStates() {
   return (
@@ -33,6 +54,58 @@ export function GalleryStates() {
           <ReasonChips reasons={FEW_REASONS} />
           <ReasonChips reasons={MANY_REASONS} />
           <ReasonChips reasons={MANY_REASONS} max={3} />
+        </div>
+      </Section>
+      <Section title="Weather chips and lines">
+        <div className="flex max-w-md flex-col gap-3" data-testid="gallery-weather">
+          <WeatherChips
+            chips={[
+              { kind: "wind", label: "Wind 18 mph" },
+              { kind: "wind", label: "Gusts 31 mph" },
+              { kind: "rain", label: "Rain likely (70%)" },
+              { kind: "snow", label: "Snow likely (60%)" },
+              { kind: "cold", label: "Cold: 21°F" },
+            ]}
+          />
+          <WeatherLine
+            weather={gw({
+              status: "forecast",
+              temperatureF: 54,
+              windMph: 18,
+              gustMph: 24,
+              precipProbability: 20,
+              precipType: "rain",
+              flags: ["wind"],
+            })}
+          />
+          <WeatherLine
+            weather={gw({
+              status: "forecast",
+              temperatureF: 31,
+              windMph: 6,
+              gustMph: 10,
+              precipProbability: 70,
+              precipType: "snow",
+              flags: ["precip"],
+            })}
+          />
+          <WeatherLine
+            weather={gw({
+              status: "forecast",
+              temperatureF: 21,
+              windMph: 8,
+              gustMph: 12,
+              precipProbability: 5,
+              precipType: "none",
+              flags: ["cold"],
+            })}
+          />
+          <WeatherLine weather={gw({ status: "indoors" })} />
+          <WeatherLine weather={gw({ status: "unavailable" })} />
+          <p className="flex items-center text-xs text-muted-foreground">
+            Null weather renders nothing. Explanation:
+            <WeatherInfo />
+          </p>
         </div>
       </Section>
       <Section title="WhySheet (static open preview)">

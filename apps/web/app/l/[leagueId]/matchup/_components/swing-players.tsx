@@ -2,6 +2,11 @@ import type { MatchupSwingPlayer } from "@sideline/shared";
 import { PlayerLink } from "../../../../../components/player-link";
 import { teamLabel } from "../../../../../components/team-label";
 import { Badge } from "../../../../../components/ui/badge";
+import {
+  WeatherChips,
+  WeatherNote,
+  weatherChipsFromWeather,
+} from "../../../../../components/weather";
 import { cn } from "../../../../../lib/client/cn";
 
 export interface SwingPlayersListProps {
@@ -36,6 +41,7 @@ function SwingPlayerRow({
   yours,
   opponentTeamName,
   swing,
+  weather,
 }: {
   playerId: string;
   name: string;
@@ -44,6 +50,7 @@ function SwingPlayerRow({
   yours: boolean;
   opponentTeamName: string;
   swing: string;
+  weather: MatchupSwingPlayer["weather"];
 }) {
   return (
     <div
@@ -66,6 +73,7 @@ function SwingPlayerRow({
         <Badge variant={yours ? "you" : "neutral"} className="w-fit">
           {yours ? "You" : opponentTeamName}
         </Badge>
+        <WeatherChips chips={weatherChipsFromWeather(weather)} className="relative" />
       </span>
       <span className="shrink-0 text-right">
         <span className="block text-base font-bold tabular-nums">±{swing}</span>
@@ -89,20 +97,30 @@ export function SwingPlayersList({
       </p>
     );
   }
+  const anyWeather = players.some((p) => weatherChipsFromWeather(p.weather).length > 0);
   return (
-    <ul className="flex flex-col gap-1" data-testid="matchup-swing-list">
-      {players.map((p) => (
-        <li key={p.playerId} data-testid="matchup-swing-row">
-          <SwingPlayerRow
-            playerId={p.playerId}
-            name={p.name}
-            team={p.nflTeam === undefined ? null : teamLabel(p.position, p.nflTeam)}
-            yours={p.rosterId === yourRosterId}
-            opponentTeamName={opponentTeamName}
-            swing={swingPts(p.varianceContribution)}
-          />
-        </li>
-      ))}
-    </ul>
+    <>
+      {anyWeather ? (
+        <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+          <span>Weather flags are shown for starters.</span>
+          <WeatherNote />
+        </div>
+      ) : null}
+      <ul className="flex flex-col gap-1" data-testid="matchup-swing-list">
+        {players.map((p) => (
+          <li key={p.playerId} data-testid="matchup-swing-row">
+            <SwingPlayerRow
+              playerId={p.playerId}
+              name={p.name}
+              team={p.nflTeam === undefined ? null : teamLabel(p.position, p.nflTeam)}
+              yours={p.rosterId === yourRosterId}
+              opponentTeamName={opponentTeamName}
+              swing={swingPts(p.varianceContribution)}
+              weather={p.weather}
+            />
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

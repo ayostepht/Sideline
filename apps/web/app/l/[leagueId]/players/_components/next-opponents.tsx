@@ -1,5 +1,6 @@
 import type { NextOpponents } from "@sideline/shared";
 import { Info } from "lucide-react";
+import { WeatherLine, WeatherNote } from "../../../../../components/weather";
 import { MatchupGrade } from "../../../../../components/matchup-grade";
 
 const EXPLAINER =
@@ -65,6 +66,11 @@ export function NextOpponentsBody({
                   : ""}
               </p>
             ) : null}
+            {!w.bye && w.weather ? (
+              <div className="col-start-2">
+                <WeatherLine weather={w.weather} />
+              </div>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -75,6 +81,12 @@ export function NextOpponentsBody({
         <Info className="mt-0.5 size-3.5 shrink-0" aria-hidden />
         <span>{EXPLAINER}</span>
       </p>
+      {nextOpponents.weeks.some((w) => !w.bye && w.weather) ? (
+        <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+          <span>Weather forecasts are shown for games with data.</span>
+          <WeatherNote />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,9 +1,13 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { Reason } from "@sideline/shared";
 import { cn } from "../lib/client/cn";
+import { kindFromLabel, WeatherChip } from "./weather";
 import { formatImpact, formatProjectedPoints, formatReasonValue } from "./reason-format";
 
 export function ReasonChip({ reason }: { reason: Reason }) {
+  if (reason.code === "WEATHER") {
+    return <WeatherChip kind={kindFromLabel(reason.label)} label={reason.label} />;
+  }
   const imp = formatImpact(reason.impact);
   const proj = formatProjectedPoints(reason.projectedPoints);
   const value = formatReasonValue(reason.value, reason.code);
