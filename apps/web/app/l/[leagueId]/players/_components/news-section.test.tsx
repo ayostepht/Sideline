@@ -66,32 +66,44 @@ describe("NewsSection", () => {
 });
 
 describe("LatestNote toggle", () => {
-  const long = "Long analysis. ".repeat(40);
   const now = new Date(NOW);
 
-  it("flips aria-expanded for long analysis", () => {
-    const collapsed = renderToStaticMarkup(<LatestNote item={note({ summary: long })} now={now} />);
+  it("renders no toggle when the text does not overflow", () => {
+    const html = renderToStaticMarkup(<LatestNote item={note()} now={now} />);
+    expect(html).not.toContain("aria-expanded");
+    expect(html).not.toContain("player-news-latest-toggle");
+  });
+
+  it("renders the toggle and flips aria-expanded when overflowing", () => {
+    const collapsed = renderToStaticMarkup(
+      <LatestNote item={note()} now={now} initialOverflowing />,
+    );
     expect(collapsed).toContain('aria-expanded="false"');
     expect(collapsed).toContain("Show more");
     expect(collapsed).toContain("line-clamp-4");
     const open = renderToStaticMarkup(
-      <LatestNote item={note({ summary: long })} now={now} defaultExpanded />,
+      <LatestNote item={note()} now={now} initialOverflowing defaultExpanded />,
     );
     expect(open).toContain('aria-expanded="true"');
     expect(open).toContain("Show less");
     expect(open).not.toContain("line-clamp-4");
   });
 
-  it("has no toggle for short analysis", () => {
+  it("uses the left rule, not a nested card", () => {
     const html = renderToStaticMarkup(<LatestNote item={note()} now={now} />);
-    expect(html).not.toContain("aria-expanded");
+    expect(html).toContain("border-l-2");
+    expect(html).toContain("sl-label");
+    expect(html).not.toContain("rounded-lg");
+    expect(html).not.toContain("bg-card");
   });
 
-  it("links to ESPN only when a url exists", () => {
+  it("links to ESPN only when a url exists, with headline context", () => {
+    expect(renderToStaticMarkup(<LatestNote item={note()} now={now} />)).not.toContain("<a ");
     const html = renderToStaticMarkup(
       <LatestNote item={note({ url: "https://espn.com/x" })} now={now} />,
     );
-    expect(html).toContain("Read on ESPN");
+    expect(html).toContain("Read full note on ESPN");
+    expect(html).toContain(": Hill (knee) practiced in full Wednesday.");
     expect(html).toContain("(opens in new tab)");
   });
 });

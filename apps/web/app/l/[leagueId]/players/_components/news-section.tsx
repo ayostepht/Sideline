@@ -3,16 +3,11 @@
 import type { PlayerNews, PlayerNewsItem } from "@sideline/shared";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import {
-  formatRelativeTime,
-  isLongAnalysis,
-  needsNewsRefresh,
-  pickLatestNote,
-} from "./player-card-format";
+import { formatRelativeTime, needsNewsRefresh, pickLatestNote } from "./player-card-format";
 
 const REFRESH_DELAY_MS = 8000;
 
-function ExternalLink({ url }: { url: string }) {
+function ExternalLink({ url, label, context }: { url: string; label: string; context?: string }) {
   return (
     <a
       href={url}
@@ -20,61 +15,98 @@ function ExternalLink({ url }: { url: string }) {
       rel="noopener noreferrer"
       className="inline-flex min-h-11 items-center text-xs text-link underline-offset-4 hover:underline"
     >
-      Read on ESPN
+      {label}
+      {context ? <span className="sr-only">: {context}</span> : null}
       <span className="sr-only"> (opens in new tab)</span>
     </a>
   );
 }
 
-/** The newest player note: the update, then what it means for fantasy. */
+function truncate(text: string, max = 80): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+/**
+ * The newest player note: the update, then what it means for fantasy.
+ * The Show more toggle appears only when the clamped text really overflows (measured).
+ */
 export function LatestNote({
   item,
   now,
   defaultExpanded = false,
+  initialOverflowing = false,
 }: {
   item: PlayerNewsItem;
   now: Date;
   defaultExpanded?: boolean;
+  /** Seed for the measured overflow state; lets tests render the overflowing case without a DOM. */
+  initialOverflowing?: boolean;
 }) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const long = isLongAnalysis(item.summary);
+  const [overflowing, setOverflowing] = useState(initialOverflowing);
+  const analysisRef = useRef<HTMLParagraphElement>(null);
   const time = formatRelativeTime(item.publishedAt, now);
+  const hasSummary = Boolean(item.summary);
+
+  useEffect(() => {
+    const el = analysisRef.current;
+    if (!el || !hasSummary) return;
+    // Only meaningful while clamped; when expanded keep the last measured answer.
+    const measure = () => {
+      if (el.classList.contains("line-clamp-4")) setOverflowing(el.scrollHeight > el.clientHeight);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hasSummary, expanded, item.summary]);
+
+  const showToggle = overflowing || expanded;
   return (
-    <div
-      className="flex flex-col gap-2 rounded-lg border bg-card p-3"
-      data-testid="player-news-latest"
-    >
-      <p className="text-xs font-medium text-muted-foreground">
-        <span className="uppercase tracking-wide text-foreground">Latest</span>
-        {time !== "" ? ` · ${time}` : ""}
-      </p>
-      <p className="break-words text-sm leading-6 text-foreground">{item.headline}</p>
-      {item.summary ? (
-        <>
-          <p
-            id={`news-analysis-${item.id}`}
-            className={`break-words text-sm leading-6 text-foreground ${
-              long && !expanded ? "line-clamp-4" : ""
-            }`}
-            data-testid="player-news-latest-analysis"
-          >
-            {item.summary}
-          </p>
-          {long ? (
-            <button
-              type="button"
-              aria-expanded={expanded}
-              aria-controls={`news-analysis-${item.id}`}
-              onClick={() => setExpanded((v) => !v)}
-              className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
-              data-testid="player-news-latest-toggle"
+    <div className="flex flex-col gap-2 border-b pb-2" data-testid="player-news-latest">
+      <div className="flex flex-col gap-1 border-l-2 border-foreground pl-3">
+        <p className="sl-label">
+          <span className="text-foreground">Latest</span>
+          {time !== "" ? ` · ${time}` : ""}
+        </p>
+        <p className="break-words text-sm font-semibold leading-6 text-foreground">
+          {item.headline}
+        </p>
+        {item.summary ? (
+          <>
+            <p
+              ref={analysisRef}
+              id={`news-analysis-${item.id}`}
+              className={`break-words text-sm leading-6 text-foreground ${
+                expanded ? "" : "line-clamp-4"
+              }`}
+              data-testid="player-news-latest-analysis"
             >
-              {expanded ? "Show less" : "Show more"}
-            </button>
-          ) : null}
-        </>
-      ) : null}
-      {item.url ? <ExternalLink url={item.url} /> : null}
+              {item.summary}
+            </p>
+            {showToggle ? (
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={`news-analysis-${item.id}`}
+                onClick={() => setExpanded((v) => !v)}
+                className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-link underline-offset-4 hover:underline"
+                data-testid="player-news-latest-toggle"
+              >
+                {expanded ? "Show less" : "Show more"}
+              </button>
+            ) : null}
+          </>
+        ) : null}
+        {item.url ? (
+          <ExternalLink
+            url={item.url}
+            label="Read full note on ESPN"
+            context={truncate(item.headline)}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -195,7 +227,13 @@ export function NewsSection({
                       {n.summary}
                     </p>
                   ) : null}
-                  {n.kind === "note" && n.url ? <ExternalLink url={n.url} /> : null}
+                  {n.kind === "note" && n.url ? (
+                    <ExternalLink
+                      url={n.url}
+                      label="Read full note on ESPN"
+                      context={truncate(n.headline)}
+                    />
+                  ) : null}
                 </li>
               ))}
             </ul>
