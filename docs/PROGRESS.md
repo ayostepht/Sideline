@@ -32,8 +32,8 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 | P7b.6f | Open-Meteo HTTP 400 counts as a failure, not out of range (m4) | sleeper-data-engineer | 4 | P7b.6 | WX-1 | Done | 1 | 58c64ac |
 | P7b.9 | Server: weather reads joined into lineup reasons, next-opponents and matchup data; review m1 (`keepIfNull: ["stadium_id"]` in the SCHEDULE upsert spec) | backend-engineer | 4 | P7b.2, P7b.6 | WX-4, WX-5 | Done | 1 | 571ba04 |
 | P7b.10 | UI: Trades route and nav item (Analyzer and Finder tabs, mobile More sheet) | frontend-engineer | 4 | P7b.7 | TRADE-3..5 | Done | 1 | 8fc0ddb |
-| P7b.3f | Finder: exclude Lopsided, rank by the smaller gain (ADR-022 7a, UX M1); surplus-position give pool (m4); dedupe perf assertion (m5) | analytics-engineer | 4c | P7b.3 | TRADE-2, TRADE-4 | In progress | 0 | |
-| P7b.7g | Trades cold-load: measure and fix the server path; batched roster read (UX M3, code m4) | backend-engineer | 4c | P7b.7f | TRADE-4 | In progress | 0 | |
+| P7b.3f | Finder: exclude Lopsided, rank by the smaller gain (ADR-022 7a, UX M1); surplus-position give pool (m4); dedupe perf assertion (m5) | analytics-engineer | 4c | P7b.3 | TRADE-2, TRADE-4 | Done | 1 | 2f594b5 |
+| P7b.7g | Trades cold-load: measure and fix the server path; batched roster read (UX M3, code m4) | backend-engineer | 4c | P7b.7f | TRADE-4 | Done | 1 | 5e8d30b |
 | P7b.10f | Trades and Auto UX fixes: touch popovers, 44px targets, Suspense streaming, before/after grid, selection chips, card actions (UX M1-M3, m1-m4; code m5, n1) | frontend-engineer | 4c | P7b.10 | TRADE-3..5, AUTO-1 | In progress | 0 | |
 | P7b.11 | UI: weather chips on Lineup, player card Next opponents, Matchup | frontend-engineer | 5 | P7b.9 | WX-4, WX-5 | Planned | 0 | |
 | P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Planned | 0 | |
@@ -60,6 +60,7 @@ Remove an item when it is done; the archive keeps history.
 - **Route JS after Batch 4:** Trades 195,187 B, Lineup 185,634 B (was 178,893 at G4), Waivers 199,044 B. All under the 204,800 B hard cap, over the 170 KB soft target. Waivers has about 2.8% headroom.
 - **For P7b.12 (qa) and devops:** `e2e/nav.spec.ts` needs Trades in the More sheet list; `scripts/screens/routes.json` lacks `/trades`; the Analyzer's evaluate, live region and prefilled auto-evaluate are untested in a browser (no jsdom in unit tests).
 - **Batch 4 review minors m1 to m5, n1** (`docs/reviews/2026-10-07-p7b-batch4-code.md`): require the `weather` fields; `synthesizeUnavailable` placeholder fields; 3-hour hash bucket; Analyzer's per-team `getTeamDetail` calls; Analyzer URL not mirrored after filtering bad ids.
+- **Cold Trades Finder is about 0.8 s, and 75% of that is the 10 top-N playoff sims** (P7b.7g). Options if it matters on real data: a batched or shared-draw `simulatePlayoffOddsBatch` in core (analytics-engineer), or prewarming the finder cache after a sync.
 - **Batch 1-2 review minors m4, m5** (`docs/reviews/2026-10-07-p7b-batch12-code.md`): the finder's give pool favors my top players over surplus-position players (tuning); the duplicate perf assertion in `finder.perf.test.ts`.
 - **`fast-check` is a root devDependency but not a `packages/core` one**; P7b.3 used a seeded loop instead. Add it to core if property tests there are wanted (devops-engineer).
 
