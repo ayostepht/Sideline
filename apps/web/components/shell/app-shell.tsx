@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LeagueSwitcher } from "./league-switcher";
-import { isModalMounted, shouldSkipFocusMove } from "../../lib/client/focus-return";
+import { clearTrigger, isModalMounted, shouldSkipFocusMove } from "../../lib/client/focus-return";
 import { activeNavKey, isPlayerDetailPath, NAV_ITEMS } from "../../lib/client/nav";
 import { useShownPathname } from "./use-shown-pathname";
 import { HeaderDetailProvider, useHeaderDetail } from "./header-detail";
@@ -53,6 +53,7 @@ function ShellInner({ leagueId, leagueName, currentWeek, leagues, children }: Pr
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
   const modalWasMounted = useRef(false);
+  const underlyingPath = useRef<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoaded, setSearchLoaded] = useState(false);
 
@@ -74,6 +75,9 @@ function ShellInner({ leagueId, leagueName, currentWeek, leagues, children }: Pr
 
   // Move focus to the page content after navigating (not on first load).
   useEffect(() => {
+    const nextIsPlayerPath = isPlayerDetailPath(pathname, leagueId);
+    const underlying = underlyingPath.current;
+    if (!nextIsPlayerPath) underlyingPath.current = pathname;
     if (firstRender.current) {
       firstRender.current = false;
       return;
@@ -82,11 +86,14 @@ function ShellInner({ leagueId, leagueName, currentWeek, leagues, children }: Pr
     // A full-page player view (no pop-up) still moves focus like any other page.
     const modalNow = isModalMounted();
     const skip = shouldSkipFocusMove({
-      nextIsPlayerPath: isPlayerDetailPath(pathname, leagueId),
+      nextIsPlayerPath,
       modalMountedNow: modalNow,
       modalWasMounted: modalWasMounted.current,
+      nextIsUnderlyingPage: underlying === null || underlying === pathname,
     });
     modalWasMounted.current = modalNow;
+    // Any non-player destination other than a close-to-underlying forgets the old trigger.
+    if (!nextIsPlayerPath && !skip) clearTrigger();
     if (skip) return;
     mainRef.current?.focus({ preventScroll: true });
   }, [pathname, leagueId]);

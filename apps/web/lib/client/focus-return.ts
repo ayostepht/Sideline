@@ -29,15 +29,24 @@ export function isModalMounted(): boolean {
   return mountedModals > 0;
 }
 
+/** Forget the remembered trigger (the user left for another page). */
+export function clearTrigger(): void {
+  trigger = null;
+}
+
 /**
  * Whether the shell should skip moving focus to main after a route change. Skip only when the
- * pop-up is opening (a player path with a pop-up mounted) or closing (a pop-up was mounted after
- * the previous route change). A full-page player view navigating elsewhere still moves focus.
+ * pop-up is opening or staying open (a player path with a pop-up mounted), or closing back to the
+ * page underneath it (the trigger restore wins). Leaving for a different page, or leaving a
+ * full-page player view, still moves focus.
  */
 export function shouldSkipFocusMove(opts: {
   nextIsPlayerPath: boolean;
   modalMountedNow: boolean;
   modalWasMounted: boolean;
+  /** The destination is the page that was underneath the pop-up (or that page is unknown). */
+  nextIsUnderlyingPage: boolean;
 }): boolean {
-  return opts.modalWasMounted || (opts.nextIsPlayerPath && opts.modalMountedNow);
+  if (opts.nextIsPlayerPath) return opts.modalMountedNow;
+  return opts.modalWasMounted && opts.nextIsUnderlyingPage;
 }

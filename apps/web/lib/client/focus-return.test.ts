@@ -8,6 +8,7 @@ describe("shouldSkipFocusMove", () => {
         nextIsPlayerPath: true,
         modalMountedNow: true,
         modalWasMounted: false,
+        nextIsUnderlyingPage: true,
       }),
     ).toBe(true);
   });
@@ -17,6 +18,7 @@ describe("shouldSkipFocusMove", () => {
         nextIsPlayerPath: false,
         modalMountedNow: false,
         modalWasMounted: true,
+        nextIsUnderlyingPage: true,
       }),
     ).toBe(true);
   });
@@ -26,6 +28,7 @@ describe("shouldSkipFocusMove", () => {
         nextIsPlayerPath: false,
         modalMountedNow: false,
         modalWasMounted: false,
+        nextIsUnderlyingPage: true,
       }),
     ).toBe(false);
   });
@@ -35,6 +38,40 @@ describe("shouldSkipFocusMove", () => {
         nextIsPlayerPath: true,
         modalMountedNow: false,
         modalWasMounted: false,
+        nextIsUnderlyingPage: true,
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("shouldSkipFocusMove (leaving and switching)", () => {
+  it("skips player to player while the pop-up stays open", () => {
+    expect(
+      shouldSkipFocusMove({
+        nextIsPlayerPath: true,
+        modalMountedNow: true,
+        modalWasMounted: true,
+        nextIsUnderlyingPage: false,
+      }),
+    ).toBe(true);
+  });
+  it("moves focus when leaving the open pop-up for a different page", () => {
+    expect(
+      shouldSkipFocusMove({
+        nextIsPlayerPath: false,
+        modalMountedNow: false,
+        modalWasMounted: true,
+        nextIsUnderlyingPage: false,
+      }),
+    ).toBe(false);
+  });
+  it("moves focus when a full-page player view goes to another page", () => {
+    expect(
+      shouldSkipFocusMove({
+        nextIsPlayerPath: false,
+        modalMountedNow: false,
+        modalWasMounted: false,
+        nextIsUnderlyingPage: false,
       }),
     ).toBe(false);
   });
