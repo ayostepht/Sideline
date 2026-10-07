@@ -30,8 +30,8 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 | P7b.8 | UI: Auto in the mode toggle (fixes review m3: toggle must show Auto selected), Home card requests `auto`, "Auto picked ..." reason | frontend-engineer | 4 | P7b.5 | AUTO-1 | Done | 1 | 0ef710b |
 | P7b.7f | Batch 3 review fixes: trade reason labels use names (M1), honest top-10 playoff reason (M2), hashes add leagues/players (m1), cached baseline sim (m2), `lineup-inputs.ts` breaks the import cycle (m3) | backend-engineer | 4 | P7b.7 | TRADE-1..4 | Done | 1 | b67cca6 |
 | P7b.6f | Open-Meteo HTTP 400 counts as a failure, not out of range (m4) | sleeper-data-engineer | 4 | P7b.6 | WX-1 | Done | 1 | 58c64ac |
-| P7b.9 | Server: weather reads joined into lineup reasons, next-opponents and matchup data; review m1 (`keepIfNull: ["stadium_id"]` in the SCHEDULE upsert spec) | backend-engineer | 4 | P7b.2, P7b.6 | WX-4, WX-5 | In progress | 0 | |
-| P7b.10 | UI: Trades route and nav item (Analyzer and Finder tabs, mobile More sheet) | frontend-engineer | 4 | P7b.7 | TRADE-3..5 | In progress | 0 | |
+| P7b.9 | Server: weather reads joined into lineup reasons, next-opponents and matchup data; review m1 (`keepIfNull: ["stadium_id"]` in the SCHEDULE upsert spec) | backend-engineer | 4 | P7b.2, P7b.6 | WX-4, WX-5 | Done | 1 | 571ba04 |
+| P7b.10 | UI: Trades route and nav item (Analyzer and Finder tabs, mobile More sheet) | frontend-engineer | 4 | P7b.7 | TRADE-3..5 | Done | 1 | 8fc0ddb |
 | P7b.11 | UI: weather chips on Lineup, player card Next opponents, Matchup | frontend-engineer | 5 | P7b.9 | WX-4, WX-5 | Planned | 0 | |
 | P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Planned | 0 | |
 
@@ -54,6 +54,8 @@ Remove an item when it is done; the archive keeps history.
 - **`pnpm fixtures:check` reports 8 pre-existing leaks on main** (README.md, docs/DECISIONS.md, docs/HANDOFF.md, docs/self-hosting.md, unraid/sideline.xml at `name#0`, plus three G2 screenshots at `name#10`). Most likely the ADR-018 GitHub-handle URLs the commit-time scan already strips, plus OCR or binary false positives in old screenshots. The checker needs the same URL exemption (devops-engineer). Not introduced by Phase 7b.
 - **nflverse sometimes tags London games with the home team's `stadium_id`** (2026 JAX at Tottenham carries `JAX00`), so the weather lookup would use Jacksonville's forecast. Fix candidate: also store and match nflverse `stadium` name (P7b.4 report, `docs/sleeper-api-notes.md`).
 - **`readOutdoorGamesBetween` compares ISO strings** (P7b.6 report): a kickoff stored as `...:00Z` (no millis) sorts after the same instant written `...:00.000Z`, so it could drop out at the window's upper edge. nflverse rows are stored with `.000Z`, so the risk is low. Normalize in db (backend-engineer).
+- **Route JS after Batch 4:** Trades 195,187 B, Lineup 185,634 B (was 178,893 at G4), Waivers 199,044 B. All under the 204,800 B hard cap, over the 170 KB soft target. Waivers has about 2.8% headroom.
+- **For P7b.12 (qa) and devops:** `e2e/nav.spec.ts` needs Trades in the More sheet list; `scripts/screens/routes.json` lacks `/trades`; the Analyzer's evaluate, live region and prefilled auto-evaluate are untested in a browser (no jsdom in unit tests).
 - **Batch 1-2 review minors m4, m5** (`docs/reviews/2026-10-07-p7b-batch12-code.md`): the finder's give pool favors my top players over surplus-position players (tuning); the duplicate perf assertion in `finder.perf.test.ts`.
 - **`fast-check` is a root devDependency but not a `packages/core` one**; P7b.3 used a seeded loop instead. Add it to core if property tests there are wanted (devops-engineer).
 
