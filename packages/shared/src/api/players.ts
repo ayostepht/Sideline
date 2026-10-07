@@ -187,6 +187,35 @@ export type PlayerNews = z.infer<typeof PlayerNewsSchema>;
 export const PlayerNewsRefreshResponseSchema = z.strictObject({ queued: z.boolean() });
 export type PlayerNewsRefreshResponse = z.infer<typeof PlayerNewsRefreshResponseSchema>;
 
+export const NextOpponentGradeSchema = z.enum(["A", "B", "C", "D", "F"]);
+export type NextOpponentGrade = z.infer<typeof NextOpponentGradeSchema>;
+
+/** One upcoming NFL week for the player's team. Grades are context only (ADR-014: projections are
+ * not adjusted). An easy defense for the player's position gets a good grade (A). */
+export const NextOpponentWeekSchema = z.strictObject({
+  week: z.number().int(),
+  bye: z.boolean(),
+  /** Opponent NFL team code (nflverse style, e.g. "LA"); null on a bye. */
+  opponent: z.string().nullable(),
+  home: z.boolean().nullable(),
+  grade: NextOpponentGradeSchema.nullable(),
+  /** Plain-language label that always accompanies the grade, e.g. "Great matchup". */
+  gradeLabel: z.string().nullable(),
+  /** Fantasy points per game the opponent allows at this position (the number behind the grade). */
+  ptsAllowedPg: z.number().nullable(),
+  /** 1 = allows the most points at the position (easiest). */
+  rank: z.number().int().nullable(),
+  totalTeams: z.number().int().nullable(),
+});
+export type NextOpponentWeek = z.infer<typeof NextOpponentWeekSchema>;
+
+export const NextOpponentsSchema = z.strictObject({
+  weeks: z.array(NextOpponentWeekSchema),
+  /** Short plain reason when no opponents are listed (no team, kicker or defense); else null. */
+  reasonUnavailable: z.string().nullable(),
+});
+export type NextOpponents = z.infer<typeof NextOpponentsSchema>;
+
 export const PlayerDetailResponseSchema = z.strictObject({
   playerId: z.string(),
   name: z.string(),
@@ -211,5 +240,8 @@ export const PlayerDetailResponseSchema = z.strictObject({
   /** Weeks 1 through the latest completed week (plus the current week if it has stats), newest first. */
   weekly: z.array(PlayerWeekRowSchema).optional(),
   news: PlayerNewsSchema.optional(),
+  /** Next 4 opponents with matchup grades (optional in the type so existing literals compile;
+   * the server always sets it). */
+  nextOpponents: NextOpponentsSchema.optional(),
 });
 export type PlayerDetailResponse = z.infer<typeof PlayerDetailResponseSchema>;

@@ -87,7 +87,7 @@ function mean(values: readonly number[]): number {
 }
 
 /** Sleeper uses `LAR`; nflverse (`schedule`, `defense_vs_position`) uses `LA`. */
-function toNflverseTeam(sleeperTeam: string): string {
+export function toNflverseTeam(sleeperTeam: string): string {
   return sleeperTeam === "LAR" ? "LA" : sleeperTeam;
 }
 
@@ -218,7 +218,7 @@ interface DvpEntry {
  * array sorted descending by points allowed (rank 1 = allows the most = easiest matchup, per
  * {@link matchupGrade}'s own doc comment).
  */
-function readDefenseVsPosition(
+export function readDefenseVsPosition(
   h: DbHandle,
   leagueId: string,
   season: number,

@@ -57,6 +57,7 @@ import {
   type PlayersListResponse,
   type PlayerTrendSignal,
 } from "@sideline/shared";
+import { nextOpponentsFor } from "./next-opponents";
 import { z } from "zod";
 
 export type Lookup<T> = { ok: true; data: T } | { ok: false; reason: "not_found" };
@@ -402,6 +403,7 @@ export function getPlayerDetail(
       }),
       weekly: weeklyRowsFor(h, leagueId, league, player, consistency.weeks),
       news: playerNewsFor(h, playerId),
+      nextOpponents: nextOpponentsFor(h, leagueId, league.season, player, now),
     },
   };
 }
