@@ -96,7 +96,11 @@ const DEFAULT_TRIGGER = (
   </Button>
 );
 
-type TriggerProps = { onClick?: (e: MouseEvent) => void; "aria-expanded"?: boolean };
+type TriggerProps = {
+  onClick?: (e: MouseEvent) => void;
+  "aria-expanded"?: boolean;
+  "aria-haspopup"?: "dialog";
+};
 
 /**
  * The sheet code (Radix dialog) loads on first hover, focus or touch to keep route JS small. Until then the
@@ -111,7 +115,7 @@ export function WhySheet(props: WhySheetProps) {
   // Load on intent (hover, focus, touch) so pages that never open it do not download the code.
   const [intent, setIntent] = useState(false);
   const { mod, failed } = useLazyModule(loader, {
-    enabled: intent || tapped,
+    enabled: intent || tapped || props.defaultOpen === true || props.open === true,
     onBeforeSwap: () => {
       hadFocus.current = host.current?.contains(document.activeElement) ?? false;
     },
@@ -141,7 +145,9 @@ export function WhySheet(props: WhySheetProps) {
     const triggerEl = isValidElement(trigger)
       ? cloneElement(trigger as ReactElement<TriggerProps>, {
           onClick: onTap,
-          ...(failed ? { "aria-expanded": tapped } : {}),
+          ...(failed
+            ? { "aria-expanded": tapped }
+            : { "aria-haspopup": "dialog" as const, "aria-expanded": false }),
         })
       : trigger;
     body = (

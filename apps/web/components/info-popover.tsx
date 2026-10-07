@@ -91,6 +91,8 @@ export function InfoPopover(props: InfoPopoverProps) {
       <InfoButton
         label={props.label}
         testid={props.testid}
+        aria-haspopup="dialog"
+        aria-expanded={false}
         onPointerEnter={() => setIntent(true)}
         onPointerDown={() => setIntent(true)}
         onFocus={() => setIntent(true)}
