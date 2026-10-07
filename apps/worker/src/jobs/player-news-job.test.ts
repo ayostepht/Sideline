@@ -294,3 +294,65 @@ describe("P7.5 player news job", () => {
     expect(rows.filter((r) => r.p === "p1").length).toBe(rows.filter((r) => r.p === "p2").length);
   });
 });
+
+describe("P7.8b news fetch attempts", () => {
+  const attempts = (db: DbHandle) =>
+    db.sqlite
+      .prepare(
+        "SELECT player_id AS p, ok, item_count AS n, attempted_at AS at FROM player_news_fetches ORDER BY player_id",
+      )
+      .all() as { p: string; ok: number; n: number; at: string }[];
+
+  it("success with items records the count", async () => {
+    const s = setup(["b"], [player("b", "3139477")]);
+    await playerNewsJob({ fetch: createFixtureFetch(), limiter: noWait }).run(
+      s.ctx({ target: "b" }),
+    );
+    const rows = attempts(s.db);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.ok).toBe(1);
+    expect(rows[0]?.n).toBeGreaterThan(0);
+    expect(rows[0]?.at).toBe(new Date(NOW).toISOString());
+  });
+
+  it("success with zero items records 0", async () => {
+    const s = setup(["a"], [player("a", "100")]);
+    await playerNewsJob({ fetch: createFixtureFetch(), limiter: noWait }).run(
+      s.ctx({ target: "a" }),
+    );
+    expect(attempts(s.db)).toEqual([{ p: "a", ok: 1, n: 0, at: new Date(NOW).toISOString() }]);
+  });
+
+  it("failure records ok false", async () => {
+    const s = setup(["a"], [player("a", "100")]);
+    const fetch: typeof globalThis.fetch = () =>
+      Promise.resolve(new Response("x", { status: 404 }));
+    await playerNewsJob({ fetch, limiter: noWait }).run(s.ctx({ target: "a" }));
+    const rows = attempts(s.db);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ p: "a", ok: 0, n: 0 });
+  });
+
+  it("targeted request without an espn id records ok true with 0 items", async () => {
+    const s = setup([], [player("a", null)]);
+    await playerNewsJob({ fetch: createFixtureFetch(), limiter: noWait }).run(
+      s.ctx({ target: "a" }),
+    );
+    expect(attempts(s.db)).toMatchObject([{ p: "a", ok: 1, n: 0 }]);
+  });
+
+  it("players skipped by the circuit breaker get no record", async () => {
+    const six = ["a", "b", "c", "d", "e", "f"];
+    const s = setup(
+      six,
+      six.map((i, n) => player(i, String(100 + n))),
+    );
+    const fetch: typeof globalThis.fetch = () =>
+      Promise.resolve(new Response("x", { status: 500 }));
+    await playerNewsJob({ fetch, limiter: noWait }).run(s.ctx());
+    const rows = attempts(s.db);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThan(six.length);
+    expect(rows.every((r) => r.ok === 0)).toBe(true);
+  });
+});

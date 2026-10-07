@@ -2,6 +2,7 @@ import {
   prunePlayerNews,
   readPlayerEspnIds,
   readRosteredPlayerIds,
+  recordPlayerNewsFetch,
   upsertPlayerNews,
   type PlayerNewsRow,
 } from "@sideline/db";
@@ -98,17 +99,28 @@ export function playerNewsJob(deps: PlayerNewsJobDeps = {}): Job {
     fetchedAt: string,
   ): Promise<ProviderResult<unknown>> {
     const res = await fetchEspnPlayerNews(espnId, opts(ctx, PLAYER_TIMEOUT_MS));
+    const attemptedAt = ctx.now().toISOString();
     if (!res.ok) {
       warn(ctx, `player ${playerIds.join(",")}`, res);
+      for (const playerId of playerIds) {
+        recordPlayerNewsFetch(ctx.db, { playerId, attemptedAt, ok: false, itemCount: 0 });
+      }
       return res;
     }
+    const cutoff = new Date(ctx.now().getTime() - NEWS_RETENTION_MS).toISOString();
+    let itemCount = 0;
     for (const item of res.data) {
       // Keep items about the requested athlete; items with no athlete ids are attributed to them.
       if (item.espnAthleteIds.length > 0 && !item.espnAthleteIds.includes(espnId)) continue;
+      if (item.publishedAt >= cutoff) itemCount++;
       for (const playerId of playerIds) {
         const row = toRow(item, playerId, fetchedAt);
         rows.set(row.id, row);
       }
+    }
+    // Each write is its own short transaction; no network call is in flight here.
+    for (const playerId of playerIds) {
+      recordPlayerNewsFetch(ctx.db, { playerId, attemptedAt, ok: true, itemCount });
     }
     return res;
   }
@@ -116,6 +128,12 @@ export function playerNewsJob(deps: PlayerNewsJobDeps = {}): Job {
   async function targeted(ctx: JobContext, playerId: string): Promise<JobResult> {
     const espnId = readPlayerEspnIds(ctx.db, [playerId]).get(playerId);
     if (espnId === undefined) {
+      recordPlayerNewsFetch(ctx.db, {
+        playerId,
+        attemptedAt: ctx.now().toISOString(),
+        ok: true,
+        itemCount: 0,
+      });
       return { rowsChanged: 0, status: "skipped", note: `no ESPN id for ${playerId}` };
     }
     const rows = new Map<string, PlayerNewsRow>();
