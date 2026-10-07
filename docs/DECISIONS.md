@@ -25,6 +25,7 @@ Read this list at session start. Open a full ADR below only when a task touches 
 - **Phase 4 plan (ADR-015):** T4.2 splits into T4.2a (candidate pool, prefilter, Lineup Impact: WAIVER-1, 2) and T4.2b (Waiver Score composite, two views: WAIVER-3, 4). T4.2b's composite and T4.1's trend signal (TREND-4) take plain pre-normalized numbers as caller-supplied inputs (never importing each other's module), the same decoupling pattern as ADR-013 item 2, so T4.1 and T4.2a run fully parallel in Batch A. Steph's G3 "Lineup why" ask is folded in as T4.8a/b/c (backend-engineer amends the `Reason` contract, then analytics-engineer populates it and rewrites copy, then frontend-engineer renders it), riding alongside Batches B to D rather than blocking them.
 - **Phase 5 plan (ADR-016):** new `packages/core/src/sim/` (T5.1, owns the seeded RNG) and `packages/core/src/league/` (T5.2) run parallel in Batch A, both analytics-engineer, file-disjoint. T5.3 (playoff odds) moves to its own Batch B and reuses T5.1's RNG/sampler rather than building a second one. T5.4 (data functions/APIs) moves from PLAN's Batch B to Batch C and its dependency widens to T5.1+T5.2+T5.3 (not just T5.1+T5.2), because it must expose LEAGUE-5 (playoff odds) too and that doesn't exist until T5.3 lands. Batches D (T5.5, frontend) and E (T5.6, qa) are unchanged from PLAN's table.
 - **Phase 6 plan (ADR-017):** T6.1 (auth HOST-8 plus security headers plus structured logging, backend-engineer, `apps/web/middleware.ts` plus `lib/server`) stays one task; its login PAGE is split out as T6.1c (frontend-engineer, ownership: `apps/web/app/` non-api pages belong to frontend, depends on T6.1's API contract). T6.3 splits into T6.3a (PWA manifest/icons), T6.3b (preseason/offseason states), T6.3c (League UX polish: desktop density, "You" markers, pluralization). Batch A: T6.1, T6.2 (Docker/self-hosting), T6.3a. Batch B: T6.1c, T6.3b, T6.3c. Batch C (unchanged from PLAN): T6.4/T6.5/T6.6 in parallel. Batch D: T6.7 fix round, skipped (Batch C returned zero Blocker/Major findings). G6 keeps its human checkpoint (release approval before tagging `v1.0.0`) regardless of how autonomously the rest of the phase runs.
+- **Game clock (ADR-019):** football "now" (locks, freshness, matchup, waivers, players) comes from `gameNow()`, overridable only by env `SIDELINE_GAME_CLOCK` (strict ISO UTC, validated at boot). Auth, sessions, rate limits, sync timestamps, health heartbeat and logs always use real time. e2e pins it to the fixture time 2026-10-02T12:00:00Z.
 
 ## ADR-000: Process, privacy, and ownership decisions for Phase 0
 
@@ -458,3 +459,27 @@ The repo went public on GitHub under her handle, and CI publishes the image to G
 - The pre-commit identifier scan (HANDOFF section 6) strips the three URL forms before grepping, so a hit still means a real leak.
 - The whole-repo scan at gates uses the same filter.
 
+
+## ADR-019: Game clock separate from real time (SIDELINE_GAME_CLOCK)
+
+Date: 2026-10-06
+
+**Decision**
+
+The app has two clocks. The game clock (`gameNow()` in `apps/web/lib/server/game-clock.ts`) answers football questions: which games have kicked off, lineup locks, matchup, waivers, league intelligence, players, data freshness. It reads the optional env var `SIDELINE_GAME_CLOCK` (strict ISO 8601 UTC, for example `2026-10-02T12:00:00Z`); unset means real time. Everything security or operations related stays on real time and never reads the override: login, sessions, cookie expiry, proxy session checks, rate limiting, sync request timestamps, health heartbeat age, request logging. The override is env-only (never read from a request). `loadConfig` validates it, and `apps/web/instrumentation.ts` validates config at boot, so a bad value stops the server with a message naming the variable. `/api/health` reports `gameClockPinned` as a boolean only, never the value. One code path for production and test builds.
+
+**Context**
+
+The e2e fixture is frozen at 2026-10-02 but pages used the real clock. Once real time passed week 4, every fixture player showed Locked and LINEUP-FLOW-5 failed on CI (run 37547997178, tag v1.0.1). The fixture's kickoff times come from recorded nflverse data replayed by the real sync, so moving them is not practical, and any test that depends on "game not started yet" would rot the same way.
+
+**Alternatives considered**
+
+- Point the test at a later week: only delays the failure.
+- Gate the override to non-production builds: e2e runs the production standalone build, so the gate would disable the fix; Steph asked for one path that works everywhere.
+- Shift all fixture timestamps at seed time: touches many columns and formats; more fragile than injecting time, which the codebase already does everywhere (`now` parameters).
+
+**Consequences**
+
+- `playwright.config.ts` pins the game clock on the main and auth e2e servers. The onboarding server stays on real time because it runs a live sync during the test.
+- A bad value in a shared env file also stops the worker, since it runs `loadConfig` too. That is intended (fail loudly).
+- One-off multi-owner change, single author per area: backend-engineer (lib/server, packages/shared, instrumentation.ts, the one-line `apps/web/tsconfig.json` include), orchestrator integration edits (page loaders under `apps/web/app/`, `playwright.config.ts`). devops-engineer to confirm the tsconfig include at the next devops task.

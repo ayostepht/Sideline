@@ -53,6 +53,7 @@ describe("HealthResponseSchema", () => {
       time: "2026-10-02T00:00:00.000Z",
       db: okDb,
       worker: { status: "ok", lastHeartbeatAt: "2026-10-02T00:00:00.000Z" },
+      gameClockPinned: false,
       lastSync: { job: "state", status: "success", finishedAt: null },
     };
     expect(HealthResponseSchema.parse(JSON.parse(JSON.stringify(body)))).toEqual(body);

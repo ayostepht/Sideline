@@ -23,6 +23,8 @@ export const HealthResponseSchema = z.strictObject({
     /** ISO 8601, null if the worker never reported. */
     lastHeartbeatAt: z.string().nullable(),
   }),
+  /** True when SIDELINE_GAME_CLOCK pins the football clock. Boolean only; the value is not exposed. */
+  gameClockPinned: z.boolean().default(false),
   lastSync: z
     .strictObject({
       job: SyncJobNameSchema,

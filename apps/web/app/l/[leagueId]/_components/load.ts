@@ -1,5 +1,6 @@
 import type { DbHandle } from "@sideline/db";
 import { getDb } from "../../../../lib/server/db";
+import { gameNow } from "../../../../lib/server/game-clock";
 
 export type PageRead<T> = { ok: true; value: T; now: Date } | { ok: false };
 
@@ -11,7 +12,7 @@ export function readPage<T>(read: (h: DbHandle, now: Date) => T): PageRead<T> {
   try {
     const db = getDb();
     if (!db.ok) return { ok: false };
-    const now = new Date();
+    const now = gameNow();
     return { ok: true, value: read(db.handle, now), now };
   } catch (err) {
     const digest = (err as { digest?: unknown } | null)?.digest;

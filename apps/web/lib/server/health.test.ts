@@ -6,6 +6,7 @@ import { HealthResponseSchema } from "@sideline/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { GET } from "../../app/api/health/route";
 import { resetDbForTests } from "./db";
+import { resetGameClockForTests } from "./game-clock";
 import { getHealth } from "./health";
 import { useTempDb, type TempDb } from "./test-utils";
 
@@ -22,6 +23,44 @@ function health(now = NOW) {
 }
 
 describe("getHealth", () => {
+  it("reports gameClockPinned as a boolean only", () => {
+    tmp = useTempDb({ migrated: true });
+    const prev = process.env["SIDELINE_GAME_CLOCK"];
+    try {
+      delete process.env["SIDELINE_GAME_CLOCK"];
+      resetGameClockForTests();
+      expect(health().body.gameClockPinned).toBe(false);
+      process.env["SIDELINE_GAME_CLOCK"] = "2026-10-02T12:00:00Z";
+      resetGameClockForTests();
+      const r = getHealth(NOW);
+      expect(HealthResponseSchema.parse(r.body).gameClockPinned).toBe(true);
+      expect(JSON.stringify(r.body)).not.toContain("2026-10-02T12:00:00Z");
+      process.env["SIDELINE_GAME_CLOCK"] = "garbage";
+      resetGameClockForTests();
+      expect(health().body.gameClockPinned).toBe(false);
+    } finally {
+      if (prev === undefined) delete process.env["SIDELINE_GAME_CLOCK"];
+      else process.env["SIDELINE_GAME_CLOCK"] = prev;
+      resetGameClockForTests();
+    }
+  });
+
+  it("never echoes an invalid pinned value in the health body", () => {
+    tmp = useTempDb({ migrated: true });
+    const prev = process.env["SIDELINE_GAME_CLOCK"];
+    try {
+      process.env["SIDELINE_GAME_CLOCK"] = "not-a-date-xyz";
+      resetGameClockForTests();
+      const r = getHealth(NOW);
+      expect(JSON.stringify(r.body)).not.toContain("not-a-date-xyz");
+      expect(JSON.stringify(r.body)).not.toContain("SIDELINE_GAME_CLOCK");
+    } finally {
+      if (prev === undefined) delete process.env["SIDELINE_GAME_CLOCK"];
+      else process.env["SIDELINE_GAME_CLOCK"] = prev;
+      resetGameClockForTests();
+    }
+  });
+
   it("is degraded with worker never on a fresh migrated DB", () => {
     tmp = useTempDb({ migrated: true });
     const { status, body } = health();

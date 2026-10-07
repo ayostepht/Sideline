@@ -33,6 +33,7 @@ import { searchPlayers } from "./league-views";
 import { getLineup } from "./lineup";
 import { getMatchup } from "./matchup";
 import { getOnboardingStatus, selectLeague, startOnboarding } from "./onboarding";
+import { gameNow } from "./game-clock";
 import { getPlayerDetail, getPlayersList } from "./players";
 import { withMigratedDb } from "./sync";
 import { getWaivers } from "./waivers";
@@ -135,7 +136,7 @@ export function handleSearch(leagueId: string, params: URLSearchParams): ApiResu
 export function handleLineup(
   leagueId: string,
   params: URLSearchParams,
-  now: Date = new Date(),
+  now: Date = gameNow(),
 ): ApiResult {
   const idOk = z.string().min(1).max(64).safeParse(leagueId);
   if (!idOk.success) return errorResult(404, "not_found", "League not found.");
@@ -217,7 +218,7 @@ export function handlePatchSettings(
 export function handleWaivers(
   leagueId: string,
   params: URLSearchParams,
-  now: Date = new Date(),
+  now: Date = gameNow(),
 ): ApiResult {
   const idOk = z.string().min(1).max(64).safeParse(leagueId);
   if (!idOk.success) return errorResult(404, "not_found", "League not found.");
@@ -256,7 +257,7 @@ export function handleWaivers(
 export function handleMatchup(
   leagueId: string,
   params: URLSearchParams,
-  now: Date = new Date(),
+  now: Date = gameNow(),
 ): ApiResult {
   const idOk = z.string().min(1).max(64).safeParse(leagueId);
   if (!idOk.success) return errorResult(404, "not_found", "League not found.");
@@ -297,7 +298,7 @@ export function handleMatchup(
 /** T5.4c: GET /api/l/[leagueId]/league-intelligence (all-play records, luck, power score,
  * positional heatmap, playoff odds, manager tendencies, for every team at once). No query params
  * beyond the league id itself. */
-export function handleLeagueIntelligence(leagueId: string, now: Date = new Date()): ApiResult {
+export function handleLeagueIntelligence(leagueId: string, now: Date = gameNow()): ApiResult {
   const idOk = z.string().min(1).max(64).safeParse(leagueId);
   if (!idOk.success) return errorResult(404, "not_found", "League not found.");
   return withMigratedDb((h) => {
@@ -311,7 +312,7 @@ export function handleLeagueIntelligence(leagueId: string, now: Date = new Date(
 export function handlePlayersList(
   leagueId: string,
   params: URLSearchParams,
-  now: Date = new Date(),
+  now: Date = gameNow(),
 ): ApiResult {
   const idOk = z.string().min(1).max(64).safeParse(leagueId);
   if (!idOk.success) return errorResult(404, "not_found", "League not found.");
@@ -378,7 +379,7 @@ export function handleLogout(request: Request): ApiResult {
 export function handlePlayerDetail(
   leagueId: string,
   playerId: string,
-  now: Date = new Date(),
+  now: Date = gameNow(),
 ): ApiResult {
   const idOk = z.string().min(1).max(64).safeParse(leagueId);
   if (!idOk.success) return errorResult(404, "not_found", "League not found.");

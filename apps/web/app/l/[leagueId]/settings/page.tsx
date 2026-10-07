@@ -1,6 +1,7 @@
 import { loadConfig } from "@sideline/shared";
 import { DbError } from "../../../../components/db-error";
 import { getDb } from "../../../../lib/server/db";
+import { gameNow } from "../../../../lib/server/game-clock";
 import { getLeagueChoices, getSettings } from "../../../../lib/server/identity";
 import { getLeagueOverview } from "../../../../lib/server/league-views";
 import { SettingsSections } from "./_components/settings-sections";
@@ -14,7 +15,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ leagu
   try {
     const db = getDb();
     if (!db.ok) return <DbError retryHref={`/l/${encodeURIComponent(leagueId)}/settings`} />;
-    const overview = getLeagueOverview(db.handle, leagueId, new Date());
+    const overview = getLeagueOverview(db.handle, leagueId, gameNow());
     data = {
       settings: getSettings(db.handle),
       leagues: getLeagueChoices(db.handle),

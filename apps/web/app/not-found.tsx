@@ -4,6 +4,7 @@ import { EmptyState } from "../components/empty-state";
 import { Button } from "../components/ui/button";
 import { getDb } from "../lib/server/db";
 import { getIdentity } from "../lib/server/identity";
+import { gameNow } from "../lib/server/game-clock";
 import { getLeagueOverview } from "../lib/server/league-views";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ function safeHome(): { href: string; label: string } {
     const db = getDb();
     if (db.ok) {
       const id = getIdentity(db.handle).activeLeagueId;
-      if (id && getLeagueOverview(db.handle, id, new Date()).ok) {
+      if (id && getLeagueOverview(db.handle, id, gameNow()).ok) {
         return { href: "/", label: "Go home" };
       }
     }

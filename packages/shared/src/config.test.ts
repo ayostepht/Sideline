@@ -29,6 +29,7 @@ describe("loadConfig", () => {
       syncCron: {},
       logLevel: "info",
       port: 3000,
+      gameClock: null,
     });
   });
 
@@ -145,5 +146,24 @@ describe("loadConfig", () => {
       "SESSION_SECRET",
     ]);
     expect(e.name).toBe("ConfigError");
+  });
+});
+
+describe("loadConfig SIDELINE_GAME_CLOCK", () => {
+  it("accepts unset and a valid UTC instant", () => {
+    expect(loadConfig({}).gameClock).toBeNull();
+    expect(loadConfig({ SIDELINE_GAME_CLOCK: "2026-10-02T12:00:00Z" }).gameClock).toBe(
+      "2026-10-02T12:00:00.000Z",
+    );
+  });
+  it.each([
+    "garbage",
+    "2026-10-02T12:00:00+00:00",
+    "2026-10-02T12:00:00-04:00",
+    "2026-10-02T12:00:00",
+  ])("rejects %s naming the variable", (v) => {
+    const e = errorOf({ SIDELINE_GAME_CLOCK: v });
+    expect(e.issues.map((i) => i.variable)).toContain("SIDELINE_GAME_CLOCK");
+    expect(e.message).toContain("SIDELINE_GAME_CLOCK");
   });
 });

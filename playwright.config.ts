@@ -89,6 +89,8 @@ if (givenDir !== undefined) {
   process.env["E2E_DATA_DIR"] = (await createSeededDataDir(REPO_ROOT)).dataDir;
 }
 const dataDir = process.env["E2E_DATA_DIR"] ?? "";
+// Fixture snapshot time (matches SEED_NOW in apps/web/lib/server/test-seed.ts).
+const E2E_GAME_CLOCK = "2026-10-02T12:00:00.000Z";
 
 // Onboarding server: a fresh temp dir where onboarding has NOT happened (the web server and the
 // fixture worker migrate it). Same export-to-env pattern.
@@ -192,6 +194,9 @@ export default defineConfig({
               HOSTNAME: HOST,
               DATA_DIR: dataDir,
               SIDELINE_GALLERY: "1",
+              // Pins the football clock to the fixture snapshot so kickoff locks and data age are
+              // stable as real time moves past the fixture weeks. Real time still drives auth.
+              SIDELINE_GAME_CLOCK: E2E_GAME_CLOCK,
             },
             // Never reuse: a stale local server (old build, real DATA_DIR) would silently be tested.
             // To test a running server on purpose, set E2E_BASE_URL.
@@ -242,6 +247,7 @@ export default defineConfig({
               HOSTNAME: HOST,
               DATA_DIR: authDir,
               SIDELINE_GALLERY: "1",
+              SIDELINE_GAME_CLOCK: E2E_GAME_CLOCK,
               APP_PASSWORD: AUTH_PASSWORD,
               SESSION_SECRET: AUTH_SESSION_SECRET,
             },

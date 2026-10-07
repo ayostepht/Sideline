@@ -65,6 +65,23 @@ function isValidTimeZone(tz: string): boolean {
   }
 }
 
+/** Env variable that pins the football-domain clock (web only; the worker ignores it). */
+export const GAME_CLOCK_ENV = "SIDELINE_GAME_CLOCK";
+
+const IsoUtcSchema = z.string().datetime();
+
+/** Returns the pinned Date, or null when unset. Throws (naming the variable) on invalid input. */
+export function parseGameClockOverride(raw: string | undefined): Date | null {
+  if (raw === undefined) return null;
+  const parsed = IsoUtcSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new Error(
+      `${GAME_CLOCK_ENV} must be an ISO 8601 UTC datetime like 2026-10-02T12:00:00Z (got ${JSON.stringify(raw)}).`,
+    );
+  }
+  return new Date(parsed.data);
+}
+
 /** Validated application config. Optional values are null when unset. */
 export const AppConfigSchema = z.strictObject({
   sleeperUsername: z.string().nullable(),
@@ -81,6 +98,8 @@ export const AppConfigSchema = z.strictObject({
   syncCron: z.partialRecord(z.string(), z.string()),
   logLevel: z.enum(LOG_LEVELS),
   port: z.number().int().min(1).max(65535),
+  /** Normalized ISO UTC instant from SIDELINE_GAME_CLOCK, or null when unset. */
+  gameClock: z.string().nullable(),
 });
 export type AppConfig = z.infer<typeof AppConfigSchema>;
 
@@ -181,6 +200,13 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     else logLevel = found;
   }
 
+  let gameClock: string | null = null;
+  try {
+    gameClock = parseGameClockOverride(get(GAME_CLOCK_ENV))?.toISOString() ?? null;
+  } catch (e) {
+    fail(GAME_CLOCK_ENV, (e instanceof Error ? e.message : String(e)).replace(/^\S+ /, ""));
+  }
+
   const config = {
     sleeperUsername: get("SLEEPER_USERNAME") ?? null,
     defaultLeagueId: get("DEFAULT_LEAGUE_ID") ?? null,
@@ -195,6 +221,7 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     syncCron,
     logLevel,
     port: int("PORT", 3000, 1, 65535),
+    gameClock,
   };
 
   if (issues.length > 0) throw new ConfigError(issues);

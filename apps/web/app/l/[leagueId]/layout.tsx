@@ -4,6 +4,7 @@ import { DbError } from "../../../components/db-error";
 import { AppShell } from "../../../components/shell/app-shell";
 import { SyncingState } from "../../../components/shell/syncing-state";
 import { getDb } from "../../../lib/server/db";
+import { gameNow } from "../../../lib/server/game-clock";
 import { getIdentity, getLeagueChoices } from "../../../lib/server/identity";
 import { getLeagueOverview } from "../../../lib/server/league-views";
 
@@ -22,7 +23,7 @@ export default async function LeagueLayout({
   try {
     const db = getDb();
     if (!db.ok) return <DbError retryHref={retryHref} />;
-    const overview = getLeagueOverview(db.handle, leagueId, new Date());
+    const overview = getLeagueOverview(db.handle, leagueId, gameNow());
     if (!overview.ok) {
       if (getIdentity(db.handle).activeLeagueId === leagueId) return <SyncingState />;
       notFound();

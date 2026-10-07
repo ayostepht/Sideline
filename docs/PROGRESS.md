@@ -103,6 +103,7 @@ Full detail and fully-fixed history: `docs/archive/progress-phase4.md`.
 
 ### Tests and tooling
 
+- FIX-CLOCK review minors (ADR-019): devops-engineer to confirm the `instrumentation.ts` include in `apps/web/tsconfig.json`; consider a startup log line on the worker too when the game clock is pinned (it ignores the value today).
 - PERF-1 review minors (`docs/reviews/2026-10-06-PERF-1-code.md`): equivalence tests lack null-position, other-league/season and null-score rows (qa or backend); optional covering index for the per-week rank subquery; `readPlayerUsageWeeks` could `ORDER BY week` (backend).
 - tests/fixtures/README.md: extra manifest keys, fake id ranges, short-name word-boundary rule, Lighthouse script-size unit (qa).
 - p1 Batch F m1 iteration guard in `drive()`; m2 RATE-1 comment. p1 Batch D m7 contract suite header comment (qa).

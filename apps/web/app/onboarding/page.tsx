@@ -2,6 +2,7 @@ import { DbError } from "../../components/db-error";
 import { isMissingTableError } from "../../lib/client/onboarding";
 import { getDb } from "../../lib/server/db";
 import { getSettings } from "../../lib/server/identity";
+import { gameNow } from "../../lib/server/game-clock";
 import { getLeagueOverview } from "../../lib/server/league-views";
 import { OnboardingFlow, type OnboardingInitial } from "./_components/onboarding-flow";
 
@@ -19,7 +20,7 @@ export default function OnboardingPage() {
   try {
     const s = getSettings(db.handle);
     const overview =
-      s.activeLeagueId === null ? null : getLeagueOverview(db.handle, s.activeLeagueId, new Date());
+      s.activeLeagueId === null ? null : getLeagueOverview(db.handle, s.activeLeagueId, gameNow());
     initial = {
       username: s.sleeperUsername,
       activeLeagueId: s.activeLeagueId,

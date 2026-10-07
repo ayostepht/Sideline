@@ -11,6 +11,7 @@
     "next-env.d.ts",
     "*.config.ts",
     "proxy.ts",
+    "instrumentation.ts",
     "proxy.test.ts",
     "app/**/*.ts",
     "app/**/*.tsx",
