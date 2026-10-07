@@ -1,9 +1,11 @@
+import { ALL_ORDER } from "../../apps/worker/src/registry.js";
 import { http } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSleeperServer, recordedFixtureRoot } from "../msw/server.js";
 import { SLEEPER_BASE_URL, withStatus } from "../msw/sleeper-handlers.js";
 import {
   createNflverseMock,
+  createOpenMeteoMock,
   createSyncHarness,
   type SyncHarness,
 } from "../helpers/sync-harness.js";
@@ -21,7 +23,7 @@ beforeEach(() => {
   wire.length = 0;
   // Only the timers the Sleeper client uses for backoff and per-attempt timeouts are faked.
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  server.use(createNflverseMock().handler);
+  server.use(createNflverseMock().handler, createOpenMeteoMock().handler);
   h = createSyncHarness();
 });
 afterEach(() => {
@@ -58,11 +60,11 @@ describe("T1.7b: failure handling", () => {
     const failed = outcomes.filter((o) => o.status === "failed");
     expect(failed.map((o) => o.job)).toEqual(["rosters"]);
     expect(failed[0]?.error).toMatch(/500/);
-    expect(outcomes).toHaveLength(11);
+    expect(outcomes).toHaveLength(ALL_ORDER.length);
     // 1 try + 3 retries, each backoff announced before it was waited
     expect(wire.filter((r) => r.endsWith("/rosters"))).toHaveLength(4);
     const runs = h.runs();
-    expect(runs).toHaveLength(11);
+    expect(runs).toHaveLength(ALL_ORDER.length);
     expect(runs.find((r) => r.job === "rosters")).toMatchObject({ status: "failed" });
     expect(runs.find((r) => r.job === "rosters")?.error).toMatch(/500/);
     expect(runs.filter((r) => r.job !== "rosters").every((r) => r.status !== "failed")).toBe(true);

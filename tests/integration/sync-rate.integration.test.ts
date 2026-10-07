@@ -4,6 +4,7 @@ import { Worker } from "../../apps/worker/src/worker.js";
 import { createSleeperServer, recordedFixtureRoot } from "../msw/server.js";
 import {
   createNflverseMock,
+  createOpenMeteoMock,
   createSyncHarness,
   type SyncHarness,
 } from "../helpers/sync-harness.js";
@@ -22,7 +23,7 @@ server.events.on("request:start", ({ request }) => {
 beforeAll(() => server.listen());
 beforeEach(() => {
   stamps = [];
-  server.use(createNflverseMock().handler);
+  server.use(createNflverseMock().handler, createOpenMeteoMock().handler);
   h = createSyncHarness();
 });
 afterEach(() => {
