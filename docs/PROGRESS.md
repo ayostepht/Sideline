@@ -27,8 +27,8 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | P7.4 | DTO (weekly rows, headshot, news) + getPlayerDetail + CSP | backend-engineer | B | Done | 1 | f6368c2 |
 | P7.5 | Persist espn_id; news worker job (scheduled + on-demand) | sleeper-data-engineer | B | Done | 1 | 1e9fa59 |
 | P7.5b | Review fixes: ESPN circuit breaker (M1), entity decode, attribution, dup espn ids | sleeper-data-engineer | B | Done | 1 | 259506e |
-| P7.6a | Player card: headshot, weekly table, news, refresh on open | frontend-engineer | C | Dispatched | 1 | |
-| P7.6b | Search opens pop-up, team on swing/riser rows, review m5/m6, header title | frontend-engineer | C | Dispatched | 1 | |
+| P7.6a | Player card: headshot, weekly table, news, refresh on open | frontend-engineer | C | Done | 1 | 0c04c89 |
+| P7.6b | Search opens pop-up, team on swing/riser rows, review m5/m6, header title | frontend-engineer | C | Done | 1 | 08c76f6 |
 | P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Open | 0 | |
 
 ## Earlier phases
@@ -44,6 +44,7 @@ Remove an item when it is done; the archive keeps history.
 - P7.4 left the new `PlayerDetailResponse`/`MatchupSwingPlayer` fields optional (server always sets them) so existing UI test literals compile; tighten to required once P7.6 updates those literals (backend).
 - `projectedPts` in weekly rows comes from `league_player_week_points.proj_pts` (stored projection scored by the recompute hook), not strictly the last pre-kickoff snapshot.
 - No persisted "fetched, no news" marker: players with zero ESPN news re-queue a refresh on each pop-up open (bounded by dedupe and the 20-pending cap).
+- P7.6b follow-ups (frontend): sidebar/tab highlight reads "Players" while the pop-up is open (`isNavActive` uses the real pathname; use `titlePathname`); the week selector's `router.replace(pathname)` would navigate to `/players/<id>?week=` if used while the pop-up is open; focus after closing a pop-up opened from search lands on body.
 - Fixture-mode ESPN per-player feed always returns athlete 3139477; only a fixture player with that espn id gets per-player news in screens/e2e (P7.7 note).
 
 - **e2e clock time bomb (pre-existing, fails on `main` 77af184 too):** LINEUP-FLOW-5 fails on all 3 projects because the fixture's week-4 kickoffs (2026-10-02..06) are now in the past, so `isLocked(info, now)` (`packages/core/src/optimizer/locks.ts:25`, real `now` from `apps/web/lib/server/lineup.ts` ~442/571) locks every starter. Other clock-dependent e2e specs may follow. Fix: test-only `SIDELINE_NOW` override in lib/server, ignored in production (backend), set in `playwright.config.ts` webServer env (qa); or shift seeded kickoffs relative to now (qa). A `fix/e2e-clock` worktree at 77af184 exists (not created by this session; left alone). Will block the Phase 7a e2e run (P7.7) unless fixed first.
