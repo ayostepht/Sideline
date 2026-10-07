@@ -1,4 +1,4 @@
-import { schema, type DbHandle } from "@sideline/db";
+import { recordPlayerNewsFetch, schema, type DbHandle } from "@sideline/db";
 import { playerHeadshotUrl, SyncStatusResponseSchema, SYNC_JOB_NAMES } from "@sideline/shared";
 import { afterEach, describe, expect, it } from "vitest";
 import { handlePlayerNewsRefresh } from "./api-handlers";
@@ -154,6 +154,16 @@ describe("POST news refresh handler", () => {
     expect(handlePlayerNewsRefresh("L1", "nope", SEED_NOW).status).toBe(404);
     expect(handlePlayerNewsRefresh("nope", "p1", SEED_NOW).status).toBe(404);
     expect(handlePlayerNewsRefresh("L1", "bad id!", SEED_NOW).status).toBe(400);
+  });
+
+  it("an ok empty fetch throttles and sets lastFetchedAt; a failed attempt does not", () => {
+    const h = setup();
+    const at = new Date(SEED_NOW.getTime() - 10 * 60_000).toISOString();
+    recordPlayerNewsFetch(h, { playerId: "p1", attemptedAt: at, ok: true, itemCount: 0 });
+    expect(handlePlayerNewsRefresh("L1", "p1", SEED_NOW).body).toEqual({ queued: false });
+    expect(detail(h, "p1").news).toEqual({ items: [], lastFetchedAt: at });
+    recordPlayerNewsFetch(h, { playerId: "p2", attemptedAt: at, ok: false, itemCount: 0 });
+    expect(handlePlayerNewsRefresh("L1", "p2", SEED_NOW).body).toEqual({ queued: true });
   });
 
   it("caps pending targeted requests", () => {

@@ -435,6 +435,18 @@ export const playerNews = sqliteTable(
   ],
 );
 
+/**
+ * One row per player: the latest ESPN news fetch attempt. Lets players with no news be throttled
+ * (staleness cannot come from `player_news` rows when there are none).
+ */
+export const playerNewsFetches = sqliteTable("player_news_fetches", {
+  playerId: text("player_id").primaryKey(),
+  /** ISO 8601. */
+  attemptedAt: text("attempted_at").notNull(),
+  ok: integer("ok", { mode: "boolean" }).notNull(),
+  itemCount: integer("item_count").notNull(),
+});
+
 /** Manual sync runs queued for the worker (ADR-005 item 3). Matches shared SyncRequest. */
 export const syncRequests = sqliteTable(
   "sync_requests",

@@ -34,7 +34,8 @@ import {
   readPlayers as readPlayersDb,
   readNflState,
   readPlayerNews,
-  readPlayerNewsLastFetchedAt,
+  countPendingTargetedRequests,
+  readPlayerNewsFetchedAt,
   readPlayerUsageWeeks,
   readPlayerWeekPointsWithProjections,
   readTeamSchedule,
@@ -242,7 +243,7 @@ export function playerNewsFor(h: DbHandle, playerId: string): PlayerNews {
       source: n.source,
       publishedAt: n.publishedAt,
     })),
-    lastFetchedAt: readPlayerNewsLastFetchedAt(h, playerId),
+    lastFetchedAt: readPlayerNewsFetchedAt(h, playerId),
   };
 }
 
@@ -418,16 +419,12 @@ export function requestPlayerNewsRefresh(
 ): Lookup<{ queued: boolean }> {
   if (readLeague(h, leagueId) === null) return { ok: false, reason: "not_found" };
   if (readPlayersDb(h, [playerId])[0] === undefined) return { ok: false, reason: "not_found" };
-  const last = readPlayerNewsLastFetchedAt(h, playerId);
+  const last = readPlayerNewsFetchedAt(h, playerId);
   if (last !== null && now.getTime() - Date.parse(last) < NEWS_REFRESH_STALE_MS) {
     return { ok: true, data: { queued: false } };
   }
-  const pending = h.sqlite
-    .prepare(
-      "SELECT COUNT(*) AS n FROM sync_requests WHERE job = 'player_news' AND status = 'pending' AND target IS NOT NULL",
-    )
-    .get() as { n: number };
-  if (pending.n >= NEWS_REFRESH_MAX_PENDING) return { ok: true, data: { queued: false } };
+  const pending = countPendingTargetedRequests(h, "player_news");
+  if (pending >= NEWS_REFRESH_MAX_PENDING) return { ok: true, data: { queued: false } };
   const { created } = enqueuePlayerNewsRequest(h, playerId, now.toISOString());
   return { ok: true, data: { queued: created } };
 }

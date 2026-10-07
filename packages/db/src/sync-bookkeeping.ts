@@ -556,3 +556,19 @@ export function readPlayersFetchedAt(h: DbHandle): string | null {
 export function writePlayersFetchedAt(h: DbHandle, now: Date): void {
   setSetting(h, SETTING_PLAYERS_FETCHED_AT, iso(now));
 }
+
+/** Count of pending targeted (target not null) requests for a job. Uses a parameterized query. */
+export function countPendingTargetedRequests(h: DbHandle, job: SyncJobName): number {
+  const row = h.db
+    .select({ n: sql<number>`count(*)` })
+    .from(syncRequests)
+    .where(
+      and(
+        eq(syncRequests.job, job),
+        eq(syncRequests.status, "pending"),
+        sql`${syncRequests.target} is not null`,
+      ),
+    )
+    .get();
+  return row?.n ?? 0;
+}

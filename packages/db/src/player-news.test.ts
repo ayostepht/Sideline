@@ -4,9 +4,19 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Player } from "@sideline/shared";
 import { dbPathFromDataDir, migrate, openDb, type DbHandle } from "./connection.js";
-import { claimNext, enqueue, enqueuePlayerNewsRequest } from "./sync-bookkeeping.js";
+import {
+  claimNext,
+  countPendingTargetedRequests,
+  enqueue,
+  enqueuePlayerNewsRequest,
+} from "./sync-bookkeeping.js";
 import { prunePlayerNews, upsertPlayers, upsertPlayerNews, type PlayerNewsRow } from "./upserts.js";
-import { readPlayerEspnIds, readPlayerNews } from "./sync-reads.js";
+import {
+  readPlayerEspnIds,
+  readPlayerNews,
+  readPlayerNewsFetchedAt,
+  recordPlayerNewsFetch,
+} from "./sync-reads.js";
 
 let dir: string;
 let h: DbHandle;
@@ -146,5 +156,46 @@ describe("enqueuePlayerNewsRequest", () => {
     const r = enqueue(h, "player_news", "cli", new Date(now));
     expect(r.target ?? null).toBeNull();
     expect(r.id).not.toBe(enqueuePlayerNewsRequest(h, "p1", now).request.id);
+  });
+});
+
+describe("news fetch attempts", () => {
+  const rec = (ok: boolean, attemptedAt: string, itemCount = 0): void =>
+    recordPlayerNewsFetch(h, { playerId: "p1", attemptedAt, ok, itemCount });
+
+  it("returns null with no rows or attempts, and upserts one row per player", () => {
+    expect(readPlayerNewsFetchedAt(h, "p1")).toBeNull();
+    rec(true, "2026-10-06T10:00:00.000Z");
+    rec(true, "2026-10-06T11:00:00.000Z", 2);
+    expect(readPlayerNewsFetchedAt(h, "p1")).toBe("2026-10-06T11:00:00.000Z");
+    expect(h.sqlite.prepare("SELECT COUNT(*) AS n FROM player_news_fetches").get()).toEqual({
+      n: 1,
+    });
+  });
+
+  it("ignores failed attempts", () => {
+    rec(false, "2026-10-06T11:00:00.000Z");
+    expect(readPlayerNewsFetchedAt(h, "p1")).toBeNull();
+  });
+
+  it("the later of attempt and news rows wins", () => {
+    upsertPlayerNews(h, [news("a", "p1", "2026-10-05T00:00:00.000Z")]); // fetched 10-06T00:00
+    rec(true, "2026-10-05T12:00:00.000Z");
+    expect(readPlayerNewsFetchedAt(h, "p1")).toBe("2026-10-06T00:00:00.000Z");
+    rec(true, "2026-10-06T09:00:00.000Z");
+    expect(readPlayerNewsFetchedAt(h, "p1")).toBe("2026-10-06T09:00:00.000Z");
+  });
+});
+
+describe("countPendingTargetedRequests", () => {
+  const now = "2026-10-06T12:00:00.000Z";
+  it("counts only pending targeted requests for the job", () => {
+    expect(countPendingTargetedRequests(h, "player_news")).toBe(0);
+    enqueuePlayerNewsRequest(h, "p1", now);
+    enqueuePlayerNewsRequest(h, "p2", now);
+    enqueue(h, "player_news", "cli", new Date(now));
+    expect(countPendingTargetedRequests(h, "player_news")).toBe(2);
+    claimNext(h, new Date(now));
+    expect(countPendingTargetedRequests(h, "player_news")).toBe(1);
   });
 });

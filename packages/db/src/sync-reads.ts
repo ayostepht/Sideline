@@ -11,6 +11,7 @@ import {
   nflState,
   playerWeekProjections,
   playerNews,
+  playerNewsFetches,
   playerWeekStats,
   players,
   schedule,
@@ -178,6 +179,38 @@ export function readPlayerNewsLastFetchedAt(h: DbHandle, playerId: string): stri
     .where(eq(playerNews.playerId, playerId))
     .get();
   return row?.m ?? null;
+}
+
+/** Upserts the latest news fetch attempt for a player (one row per player). */
+export function recordPlayerNewsFetch(
+  h: DbHandle,
+  a: { playerId: string; attemptedAt: string; ok: boolean; itemCount: number },
+): void {
+  h.db
+    .insert(playerNewsFetches)
+    .values(a)
+    .onConflictDoUpdate({
+      target: playerNewsFetches.playerId,
+      set: { attemptedAt: a.attemptedAt, ok: a.ok, itemCount: a.itemCount },
+    })
+    .run();
+}
+
+/**
+ * Latest successful news fetch time for a player: the later of the last `ok` attempt and the
+ * newest stored news row's `fetched_at`. Failed attempts are ignored so they retry. Null when none.
+ */
+export function readPlayerNewsFetchedAt(h: DbHandle, playerId: string): string | null {
+  const attempt = h.db
+    .select({ at: playerNewsFetches.attemptedAt })
+    .from(playerNewsFetches)
+    .where(and(eq(playerNewsFetches.playerId, playerId), eq(playerNewsFetches.ok, true)))
+    .get();
+  const rows = readPlayerNewsLastFetchedAt(h, playerId);
+  const a = attempt?.at ?? null;
+  if (a === null) return rows;
+  if (rows === null) return a;
+  return a > rows ? a : rows;
 }
 
 /** player_id to ESPN id for players with a non-null ESPN id; all players when `playerIds` is omitted. */
