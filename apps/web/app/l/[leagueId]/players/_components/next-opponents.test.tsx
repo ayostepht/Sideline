@@ -41,7 +41,16 @@ describe("NextOpponentsBody", () => {
     const out = html({ reasonUnavailable: null, weeks: [wk({})] });
     expect(out).toContain("great matchup");
     expect(out).toContain(">A<");
-    expect(out).toContain("24.1 pts/g allowed to WRs");
+    expect(out).toContain("24.1 pts per game allowed to WRs");
+  });
+
+  it("has no button and puts the explainer after the list", () => {
+    const out = html({ reasonUnavailable: null, weeks: [wk({})] });
+    expect(out).not.toContain("<button");
+    expect(out.indexOf("player-next-opponents-note")).toBeGreaterThan(
+      out.lastIndexOf("player-next-opponent-row"),
+    );
+    expect(out).toContain("context only");
   });
 
   it("shows the reason when unavailable", () => {
