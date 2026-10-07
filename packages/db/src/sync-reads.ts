@@ -152,6 +152,8 @@ export interface PlayerNewsItem {
   summary: string | null;
   url: string | null;
   source: string;
+  /** Raw stored text; the server narrows it to shared PlayerNewsKind. */
+  kind: string;
   publishedAt: string;
   fetchedAt: string;
 }

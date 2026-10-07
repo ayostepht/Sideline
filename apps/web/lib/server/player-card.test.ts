@@ -109,6 +109,7 @@ describe("player news", () => {
           summary: null,
           url: i === 6 ? "javascript:alert(1)" : "https://example.com/a",
           source: "ESPN",
+          kind: i === 6 ? "note" : "article",
           publishedAt: `2026-10-0${i + 1}T00:00:00.000Z`,
           fetchedAt: `2026-10-02T0${i}:00:00.000Z`,
         })
@@ -116,7 +117,8 @@ describe("player news", () => {
     }
     const n = detail(h, "p1").news;
     expect(n?.items).toHaveLength(5);
-    expect(n?.items[0]).toMatchObject({ id: "n6", url: null });
+    expect(n?.items[0]).toMatchObject({ id: "n6", url: null, kind: "note" });
+    expect(n?.items[1]?.kind).toBe("article");
     expect(n?.items[1]?.url).toBe("https://example.com/a");
     expect(n?.lastFetchedAt).toBe("2026-10-02T06:00:00.000Z");
   });

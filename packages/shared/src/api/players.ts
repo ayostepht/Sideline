@@ -160,8 +160,13 @@ export const PlayerWeekRowSchema = z.strictObject({
 });
 export type PlayerWeekRow = z.infer<typeof PlayerWeekRowSchema>;
 
+/** "note" is a short player update with analysis (RotoWire style); "article" is a generic story. */
+export const PlayerNewsKindSchema = z.enum(["note", "article"]);
+export type PlayerNewsKind = z.infer<typeof PlayerNewsKindSchema>;
+
 export const PlayerNewsItemSchema = z.strictObject({
   id: z.string(),
+  kind: PlayerNewsKindSchema,
   headline: z.string(),
   summary: z.string().nullable(),
   /** http(s) only; anything else is mapped to null server-side. */

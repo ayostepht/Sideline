@@ -66,6 +66,16 @@ const player = (id: string, espnId?: string | null): Player => ({
 });
 
 describe("player_news upsert, prune, read", () => {
+  it("updates kind on conflict and defaults to article", () => {
+    upsertPlayerNews(h, [news("k1", "p1", "2026-10-05T00:00:00.000Z")]);
+    expect(readPlayerNews(h, "p1")[0]?.kind).toBe("article");
+    const r = upsertPlayerNews(h, [
+      { ...news("k1", "p1", "2026-10-05T00:00:00.000Z"), kind: "note" },
+    ]);
+    expect(r.rowsChanged).toBe(1);
+    expect(readPlayerNews(h, "p1")[0]?.kind).toBe("note");
+  });
+
   it("is idempotent and counts a changed headline once", () => {
     const base = news("espn:1:p1", "p1", "2026-10-01T00:00:00.000Z");
     const rows = [base];

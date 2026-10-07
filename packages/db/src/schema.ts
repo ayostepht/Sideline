@@ -424,6 +424,8 @@ export const playerNews = sqliteTable(
     url: text("url"),
     /** Provider label, e.g. "ESPN". */
     source: text("source").notNull(),
+    /** "note" | "article" (shared PlayerNewsKind). */
+    kind: text("kind").notNull().default("article"),
     /** ISO 8601. */
     publishedAt: text("published_at").notNull(),
     /** ISO 8601. Volatile: not part of the change test. */

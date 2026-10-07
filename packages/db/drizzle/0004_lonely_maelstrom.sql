@@ -1,0 +1,1 @@
+ALTER TABLE `player_news` ADD `kind` text DEFAULT 'article' NOT NULL;

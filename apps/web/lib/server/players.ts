@@ -241,6 +241,7 @@ export function playerNewsFor(h: DbHandle, playerId: string): PlayerNews {
       summary: n.summary,
       url: sanitizeNewsUrl(n.url),
       source: n.source,
+      kind: n.kind === "note" ? "note" : "article",
       publishedAt: n.publishedAt,
     })),
     lastFetchedAt: readPlayerNewsFetchedAt(h, playerId),

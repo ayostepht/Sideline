@@ -653,6 +653,7 @@ const PLAYER_NEWS: TableSpec = {
     "summary",
     "url",
     "source",
+    "kind",
     "published_at",
     "fetched_at",
   ],
@@ -668,6 +669,8 @@ export interface PlayerNewsRow {
   summary: string | null;
   url: string | null;
   source: string;
+  /** Defaults to "article" when omitted. */
+  kind?: "note" | "article";
   /** ISO 8601. */
   publishedAt: string;
   /** ISO 8601. Written on insert and on a real change, not part of the change test. */
@@ -683,6 +686,7 @@ export function upsertPlayerNews(h: DbHandle, rows: readonly PlayerNewsRow[]): U
     n.summary,
     n.url,
     n.source,
+    n.kind ?? "article",
     n.publishedAt,
     n.fetchedAt,
   ]);
