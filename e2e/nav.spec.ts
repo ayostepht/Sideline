@@ -10,12 +10,13 @@ const ITEMS = [
   ["waivers", "Waivers"],
   ["players", "Players"],
   ["league", "League"],
+  ["trades", "Trades"],
   ["team", "My Team"],
   ["settings", "Settings"],
 ] as const;
 
 test.describe("Navigation (PLAN 6.3)", () => {
-  test("NAV-1: desktop sidebar has all 8 items and marks only the current one", async ({
+  test("NAV-1: desktop sidebar has all 9 items (Trades after League) and marks only the current one", async ({
     page,
   }) => {
     await page.goto(`${L}/league`);
@@ -27,7 +28,12 @@ test.describe("Navigation (PLAN 6.3)", () => {
     for (const [key, label] of ITEMS) {
       await expect(nav.getByTestId(`nav-link-${key}`)).toHaveText(label);
     }
-    await expect(nav.locator("a")).toHaveCount(8);
+    await expect(nav.locator("a")).toHaveCount(9);
+    // TRADE-5: Trades sits right after League.
+    const keys = await Promise.all(
+      (await nav.locator("a").all()).map((a) => a.getAttribute("data-testid")),
+    );
+    expect(keys.indexOf("nav-link-trades")).toBe(keys.indexOf("nav-link-league") + 1);
     await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
     await expect(nav.getByTestId("nav-link-league")).toHaveAttribute("aria-current", "page");
     await expect(page.getByTestId("nav-bottom-tabs")).toBeHidden();
@@ -50,6 +56,7 @@ test.describe("Navigation (PLAN 6.3)", () => {
     for (const [key, label] of [
       ["players", "Players"],
       ["league", "League"],
+      ["trades", "Trades"],
       ["team", "My Team"],
       ["settings", "Settings"],
     ] as const) {

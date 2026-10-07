@@ -16,9 +16,11 @@ import { assertSeededDataDir, createSeededDataDir } from "./scripts/lib/seed";
  * - Helper self-tests (`e2e/helpers.spec.ts`) use page.setContent and need no app, so the server
  *   is not started when that is the only spec named on the command line.
  */
-const PORT = 3000;
-const ONBOARDING_PORT = 3101;
-const AUTH_PORT = 3102;
+// E2E_PORT moves the main server (default 3000) when that port is taken; the onboarding and
+// auth servers follow at +101 and +102 so the defaults stay 3101 and 3102.
+const PORT = Number(process.env["E2E_PORT"] ?? "3000");
+const ONBOARDING_PORT = PORT + 101;
+const AUTH_PORT = PORT + 102;
 const HOST = "127.0.0.1";
 const externalBaseUrl = process.env["E2E_BASE_URL"];
 const baseURL = externalBaseUrl ?? `http://${HOST}:${PORT}`;
