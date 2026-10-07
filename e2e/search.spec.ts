@@ -34,13 +34,15 @@ test.describe("Player search (ADR-009 item 11)", () => {
     const hit = page.getByTestId("search-result").filter({ hasText: DATA.otherPlayerName });
     await expect(hit).toHaveCount(1);
     await expect(hit).toContainText(DATA.otherTeamName);
+    // The NFL team shows next to the owner (ADR-019).
+    await expect(hit).toContainText(`${DATA.otherPlayerNflTeam} · ${DATA.otherTeamName}`);
     await input.fill(DATA.freeAgentQuery);
     const fa = page.getByTestId("search-result").filter({ hasText: DATA.freeAgentName });
     await expect(fa).toHaveCount(1);
-    await expect(fa).toContainText("Free agent");
+    await expect(fa).toContainText(`${DATA.freeAgentNflTeam} · Free agent`);
   });
 
-  test("SEARCH-3: Enter on a rostered player opens that team with ?highlight=", async ({
+  test("SEARCH-3: Enter on a rostered player opens the player pop-up at its own URL", async ({
     page,
   }) => {
     await page.goto(L);
@@ -50,19 +52,23 @@ test.describe("Player search (ADR-009 item 11)", () => {
       page.getByTestId("search-result").filter({ hasText: DATA.otherPlayerName }),
     ).toHaveCount(1);
     await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(
-      new RegExp(`${L}/league/teams/${DATA.otherRosterId}\\?.*highlight=${DATA.otherPlayerId}`),
-    );
-    await expect(page.getByTestId("team-highlighted-row")).toContainText(DATA.otherPlayerName);
+    await expect(page).toHaveURL(new RegExp(`${L}/players/${DATA.otherPlayerId}$`));
+    await expect(page.getByTestId("player-modal")).toBeVisible();
+    await expect(page.getByRole("dialog", { name: DATA.otherPlayerName })).toBeVisible();
+    // The old highlight flow is gone.
+    expect(page.url()).not.toContain("highlight=");
+    await expect(page.getByTestId("team-highlighted-row")).toHaveCount(0);
   });
 
-  test("SEARCH-4: a free agent opens a sheet instead of navigating", async ({ page }) => {
+  test("SEARCH-4: a free agent opens the same player pop-up and URL", async ({ page }) => {
     await page.goto(L);
     await openSearch(page);
     await page.getByTestId("search-input").fill(DATA.freeAgentQuery);
     await page.getByTestId("search-result").filter({ hasText: DATA.freeAgentName }).click();
-    await expect(page.getByTestId("search-free-agent-sheet")).toContainText(DATA.freeAgentName);
-    await expect(page).toHaveURL(new RegExp(`${L}$`));
+    await expect(page).toHaveURL(new RegExp(`${L}/players/${DATA.freeAgentId}$`));
+    await expect(page.getByTestId("player-modal")).toBeVisible();
+    await expect(page.getByRole("dialog", { name: DATA.freeAgentName })).toBeVisible();
+    await expect(page.getByTestId("search-free-agent-sheet")).toHaveCount(0);
   });
 
   test("SEARCH-5: Escape closes and the query is cleared on reopen", async ({ page }) => {
