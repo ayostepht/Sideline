@@ -2,7 +2,7 @@
 
 Single source for resuming after a session limit or `/clear`. The orchestrator updates this file and commits it after every task commit, review, and dispatch. If it disagrees with `git log`, trust `git log` and fix this file.
 
-Last updated: 2026-10-06. **v1.1.0 released** (player card, Phase 7a, ADR-020; plus FIX-CLOCK, ADR-019). `phase/7-player-card` merged to `main` (`b153b3d`) and pushed with tag `v1.1.0`. Earlier: v1.0.0 (G6) and v1.0.1. Remote: `origin` is https://github.com/ayostepht/Sideline (public).
+Last updated: 2026-10-07. **v1.1.1 released**: FIX-ORIGIN (write guard trusts Sec-Fetch-Site so proxies that rewrite Host don't block Sync now) plus an e2e WebKit hydration-flake fix (`e2e/helpers/players-search.ts`). v1.1.0 (2026-10-06): player card (Phase 7a, ADR-020) and FIX-CLOCK (ADR-019). Remote: `origin` is https://github.com/ayostepht/Sideline (public).
 
 **This is a clean point to `/clear`.** Phase 7 (P1 backlog) planning is the natural next step, but has not started -- do not begin it without Steph's go-ahead, since this is new scope beyond what she's approved so far.
 
@@ -36,7 +36,7 @@ Last updated: 2026-10-06. **v1.1.0 released** (player card, Phase 7a, ADR-020; p
 
 ## 4. Next steps (in order)
 
-1. **Unraid deploy in progress (2026-10-06).** Repo is public at github.com/ayostepht/Sideline; CI publishes `ghcr.io/ayostepht/sideline`. Template fixed [OPS-1]. Steph's to-dos: set the GHCR package Public, install via `my-sideline.xml` (v1.1.0 is now the latest tag). No APP_PASSWORD: it sits behind NPM + Authentik.
+1. **Unraid deploy in progress (2026-10-06).** Repo is public at github.com/ayostepht/Sideline; CI publishes `ghcr.io/ayostepht/sideline`. Template fixed [OPS-1]. Steph's to-dos: set the GHCR package Public, install via `my-sideline.xml` (v1.1.1 is now the latest tag). No APP_PASSWORD: it sits behind NPM + Authentik.
 2. **Remaining Phase 7 (P1 backlog) planning is the natural next step** (7a player card is done), per PLAN.md section 9's suggested order: notifications (Home Assistant webhook first, then ntfy and Discord), trade analyzer and finder, Auto lineup mode, weekly backtest job, league history, weather, offline caching, "view as team." Each follows the same brief/verify/review cycle and ends with a mini-gate. **Do not start Phase 7 without Steph's explicit go-ahead** -- PLAN.md only has a suggested feature order, not a task table, so the first real step is planning it (likely an Explore pass plus an ADR, same precedent as every prior phase).
 3. Restarting `pnpm dev:lan`/`pnpm dev:worker` is no longer withheld -- both are running now at Steph's request. Stop them only for a gate-affecting run (section 2's standing lesson), and restart after.
 
