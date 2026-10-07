@@ -30,7 +30,8 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Done: P7.1 `30e45e4`, P7.2 `e4fa039`, P7.5 `1e9fa59`, P7.3 `5080504`. In flight: P7.4 (backend: weekly rows, headshotUrl, news in detail DTO, news refresh POST route, CSP sleepercdn, team on swing/riser rows); code review of A+P7.5; qa triage of e2e LINEUP-FLOW-5 (fails on branch, unknown if pre-existing). Next: P7.6 frontend (headshot, weekly table, news, refresh on open; search results open the pop-up too, replacing the "Full player pages arrive soon" sheet, per Steph's "always clickable"; team on swing/riser rows; page header title behind pop-up), then P7.7 qa, UX review.
+- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Done and verified: P7.1 `30e45e4`, P7.2 `e4fa039`, P7.5 `1e9fa59`, P7.3 `5080504`, P7.5b `259506e` (review M1 circuit breaker), P7.4 `f6368c2`. Batch A code review saved (`docs/reviews/2026-10-06-p7-batchA-code.md`). Coverage at f6368c2 all above floors. In flight (two frontend agents, disjoint files): P7.6a (player card content) and P7.6b (search -> pop-up, team on swing/riser rows, m5 focus return, m6 not-found, header title). Next: code review + ux-review of P7.3..P7.6, then P7.7 qa (update `e2e/search.spec.ts`, re-verify PLAYERS-FLOW-5, new pop-up/card specs).
+- **Blocker for P7.7, waiting on Steph:** pre-existing e2e clock time bomb (PROGRESS "Found during Phase 7a"). Asked whether the existing `fix/e2e-clock` worktree is hers/another session's, or whether to fix it here.
 - Dev worker restarted 2026-10-06 after P7.5 (migration 0002 applied). espn_ids fill on the next daily players sync.
 
 ## 4. Next steps (in order)
