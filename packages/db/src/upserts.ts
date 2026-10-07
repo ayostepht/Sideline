@@ -709,3 +709,29 @@ export function prunePlayerNews(h: DbHandle, opts: { olderThanIso: string }): nu
   return h.sqlite.prepare("DELETE FROM player_news WHERE published_at < ?").run(opts.olderThanIso)
     .changes;
 }
+
+/**
+ * Fills `players.espn_id` from an external crosswalk (player_id -> espn_id). Only touches rows whose
+ * stored value IS NULL (never overwrites a Sleeper-provided id); unknown players and blank ids are
+ * ignored. Chunked transactions; returns the number of rows changed.
+ */
+export function fillMissingEspnIds(h: DbHandle, ids: ReadonlyMap<string, string>): number {
+  const pairs: [string, string][] = [];
+  for (const [playerId, espnId] of ids) {
+    const e = espnId.trim();
+    if (e !== "") pairs.push([playerId, e]);
+  }
+  if (pairs.length === 0) return 0;
+  const stmt = h.sqlite.prepare(
+    "UPDATE players SET espn_id = ? WHERE player_id = ? AND espn_id IS NULL",
+  );
+  let changed = 0;
+  const CHUNK = 1000;
+  for (let i = 0; i < pairs.length; i += CHUNK) {
+    const slice = pairs.slice(i, i + CHUNK);
+    h.sqlite.transaction(() => {
+      for (const [playerId, e] of slice) changed += stmt.run(e, playerId).changes;
+    })();
+  }
+  return changed;
+}

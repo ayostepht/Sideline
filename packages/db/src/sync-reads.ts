@@ -237,3 +237,15 @@ export function readPlayerEspnIds(h: DbHandle, playerIds?: readonly string[]): M
   }
   return out;
 }
+
+/** Player count and how many have a non-null ESPN id. */
+export function countPlayersWithEspnId(h: DbHandle): { players: number; withEspnId: number } {
+  const r = h.db
+    .select({
+      players: sql<number>`count(*)`,
+      withEspnId: sql<number>`count(${players.espnId})`,
+    })
+    .from(players)
+    .get();
+  return { players: r?.players ?? 0, withEspnId: r?.withEspnId ?? 0 };
+}

@@ -10,8 +10,15 @@ import {
   enqueue,
   enqueuePlayerNewsRequest,
 } from "./sync-bookkeeping.js";
-import { prunePlayerNews, upsertPlayers, upsertPlayerNews, type PlayerNewsRow } from "./upserts.js";
 import {
+  fillMissingEspnIds,
+  prunePlayerNews,
+  upsertPlayers,
+  upsertPlayerNews,
+  type PlayerNewsRow,
+} from "./upserts.js";
+import {
+  countPlayersWithEspnId,
   readPlayerEspnIds,
   readPlayerNews,
   readPlayerNewsFetchedAt,
@@ -226,5 +233,40 @@ describe("countPendingTargetedRequests", () => {
     expect(countPendingTargetedRequests(h, "player_news")).toBe(2);
     claimNext(h, new Date(now));
     expect(countPendingTargetedRequests(h, "player_news")).toBe(1);
+  });
+});
+
+describe("fillMissingEspnIds / countPlayersWithEspnId", () => {
+  it("counts on empty and mixed tables", () => {
+    expect(countPlayersWithEspnId(h)).toEqual({ players: 0, withEspnId: 0 });
+    upsertPlayers(h, [player("p1", "1"), player("p2"), player("p3", null)], "t");
+    expect(countPlayersWithEspnId(h)).toEqual({ players: 3, withEspnId: 1 });
+  });
+
+  it("fills only null ids, skips unknown and blank, returns exact count, idempotent", () => {
+    upsertPlayers(h, [player("p1", "1"), player("p2"), player("p3"), player("p4")], "t");
+    const ids = new Map([
+      ["p1", "999"],
+      ["p2", " 22 "],
+      ["p3", "  "],
+      ["p4", ""],
+      ["zz", "5"],
+    ]);
+    expect(fillMissingEspnIds(h, ids)).toBe(1);
+    expect(readPlayerEspnIds(h)).toEqual(
+      new Map([
+        ["p1", "1"],
+        ["p2", "22"],
+      ]),
+    );
+    expect(fillMissingEspnIds(h, ids)).toBe(0);
+    expect(fillMissingEspnIds(h, new Map())).toBe(0);
+  });
+
+  it("a later players upsert with null espn_id keeps the filled id", () => {
+    upsertPlayers(h, [player("p2")], "t");
+    fillMissingEspnIds(h, new Map([["p2", "22"]]));
+    upsertPlayers(h, [player("p2", null)], "t");
+    expect(readPlayerEspnIds(h).get("p2")).toBe("22");
   });
 });
