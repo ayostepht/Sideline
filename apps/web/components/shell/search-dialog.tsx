@@ -8,9 +8,9 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { normalizeSearchQuery, searchResultHref, SEARCH_DEBOUNCE_MS } from "../../lib/client/nav";
 import { InjuryBadge } from "../injury-badge";
+import { teamLabel } from "../team-label";
 import { PositionBadge } from "../position-badge";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet";
 
 type SearchState =
   | { kind: "idle" }
@@ -31,7 +31,6 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
   const [query, setQuery] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<SearchState>({ kind: "idle" });
-  const [freeAgent, setFreeAgent] = useState<PlayerSearchResult | null>(null);
 
   useEffect(() => {
     const q = normalizeSearchQuery(query);
@@ -71,10 +70,8 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
   }
 
   function select(r: PlayerSearchResult) {
-    const href = searchResultHref(leagueId, r);
     handleOpenChange(false);
-    if (href === null) setFreeAgent(r);
-    else router.push(href);
+    router.push(searchResultHref(leagueId, r));
   }
 
   return (
@@ -118,7 +115,10 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
                           <InjuryBadge status={r.injuryStatus} />
                         </span>
                         <span className="block truncate text-xs text-muted-foreground">
-                          {r.nflTeam ?? "No team"} · {r.owner?.teamName ?? "Free agent"}
+                          {teamLabel(r.position, r.nflTeam)
+                            ? `${teamLabel(r.position, r.nflTeam)} · `
+                            : ""}
+                          {r.owner?.teamName ?? "Free agent"}
                         </span>
                       </span>
                     </Command.Item>
@@ -128,25 +128,6 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
           </Command>
         </DialogContent>
       </Dialog>
-      <Sheet open={freeAgent !== null} onOpenChange={(o) => !o && setFreeAgent(null)}>
-        <SheetContent side="bottom" data-testid="search-free-agent-sheet">
-          <SheetHeader>
-            <SheetTitle>{freeAgent?.name}</SheetTitle>
-            <SheetDescription>Free agent</SheetDescription>
-          </SheetHeader>
-          {freeAgent ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <PositionBadge position={freeAgent.position} />
-              <span className="text-sm">{freeAgent.nflTeam ?? "No team"}</span>
-              <InjuryBadge status={freeAgent.injuryStatus} />
-              {freeAgent.injuryStatus === null ? (
-                <span className="text-sm text-muted-foreground">No injury designation</span>
-              ) : null}
-            </div>
-          ) : null}
-          <p className="mt-3 text-sm text-muted-foreground">Full player pages arrive soon.</p>
-        </SheetContent>
-      </Sheet>
     </>
   );
 }

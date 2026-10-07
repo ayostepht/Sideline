@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
+import { restoreTriggerFocus } from "../lib/client/focus-return";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 /**
@@ -23,6 +24,9 @@ export function PlayerModal({
       <DialogContent
         data-testid="player-modal"
         aria-describedby={undefined}
+        onCloseAutoFocus={(e) => {
+          if (restoreTriggerFocus()) e.preventDefault();
+        }}
         className="inset-x-0 bottom-0 top-auto flex max-h-[92dvh] w-full max-w-none translate-x-0 translate-y-0 flex-col overflow-y-auto rounded-b-none p-4 pt-12 md:inset-auto md:left-1/2 md:top-1/2 md:max-h-[85dvh] md:max-w-[720px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-b-card md:p-5 md:pt-12"
       >
         {loadingLabel ? (

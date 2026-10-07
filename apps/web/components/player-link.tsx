@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import type { ReactNode } from "react";
 import { cn } from "../lib/client/cn";
+import { rememberTrigger } from "../lib/client/focus-return";
 import { playerHref } from "../lib/client/nav";
 
 /**
@@ -42,6 +43,7 @@ export function PlayerLink({
       href={playerHref(leagueId, playerId)}
       title={title}
       data-testid="player-link"
+      onClick={(e) => rememberTrigger(e.currentTarget)}
       className={cn(
         "rounded-control underline-offset-4 hover:underline focus-visible:underline",
         stretch && "after:absolute after:inset-0 after:content-['']",

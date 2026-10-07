@@ -313,7 +313,17 @@ export default async function HomePage({
                       className="flex min-h-11 items-center gap-3 px-2 py-1 text-sm hover:bg-muted"
                     >
                       <PositionBadge position={r.position} />
-                      <span className="min-w-0 flex-1 truncate font-medium">{r.name}</span>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate font-medium">{r.name}</span>
+                        {teamLabel(r.position, r.nflTeam) ? (
+                          <span
+                            className="text-xs text-muted-foreground"
+                            data-testid="player-row-team"
+                          >
+                            {teamLabel(r.position, r.nflTeam)}
+                          </span>
+                        ) : null}
+                      </span>
                       <span className="shrink-0 text-xs text-muted-foreground">
                         {r.source === "roster" ? "Your roster" : "Free agent"}
                       </span>

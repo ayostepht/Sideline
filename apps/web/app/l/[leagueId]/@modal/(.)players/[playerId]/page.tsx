@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { DbError } from "../../../../../../components/db-error";
 import { PlayerModal } from "../../../../../../components/player-modal";
 import { getPlayerDetail } from "../../../../../../lib/server/players";
@@ -22,7 +21,18 @@ export default async function PlayerModalPage({
       </PlayerModal>
     );
   }
-  if (!read.value.ok) notFound();
+  if (!read.value.ok) {
+    return (
+      <PlayerModal loadingLabel="Player not found">
+        <div className="py-6" data-testid="player-modal-not-found" role="status">
+          <h2 className="text-xl font-semibold">Player not found</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            We could not find this player. Close this and try another.
+          </p>
+        </div>
+      </PlayerModal>
+    );
+  }
   return (
     <PlayerModal>
       <PlayerDetailView player={read.value.data} now={read.now} inModal />

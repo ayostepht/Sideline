@@ -107,10 +107,9 @@ export function withWeekParam(search: string, week: number): string {
   return p.toString();
 }
 
-/** Where selecting a search result goes. Free agents have no page yet (null: open the sheet). */
-export function searchResultHref(leagueId: string, r: PlayerSearchResult): string | null {
-  if (r.owner === null) return null;
-  return `${leagueBase(leagueId)}/league/teams/${r.owner.rosterId}?highlight=${encodeURIComponent(r.playerId)}`;
+/** Where selecting a search result goes: the player page, which opens as a pop-up. */
+export function searchResultHref(leagueId: string, r: PlayerSearchResult): string {
+  return playerHref(leagueId, r.playerId);
 }
 
 /** Trimmed query, or null when too short to search. */
@@ -142,4 +141,30 @@ export function switchLeagueHref(
 /** Path to a player's detail page (opens as a pop-up from inside the app). */
 export function playerHref(leagueId: string, playerId: string): string {
   return `/l/${encodeURIComponent(leagueId)}/players/${encodeURIComponent(playerId)}`;
+}
+
+/** True for `/l/<leagueId>/players/<playerId>` (the pop-up route), not the `/players` list. */
+export function isPlayerDetailPath(pathname: string, leagueId: string): boolean {
+  const path = pathname.replace(/\/+$/, "");
+  const prefix = `${leagueBase(leagueId)}/players/`;
+  return (
+    path.startsWith(prefix) &&
+    path.length > prefix.length &&
+    !path.slice(prefix.length).includes("/")
+  );
+}
+
+/**
+ * Path the header title and active nav derive from. While the player pop-up is open the URL is the
+ * player page, but the page behind it is unchanged, so keep the last non-player path. A direct
+ * load of a player page has no earlier path and uses its own.
+ */
+export function titlePathname(
+  pathname: string,
+  lastUnderlying: string | null,
+  leagueId: string,
+): string {
+  return isPlayerDetailPath(pathname, leagueId) && lastUnderlying !== null
+    ? lastUnderlying
+    : pathname;
 }

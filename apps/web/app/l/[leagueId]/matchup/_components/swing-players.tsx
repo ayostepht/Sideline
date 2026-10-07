@@ -1,5 +1,6 @@
 import type { MatchupSwingPlayer } from "@sideline/shared";
 import { PlayerLink } from "../../../../../components/player-link";
+import { teamLabel } from "../../../../../components/team-label";
 import { Badge } from "../../../../../components/ui/badge";
 import { cn } from "../../../../../lib/client/cn";
 
@@ -31,12 +32,15 @@ function swingPts(varianceContribution: number): string {
 function SwingPlayerRow({
   playerId,
   name,
+  team,
   yours,
   opponentTeamName,
   swing,
 }: {
   playerId: string;
   name: string;
+  /** Team subline text, null when unknown. */
+  team: string | null;
   yours: boolean;
   opponentTeamName: string;
   swing: string;
@@ -54,6 +58,11 @@ function SwingPlayerRow({
             {name}
           </PlayerLink>
         </span>
+        {team ? (
+          <span className="text-xs text-muted-foreground" data-testid="player-row-team">
+            {team}
+          </span>
+        ) : null}
         <Badge variant={yours ? "you" : "neutral"} className="w-fit">
           {yours ? "You" : opponentTeamName}
         </Badge>
@@ -87,6 +96,7 @@ export function SwingPlayersList({
           <SwingPlayerRow
             playerId={p.playerId}
             name={p.name}
+            team={p.nflTeam === undefined ? null : teamLabel(p.position, p.nflTeam)}
             yours={p.rosterId === yourRosterId}
             opponentTeamName={opponentTeamName}
             swing={swingPts(p.varianceContribution)}
