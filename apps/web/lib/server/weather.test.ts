@@ -191,6 +191,27 @@ describe("matchup weather", () => {
   });
 });
 
+describe("weather team-code handling (P7b.9f)", () => {
+  it("finds the game for an away team and for a Sleeper code needing conversion (LAR -> LA)", () => {
+    const h = setup(true);
+    // p2 (Sleeper LAR) is the away side of 5_T03_T04; nflverse stores that side as LA.
+    h.sqlite.prepare("UPDATE players SET team = 'LAR' WHERE player_id = 'p2'").run();
+    h.sqlite
+      .prepare("UPDATE schedule SET away = 'LA' WHERE game_id = '5_T03_T04' AND week = 5")
+      .run();
+    const by = new Map(lineup(h).players.map((p) => [p.playerId, p] as const));
+    expect(by.get("p2")?.weather).toMatchObject({ gameId: "5_T03_T04", status: "forecast" });
+    expect(by.get("p2")?.reasons.filter((r) => r.code === "WEATHER")).toHaveLength(2);
+
+    const m = getMatchup(h, "L1", { week: 5, rosterId: 1 }, SEED_NOW);
+    if (!m.ok) throw new Error(m.reason);
+    expect(m.data.swingPlayers.find((s) => s.playerId === "p2")?.weather?.gameId).toBe("5_T03_T04");
+
+    const n = nextOpponentsFor(h, "L1", 2026, { position: "RB", team: "LAR" }, SEED_NOW);
+    expect(n.weeks.find((w) => w.week === 5)?.weather?.gameId).toBe("5_T03_T04");
+  });
+});
+
 describe("weatherReasons", () => {
   const base = wx("g", 5);
   const w = (o: Record<string, unknown>) => ({
