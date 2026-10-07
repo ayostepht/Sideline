@@ -1,6 +1,7 @@
 import { OnboardingStatusSchema } from "@sideline/shared/src/api/onboarding";
 import { PlayersListResponseSchema } from "@sideline/shared/src/api/players";
 import { SyncRunResponseSchema, SyncStatusResponseSchema } from "@sideline/shared/src/api/sync";
+import { TradeEvaluateResponseSchema } from "@sideline/shared/src/api/trades";
 import { WaiverResponseSchema } from "@sideline/shared/src/api/waiver";
 import { z } from "zod";
 
@@ -10,6 +11,7 @@ export {
   PlayersListResponseSchema,
   SyncRunResponseSchema,
   SyncStatusResponseSchema,
+  TradeEvaluateResponseSchema,
   WaiverResponseSchema,
 };
 

@@ -57,8 +57,8 @@ export function ReasonChips({ reasons, max, className, trailing }: ReasonChipsPr
       aria-label="Reasons"
       data-testid="reason-chips"
     >
-      {shown.map((r) => (
-        <ReasonChip key={r.code} reason={r} />
+      {shown.map((r, i) => (
+        <ReasonChip key={`${r.code}:${String(i)}`} reason={r} />
       ))}
       {hidden > 0 ? (
         <li className="text-[13px] text-muted-foreground tabular-nums sm:text-xs">
