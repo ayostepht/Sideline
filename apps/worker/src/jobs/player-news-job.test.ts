@@ -93,6 +93,54 @@ describe("P7.5 player news job", () => {
     expect(second.rowsChanged).toBe(0);
   });
 
+  it("stores Rotowire items as notes and dedupe never downgrades a note", async () => {
+    const s = setup(["a"], [player("a", "3139477")]);
+    const job = playerNewsJob({ fetch: createFixtureFetch(), limiter: noWait });
+    await job.run(s.ctx());
+    const kinds = s.db.sqlite
+      .prepare("SELECT id, kind, length(summary) AS n FROM player_news WHERE player_id = 'a'")
+      .all() as { id: string; kind: string; n: number }[];
+    expect(kinds.filter((k) => k.kind === "note").length).toBeGreaterThan(0);
+    expect(kinds.some((k) => k.kind === "note" && k.n > 400)).toBe(true);
+
+    // Same story id and athlete in both feeds: recent (article) arrives first, per-player note after,
+    // and the note must win in either order.
+    const t = "2026-10-06T12:00:00Z";
+    const recent = {
+      articles: [
+        {
+          id: 777,
+          headline: "H",
+          description: "short",
+          published: t,
+          categories: [{ type: "athlete", athleteId: 3139477 }],
+        },
+      ],
+    };
+    const perPlayer = {
+      feed: [
+        {
+          id: 777,
+          type: "Rotowire",
+          headline: "H",
+          story: "long analysis",
+          published: t,
+          playerId: 3139477,
+        },
+      ],
+    };
+    const fetch: typeof globalThis.fetch = (input) => {
+      const u = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      return Promise.resolve(Response.json(u.includes("playerId=") ? perPlayer : recent));
+    };
+    const s2 = setup(["a"], [player("a", "3139477")]);
+    await playerNewsJob({ fetch, limiter: noWait }).run(s2.ctx());
+    const row = s2.db.sqlite
+      .prepare("SELECT kind, summary FROM player_news WHERE id = 'espn:777:a'")
+      .get() as { kind: string; summary: string };
+    expect(row).toEqual({ kind: "note", summary: "long analysis" });
+  });
+
   it("fetches rostered players with an espn id, capped per run and rotating", async () => {
     const ids = ["a", "b", "c", "d", "e"];
     const s = setup(

@@ -1,3 +1,4 @@
+import type { PlayerNewsKind } from "@sideline/shared";
 import { z } from "zod";
 import type { FetchFn } from "./cache.js";
 import type { ProviderResult } from "./types.js";
@@ -7,6 +8,8 @@ export interface EspnNewsItem {
   storyId: string;
   headline: string;
   summary: string | null;
+  /** "note" for RotoWire analysis items, "article" otherwise. */
+  kind: PlayerNewsKind;
   url: string | null;
   /** ISO 8601 UTC. */
   publishedAt: string;
@@ -50,6 +53,8 @@ const USER_AGENT = "Sideline (self-hosted)";
 const PLAYER_URL = "https://site.api.espn.com/apis/fantasy/v2/games/ffl/news/players";
 const RECENT_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news";
 export const ESPN_SUMMARY_MAX = 400;
+/** RotoWire notes keep their full analysis paragraph, with a higher cap. */
+export const ESPN_NOTE_SUMMARY_MAX = 1500;
 
 const idSchema = z.union([z.string(), z.number()]);
 const linkSchema = z.looseObject({ href: z.string().optional() });
@@ -60,6 +65,7 @@ const playerItem = z.looseObject({
   headline: z.string(),
   description: z.string().nullish(),
   story: z.string().nullish(),
+  type: z.string().nullish(),
   published: z.string(),
   playerId: idSchema.nullish(),
   links: linksSchema.nullish(),
@@ -123,7 +129,12 @@ export function cleanSummary(
     .replace(/\s+/g, " ")
     .trim();
   if (!text) return null;
-  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  const lastSpace = cut.lastIndexOf(" ");
+  // Cut at a word boundary when one is reasonably close to the limit.
+  const base = lastSpace > max * 0.6 ? cut.slice(0, lastSpace) : cut;
+  return `${base.trimEnd()}…`;
 }
 
 function safeUrl(links: z.infer<typeof linksSchema> | null | undefined): string | null {
@@ -237,10 +248,19 @@ export async function fetchEspnPlayerNews(
       const publishedAt = isoOrNull(p.data.published);
       if (!publishedAt) return null;
       const athlete = p.data.playerId == null ? espnId : String(p.data.playerId);
+      const headline = p.data.headline.trim();
+      const isNote = p.data.type?.trim().toLowerCase() === "rotowire";
+      let summary = isNote
+        ? (cleanSummary(p.data.story, ESPN_NOTE_SUMMARY_MAX) ??
+          cleanSummary(p.data.description, ESPN_NOTE_SUMMARY_MAX))
+        : (cleanSummary(p.data.story) ?? cleanSummary(p.data.description));
+      // A note's analysis should add to its headline, not repeat it.
+      if (isNote && summary === headline) summary = null;
       return {
         storyId: String(p.data.id),
-        headline: p.data.headline.trim(),
-        summary: cleanSummary(p.data.story) ?? cleanSummary(p.data.description),
+        headline,
+        summary,
+        kind: isNote ? "note" : "article",
         url: safeUrl(p.data.links),
         publishedAt,
         espnAthleteIds: [athlete],
@@ -278,6 +298,7 @@ export async function fetchEspnRecentNews(
         storyId: String(p.data.id),
         headline: p.data.headline.trim(),
         summary: cleanSummary(p.data.description),
+        kind: "article",
         url: safeUrl(p.data.links),
         publishedAt,
         espnAthleteIds: [...new Set(ids)],

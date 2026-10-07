@@ -39,10 +39,59 @@ describe("fetchEspnPlayerNews", () => {
     expect(first?.espnAthleteIds).toEqual(["3139477"]);
     expect(first?.storyId).toMatch(/^\d+$/);
     expect(first?.publishedAt).toMatch(/^\d{4}-\d\d-\d\dT.*Z$/);
-    expect(first?.summary?.length ?? 0).toBeLessThanOrEqual(400);
+    expect(first?.summary?.length ?? 0).toBeLessThanOrEqual(first?.kind === "note" ? 1500 : 400);
     const sorted = [...r.data].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
     expect(r.data).toEqual(sorted);
     expect(r.meta.source).toBe("espn-news");
+  });
+
+  it("classifies Rotowire items as notes with the full story and Story items as capped articles", async () => {
+    const r = await fetchEspnPlayerNews("3139477", {
+      ...fast,
+      fetch: json(load("player-news.json")),
+    });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const notes = r.data.filter((i) => i.kind === "note");
+    const articles = r.data.filter((i) => i.kind === "article");
+    expect(notes).toHaveLength(5);
+    expect(articles).toHaveLength(3);
+    expect(notes.some((n) => (n.summary?.length ?? 0) > 400)).toBe(true);
+    for (const n of notes) expect(n.summary?.length ?? 0).toBeLessThanOrEqual(1500);
+    for (const a of articles) expect(a.summary?.length ?? 0).toBeLessThanOrEqual(400);
+    expect(notes.every((n) => n.summary !== n.headline)).toBe(true);
+  });
+
+  it("caps long notes at a word boundary and nulls a summary that repeats the headline", async () => {
+    const feed = {
+      feed: [
+        {
+          id: 1,
+          type: "ROTOWIRE",
+          headline: "Big",
+          story: "<p>word </p>".repeat(600),
+          published: "2026-10-01T00:00:00Z",
+        },
+        {
+          id: 2,
+          type: "Rotowire",
+          headline: "Same",
+          story: "",
+          description: "Same",
+          published: "2026-10-01T00:00:00Z",
+        },
+        { id: 3, headline: "Plain", story: "x", published: "2026-10-01T00:00:00Z" },
+      ],
+    };
+    const r = await fetchEspnPlayerNews("1", { ...fast, fetch: json(feed) });
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    const by = (id: string) => r.data.find((i) => i.storyId === id);
+    expect(by("1")?.kind).toBe("note");
+    expect(by("1")?.summary?.length).toBeLessThanOrEqual(1500);
+    expect(by("1")?.summary).toMatch(/word…$/);
+    expect(by("2")?.summary).toBeNull();
+    expect(by("3")?.kind).toBe("article");
   });
 
   it("rejects a non-numeric id without calling out", async () => {

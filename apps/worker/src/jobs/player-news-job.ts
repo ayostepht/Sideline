@@ -45,11 +45,19 @@ function toRow(item: EspnNewsItem, playerId: string, fetchedAt: string): PlayerN
     playerId,
     headline: item.headline,
     summary: item.summary,
+    kind: item.kind,
     url: item.url,
     source: NEWS_SOURCE,
     publishedAt: item.publishedAt,
     fetchedAt,
   };
+}
+
+/** Adds a row; a note is never replaced by an article carrying the same id. */
+function put(rows: Map<string, PlayerNewsRow>, row: PlayerNewsRow): void {
+  const prev = rows.get(row.id);
+  if (prev?.kind === "note" && row.kind !== "note") return;
+  rows.set(row.id, row);
 }
 
 /** Writes rows in one short transaction (no network inside) and prunes expired news. */
@@ -115,7 +123,7 @@ export function playerNewsJob(deps: PlayerNewsJobDeps = {}): Job {
       if (item.publishedAt >= cutoff) itemCount++;
       for (const playerId of playerIds) {
         const row = toRow(item, playerId, fetchedAt);
-        rows.set(row.id, row);
+        put(rows, row);
       }
     }
     // Each write is its own short transaction; no network call is in flight here.
@@ -168,7 +176,7 @@ export function playerNewsJob(deps: PlayerNewsJobDeps = {}): Job {
           for (const athlete of item.espnAthleteIds) {
             for (const playerId of byEspn.get(athlete) ?? []) {
               const row = toRow(item, playerId, fetchedAt);
-              rows.set(row.id, row);
+              put(rows, row);
             }
           }
         }
