@@ -60,12 +60,13 @@ describe("parseMode", () => {
     expect(parseMode("safe")).toBe("safe");
     expect(parseMode("upside")).toBe("upside");
     expect(parseMode("projected")).toBe("projected");
+    expect(parseMode("auto")).toBe("auto");
   });
   it("falls back to projected for missing or invalid values", () => {
-    expect(parseMode(undefined)).toBe("projected");
-    expect(parseMode(null)).toBe("projected");
-    expect(parseMode("")).toBe("projected");
-    expect(parseMode("bogus")).toBe("projected");
+    expect(parseMode(undefined)).toBe("auto");
+    expect(parseMode(null)).toBe("auto");
+    expect(parseMode("")).toBe("auto");
+    expect(parseMode("bogus")).toBe("auto");
   });
   it("takes the first of a repeated param", () => {
     expect(parseMode(["safe", "upside"])).toBe("safe");
@@ -159,6 +160,9 @@ describe("lineupSummary", () => {
 });
 
 describe("buildLineupHref", () => {
+  it("omits mode when auto", () => {
+    expect(buildLineupHref("abc", { week: 5, mode: "auto" })).toBe("/l/abc/lineup?week=5");
+  });
   it("includes week and mode, omits roster when unset", () => {
     expect(buildLineupHref("abc", { week: 5, mode: "safe" })).toBe(
       "/l/abc/lineup?week=5&mode=safe",

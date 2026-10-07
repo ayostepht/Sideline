@@ -129,13 +129,14 @@ export default async function LineupPage({
         <ModeToggle
           leagueId={leagueId}
           week={data.week}
-          mode={data.resolvedMode}
+          mode={data.mode}
+          reason={data.modeReason}
           {...(toggleRoster !== undefined ? { roster: toggleRoster } : {})}
         />
         <RosterToggle
           leagueId={leagueId}
           week={data.week}
-          mode={data.resolvedMode}
+          mode={data.mode}
           mine={mine}
           opponentRosterId={data.opponentRosterId}
           opponentName={opponentName}

@@ -1,12 +1,19 @@
-import type { LineupMode, LineupPlayer, LineupSwap, StandingsRow } from "@sideline/shared";
+import type {
+  LineupMode,
+  LineupModeChoice,
+  LineupPlayer,
+  LineupSwap,
+  StandingsRow,
+} from "@sideline/shared";
 import { hasMaterialSwaps } from "../../../../../lib/client/lineup-recommendation";
 import { leagueBase } from "../../../../../lib/client/nav";
 
 export { hasMaterialSwaps };
 
-const MODES: readonly LineupMode[] = ["projected", "safe", "upside"];
+export const MODE_CHOICES: readonly LineupModeChoice[] = ["auto", "projected", "safe", "upside"];
 
-export const MODE_LABEL: Record<LineupMode, string> = {
+export const MODE_LABEL: Record<LineupModeChoice, string> = {
+  auto: "Auto",
   projected: "Projected",
   safe: "Safe",
   upside: "Upside",
@@ -19,12 +26,12 @@ export const MODE_STAT_LABEL: Record<LineupMode, string> = {
   upside: "Upside pts",
 };
 
-/** A valid lineup mode from a `?mode=` query param, else the default "projected" (LINEUP-5). */
-export function parseMode(raw: string | readonly string[] | null | undefined): LineupMode {
+/** A valid lineup mode choice from a `?mode=` query param, else the default "auto" (LINEUP-5, AUTO-1). */
+export function parseMode(raw: string | readonly string[] | null | undefined): LineupModeChoice {
   const v = typeof raw === "string" || raw == null ? raw : raw[0];
-  return v !== undefined && v !== null && (MODES as readonly string[]).includes(v)
-    ? (v as LineupMode)
-    : "projected";
+  return v !== undefined && v !== null && (MODE_CHOICES as readonly string[]).includes(v)
+    ? (v as LineupModeChoice)
+    : "auto";
 }
 
 /** A positive integer roster id from a `?roster=` query param, else undefined (the viewer's own). */
@@ -76,14 +83,14 @@ export function lineupSummary(pointDelta: number, swapCount: number): string {
   return `${n} available, projected ${formatSignedPoints(pointDelta)}`;
 }
 
-/** Path and query for the lineup page with the given week/mode/roster; nothing else carries over. */
+/** Path and query for the lineup page with the given week/mode/roster (`auto` is the default, so omitted); nothing else carries over. */
 export function buildLineupHref(
   leagueId: string,
-  opts: { week: number | null; mode: LineupMode; roster?: number },
+  opts: { week: number | null; mode: LineupModeChoice; roster?: number },
 ): string {
   const params = new URLSearchParams();
   if (opts.week !== null) params.set("week", String(opts.week));
-  params.set("mode", opts.mode);
+  if (opts.mode !== "auto") params.set("mode", opts.mode);
   if (opts.roster !== undefined) params.set("roster", String(opts.roster));
   const qs = params.toString();
   return `${leagueBase(leagueId)}/lineup${qs ? `?${qs}` : ""}`;
