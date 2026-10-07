@@ -31,8 +31,8 @@ See `docs/HANDOFF.md` (the single source for resuming after a session limit or `
 | P7.6b | Search opens pop-up, team on swing/riser rows, review m5/m6, header title | frontend-engineer | C | Done | 1 | 08c76f6 |
 | P7.8a | Review M1/m1: news fetch-attempt marker, count helper in db | backend-engineer | D | Done | 1 | c74522d |
 | P7.8b | Worker records news fetch attempts | sleeper-data-engineer | D | Done | 1 | 4aac7d0 |
-| P7.8c | Code review M3/m2/m5/n1 + UX M1-M4/m1/m2/m4/n1 + nav highlight in pop-up | frontend-engineer | D | Dispatched | 1 | |
-| P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Open | 0 | |
+| P7.8c | Code review M3/m2/m5/n1 + UX M1-M4/m1/m2/m4/n1 + nav highlight in pop-up | frontend-engineer | D | Done | 1 | 2a0b262 |
+| P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Dispatched | 1 | |
 
 ## Earlier phases
 

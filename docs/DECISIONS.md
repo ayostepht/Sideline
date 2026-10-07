@@ -474,3 +474,5 @@ Date: 2026-10-06
 5. **Task plan.** Batch A: P7.1 (backend, db schema/helpers), P7.2 (sleeper-data, ESPN provider client), P7.3 (frontend, pop-up plus clickable names plus team subline), file-disjoint. Batch B: P7.4 (backend, DTO plus `getPlayerDetail` plus CSP), P7.5 (sleeper-data, espn_id persistence plus news worker job). Batch C: P7.6 (frontend, headshot, weekly table, news section), then P7.7 (qa, e2e plus a11y).
 
 **Consequences:** a new external dependency that may break without notice; it is isolated behind zod and degrades quietly. News freshness depends on the worker cadence.
+
+**Amendment (2026-10-06, P7.8c):** no `@modal/[...catchAll]` route. With it, Next 16.3.8 re-prefetched linked routes in an endless loop (pages never reached network idle). `PlayerModal` instead renders nothing once the pathname is no longer a player path. `PlayerLink` uses `prefetch={false}` so long player lists don't prefetch one route per name. Revisit if Next changes parallel-route soft-navigation behavior.

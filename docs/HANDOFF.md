@@ -30,8 +30,9 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Feature tasks P7.1-P7.6b done; fix round: P7.8a `c74522d`, P7.8b `4aac7d0` (code review M1 fixed). Reviews saved: `docs/reviews/2026-10-06-p7-batchA-code.md`, `-p7-batchBC-code.md`, `-p7-ux.md`. In flight: P7.8c frontend fix round (UX M1 networkidle/prefetch on Lineup, code M3 focus regression, UX M2-M4 and minors). Then P7.7 qa: update `e2e/search.spec.ts` SEARCH-3/4 (code review M2), re-verify PLAYERS-FLOW-5, new pop-up/card/news/focus/not-found specs, and `pnpm test:a11y`. **Stop `pnpm dev:lan` and `pnpm dev:worker` before P7.7's e2e/a11y run** (port 3000), restart after. Then a short re-review and Steph's look.
-- Dev worker restarted after P7.8b (migration 0003 applied).
+- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** All feature and fix-round tasks done through P7.8c `2a0b262` (`pnpm verify` green, 160 files, 1563 tests). Reviews saved under `docs/reviews/2026-10-06-p7-*`. In flight: P7.7 qa (search spec update, new player-card e2e spec, a11y, full e2e run).
+- **Dev servers are STOPPED** for P7.7 (port 3000). Restart `pnpm dev:lan` (log `/tmp/sideline-web-dev.log`) and `pnpm dev:worker` (log `/tmp/sideline-worker-dev.log`) when P7.7 reports.
+- After P7.7: short code re-review of 2a0b262 + P7.7, then present to Steph (merge to main is her call).
 - **Blocker for P7.7, waiting on Steph:** pre-existing e2e clock time bomb (PROGRESS "Found during Phase 7a"). Asked whether the existing `fix/e2e-clock` worktree is hers/another session's, or whether to fix it here.
 - Dev worker restarted 2026-10-06 after P7.5 (migration 0002 applied). espn_ids fill on the next daily players sync.
 
