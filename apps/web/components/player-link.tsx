@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { cn } from "../lib/client/cn";
 import { rememberTrigger } from "../lib/client/focus-return";
 import { playerHref } from "../lib/client/nav";
+
+function isModifiedClick(e: MouseEvent): boolean {
+  return e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0;
+}
 
 /**
  * The one way to render a player's name. Links to `/l/<leagueId>/players/<playerId>`; the league
@@ -41,9 +45,14 @@ export function PlayerLink({
   return (
     <Link
       href={playerHref(leagueId, playerId)}
+      // A page lists many players; viewport prefetch of each pop-up route keeps the network busy.
+      prefetch={false}
       title={title}
       data-testid="player-link"
-      onClick={(e) => rememberTrigger(e.currentTarget)}
+      onClick={(e) => {
+        // New-tab clicks do not open the pop-up here, so there is nothing to return focus to.
+        rememberTrigger(isModifiedClick(e) ? null : e.currentTarget);
+      }}
       className={cn(
         "rounded-control underline-offset-4 hover:underline focus-visible:underline",
         stretch && "after:absolute after:inset-0 after:content-['']",

@@ -6,7 +6,9 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LeagueSwitcher } from "./league-switcher";
-import { activeNavKey, isPlayerDetailPath, NAV_ITEMS, titlePathname } from "../../lib/client/nav";
+import { isModalMounted, shouldSkipFocusMove } from "../../lib/client/focus-return";
+import { activeNavKey, isPlayerDetailPath, NAV_ITEMS } from "../../lib/client/nav";
+import { useShownPathname } from "./use-shown-pathname";
 import { HeaderDetailProvider, useHeaderDetail } from "./header-detail";
 import { BottomTabs, SidebarNav } from "./nav-links";
 import { WeekSelector } from "./week-selector";
@@ -45,16 +47,12 @@ function ShellInner({ leagueId, leagueName, currentWeek, leagues, children }: Pr
   const pathname = usePathname();
   const detail = useHeaderDetail();
   // The pop-up changes the URL but not the page behind it: keep that page's title.
-  const underlying = useRef<string | null>(null);
-  const shownPath = titlePathname(pathname, underlying.current, leagueId);
-  useEffect(() => {
-    if (!isPlayerDetailPath(pathname, leagueId)) underlying.current = pathname;
-  }, [pathname, leagueId]);
+  const shownPath = useShownPathname(leagueId);
   const base = pageTitle(shownPath, leagueId);
   const title = detail ? `${base} / ${detail}` : base;
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
-  const prevPath = useRef(pathname);
+  const modalWasMounted = useRef(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoaded, setSearchLoaded] = useState(false);
 
@@ -81,11 +79,15 @@ function ShellInner({ leagueId, leagueName, currentWeek, leagues, children }: Pr
       return;
     }
     // Opening or closing the player pop-up keeps focus on the name (restored by the pop-up).
-    if (isPlayerDetailPath(pathname, leagueId) || isPlayerDetailPath(prevPath.current, leagueId)) {
-      prevPath.current = pathname;
-      return;
-    }
-    prevPath.current = pathname;
+    // A full-page player view (no pop-up) still moves focus like any other page.
+    const modalNow = isModalMounted();
+    const skip = shouldSkipFocusMove({
+      nextIsPlayerPath: isPlayerDetailPath(pathname, leagueId),
+      modalMountedNow: modalNow,
+      modalWasMounted: modalWasMounted.current,
+    });
+    modalWasMounted.current = modalNow;
+    if (skip) return;
     mainRef.current?.focus({ preventScroll: true });
   }, [pathname, leagueId]);
 

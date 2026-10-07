@@ -1,3 +1,5 @@
+import { formatCount } from "../lib/client/format-count";
+
 export interface ImpactText {
   sign: "up" | "down" | "none";
   /** Text such as "+1.2 pts" or "-0.8 pts". */
@@ -32,7 +34,12 @@ export function formatProjectedPoints(points: number | undefined): string | unde
  * plain integer count rather than a points or percentage figure). Add new entries here rather than
  * special-casing call sites; see docs/PROGRESS.md for the next known candidate (`WAIVER_SCORE_*`).
  */
+const countFormatter = (value: number | string): string => formatCount(Number(value));
+
 const REASON_VALUE_FORMATTERS: Record<string, (value: number | string) => string> = {
+  // Sleeper add and drop counts are whole numbers in the tens of thousands.
+  TREND_MOMENTUM_ADDS: countFormatter,
+  TREND_MOMENTUM_DROPS: countFormatter,
   // `value` is a non-negative integer count of weeks that fell back to a season-average estimate
   // (packages/core/src/projections/rest-of-season.ts). A bare decimal like "14.0" reads as points.
   ROS_ESTIMATED_FROM_PPG: (value) => {

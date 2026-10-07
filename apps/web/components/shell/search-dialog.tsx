@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { rememberTrigger } from "../../lib/client/focus-return";
 import { normalizeSearchQuery, searchResultHref, SEARCH_DEBOUNCE_MS } from "../../lib/client/nav";
 import { InjuryBadge } from "../injury-badge";
 import { teamLabel } from "../team-label";
@@ -71,6 +72,8 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
 
   function select(r: PlayerSearchResult) {
     handleOpenChange(false);
+    // Search opens the pop-up from no link; do not return focus to an older clicked name.
+    rememberTrigger(null);
     router.push(searchResultHref(leagueId, r));
   }
 
@@ -100,29 +103,30 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
             <Command.List className="max-h-[min(60vh,420px)] overflow-y-auto p-2">
               <Status state={state} query={query} onRetry={() => setAttempt((n) => n + 1)} />
               {state.kind === "done"
-                ? state.results.map((r) => (
-                    <Command.Item
-                      key={r.playerId}
-                      value={r.playerId}
-                      onSelect={() => select(r)}
-                      data-testid="search-result"
-                      className="flex min-h-12 cursor-pointer items-center gap-2 rounded-control px-3 py-1 data-[selected=true]:bg-muted"
-                    >
-                      <PositionBadge position={r.position} />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">{r.name}</span>
-                          <InjuryBadge status={r.injuryStatus} />
+                ? state.results.map((r) => {
+                    const team = teamLabel(r.position, r.nflTeam);
+                    return (
+                      <Command.Item
+                        key={r.playerId}
+                        value={r.playerId}
+                        onSelect={() => select(r)}
+                        data-testid="search-result"
+                        className="flex min-h-12 cursor-pointer items-center gap-2 rounded-control px-3 py-1 data-[selected=true]:bg-muted"
+                      >
+                        <PositionBadge position={r.position} />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-sm font-medium">{r.name}</span>
+                            <InjuryBadge status={r.injuryStatus} />
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {team ? `${team} · ` : ""}
+                            {r.owner?.teamName ?? "Free agent"}
+                          </span>
                         </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {teamLabel(r.position, r.nflTeam)
-                            ? `${teamLabel(r.position, r.nflTeam)} · `
-                            : ""}
-                          {r.owner?.teamName ?? "Free agent"}
-                        </span>
-                      </span>
-                    </Command.Item>
-                  ))
+                      </Command.Item>
+                    );
+                  })
                 : null}
             </Command.List>
           </Command>

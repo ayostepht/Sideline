@@ -171,3 +171,24 @@ describe("formatNetCount", () => {
     expect(formatNetCount(0)).toBe("0");
   });
 });
+
+describe("usageEmptyMessage and formatNetCount", () => {
+  it("returns null when there are fields", async () => {
+    const { usageEmptyMessage } = await import("./format");
+    expect(usageEmptyMessage({ fields: [1], reasons: [{ label: "x" }] })).toBeNull();
+  });
+  it("returns the first reason label when empty, else a default", async () => {
+    const { usageEmptyMessage } = await import("./format");
+    expect(
+      usageEmptyMessage({ fields: [], reasons: [{ label: "We don't track usage stats for K" }] }),
+    ).toBe("We don't track usage stats for K");
+    expect(usageEmptyMessage({ fields: [], reasons: [] })).toBe(
+      "No usage data tracked for this position.",
+    );
+  });
+  it("formats net counts with separators", async () => {
+    const { formatNetCount } = await import("./format");
+    expect(formatNetCount(59800)).toBe("+59,800");
+    expect(formatNetCount(-80)).toBe("-80");
+  });
+});

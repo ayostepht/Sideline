@@ -171,4 +171,9 @@ describe("player pop-up title path", () => {
     expect(titlePathname("/l/100/players/p1", null, "100")).toBe("/l/100/players/p1");
     expect(titlePathname("/l/100/waivers", "/l/100/lineup", "100")).toBe("/l/100/waivers");
   });
+  it("keeps the underlying tab active while the pop-up is open", () => {
+    const shown = titlePathname("/l/100/players/p1", "/l/100/lineup", "100");
+    expect(isNavActive(shown, L, item("lineup"))).toBe(true);
+    expect(isNavActive(shown, L, item("players"))).toBe(false);
+  });
 });

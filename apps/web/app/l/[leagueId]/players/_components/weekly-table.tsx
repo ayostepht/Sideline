@@ -40,7 +40,7 @@ export function WeeklyTable({
 }) {
   return (
     <div
-      className="max-h-[22rem] overflow-auto rounded-control border"
+      className="max-h-[22rem] max-w-xl overflow-auto rounded-control border"
       // Scrollable region must be keyboard reachable.
       tabIndex={0}
       role="region"
@@ -60,13 +60,13 @@ export function WeeklyTable({
             <th scope="col" className={`${TH} py-2 text-right`}>
               Pts
             </th>
-            <th scope="col" className={`${TH} text-right`}>
+            <th scope="col" className={`${TH} hidden text-right sm:table-cell`}>
               <HeadWithTip label="Proj" tip={HEAD_TIPS.Proj} />
             </th>
             <th scope="col" className={`${TH} text-right`}>
               <HeadWithTip label="Rank" tip={HEAD_TIPS.Rank} />
             </th>
-            <th scope="col" className={`${TH} text-left`}>
+            <th scope="col" className={`${TH} text-right`}>
               <HeadWithTip label="Result" tip={HEAD_TIPS.Result} />
             </th>
           </tr>
@@ -91,12 +91,20 @@ export function WeeklyTable({
                     </span>
                   ) : null}
                   {formatWeekPts(r)}
+                  {/* Below sm the Proj column is hidden to fit 390px; show it under Pts instead. */}
+                  {r.projectedPts !== null ? (
+                    <span className="block text-[11px] font-normal text-muted-foreground sm:hidden">
+                      proj {formatWeekProj(r)}
+                    </span>
+                  ) : null}
                 </td>
-                <td className="px-2 py-2 text-right text-muted-foreground">{formatWeekProj(r)}</td>
+                <td className="hidden px-2 py-2 text-right text-muted-foreground sm:table-cell">
+                  {formatWeekProj(r)}
+                </td>
                 <td className="px-2 py-2 text-right text-muted-foreground">
                   {formatWeekRank(r, position)}
                 </td>
-                <td className="px-2 py-2">
+                <td className="px-2 py-2 text-right">
                   {result === "Boom" ? (
                     <span className="font-semibold text-positive">Boom</span>
                   ) : result === "Bust" ? (

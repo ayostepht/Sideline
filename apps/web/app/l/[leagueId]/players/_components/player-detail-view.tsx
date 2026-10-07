@@ -1,6 +1,7 @@
 import type { PlayerDetailResponse } from "@sideline/shared";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { formatCount } from "../../../../../lib/client/format-count";
 import { PlayerAvatar } from "../../../../../components/player-avatar";
 import { DialogTitle } from "../../../../../components/ui/dialog";
 import { DataFreshness } from "../../../../../components/data-freshness";
@@ -23,6 +24,7 @@ import {
   MOMENTUM_TONE,
   signalToTrend,
   sortedWeeklySeries,
+  usageEmptyMessage,
   USAGE_FIELD_LABEL,
 } from "./format";
 import { NewsSection } from "./news-section";
@@ -103,7 +105,9 @@ export function PlayerDetailView({
             </p>
           </div>
         </div>
-        <DataFreshness freshness={player.freshness} now={now} className="mt-2" />
+        {player.freshness.stale ? null : (
+          <DataFreshness freshness={player.freshness} now={now} className="mt-2" />
+        )}
       </div>
       <StaleBanner freshness={player.freshness} now={now} />
 
@@ -193,9 +197,9 @@ export function PlayerDetailView({
       </Section>
 
       <Section id="usage" title="Usage">
-        {usage.fields.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {usage.reasons[0]?.label ?? "No usage data tracked for this position."}
+        {usageEmptyMessage(usage) !== null ? (
+          <p className="text-sm text-muted-foreground" data-testid="player-usage-empty">
+            {usageEmptyMessage(usage)}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -212,13 +216,15 @@ export function PlayerDetailView({
             ))}
           </div>
         )}
-        <ReasonChips
-          reasons={usage.reasons}
-          max={2}
-          trailing={
-            usage.reasons.length > 0 ? <WhySheet title="Usage" reasons={usage.reasons} /> : null
-          }
-        />
+        {usage.fields.length > 0 ? (
+          <ReasonChips
+            reasons={usage.reasons}
+            max={2}
+            trailing={
+              usage.reasons.length > 0 ? <WhySheet title="Usage" reasons={usage.reasons} /> : null
+            }
+          />
+        ) : null}
       </Section>
 
       <Section id="consistency" title="Boom and bust weeks">
@@ -242,7 +248,7 @@ export function PlayerDetailView({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={MOMENTUM_TONE[momentum.label]}>{momentum.label}</Badge>
           <span className="text-sm tabular-nums text-muted-foreground">
-            {momentum.addCount} adds · {momentum.dropCount} drops
+            {formatCount(momentum.addCount)} adds · {formatCount(momentum.dropCount)} drops
           </span>
         </div>
         <ReasonChips

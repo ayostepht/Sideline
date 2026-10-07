@@ -27,6 +27,9 @@ export function NewsSection({
   const [checking, setChecking] = useState(false);
   const started = useRef(false);
 
+  // In React StrictMode (dev only) effects run twice: the first POST is aborted on cleanup, but the
+  // server may already have queued it. The retry then gets `queued: false`, so no refresh is
+  // scheduled in dev. Production runs the effect once.
   useEffect(() => {
     if (started.current || !leagueId) return;
     if (!needsNewsRefresh(lastFetchedAt, new Date())) return;

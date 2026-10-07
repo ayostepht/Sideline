@@ -5,6 +5,7 @@ import type {
   PlayerWeeklyPoint,
 } from "@sideline/shared";
 import { leagueBase } from "../../../../../lib/client/nav";
+import { formatCount } from "../../../../../lib/client/format-count";
 import type { Trend } from "../../../../../components/trend";
 
 /**
@@ -146,5 +147,14 @@ export const MOMENTUM_TONE: Record<PlayerMomentumLabel, "positive" | "neutral" |
 
 /** Signed net add/drop count, for example "+240" or "-80". */
 export function formatNetCount(n: number): string {
-  return n > 0 ? `+${n}` : String(n);
+  return n > 0 ? `+${formatCount(n)}` : formatCount(n);
+}
+
+/** Why the Usage section has nothing to show, or null when there are usage fields. */
+export function usageEmptyMessage(usage: {
+  fields: readonly unknown[];
+  reasons: ReadonlyArray<{ label: string }>;
+}): string | null {
+  if (usage.fields.length > 0) return null;
+  return usage.reasons[0]?.label ?? "No usage data tracked for this position.";
 }

@@ -48,8 +48,8 @@ function SwingPlayerRow({
   return (
     <div
       className={cn(
-        "relative flex min-h-11 w-full min-w-0 items-center gap-2 rounded-control border-l-4 px-2 py-1 transition-colors hover:bg-muted md:max-w-2xl",
-        yours ? "border-primary bg-accent-soft" : "border-transparent",
+        "relative flex min-h-11 w-full min-w-0 items-center gap-2 rounded-control border-l-2 px-2.5 py-1 transition-colors hover:bg-muted md:max-w-2xl",
+        yours ? "border-foreground" : "border-transparent",
       )}
     >
       <span className="flex min-w-0 flex-1 flex-col gap-1">

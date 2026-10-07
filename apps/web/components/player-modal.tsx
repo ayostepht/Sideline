@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
-import { restoreTriggerFocus } from "../lib/client/focus-return";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import { useEffect, type ReactNode } from "react";
+import { isPlayerDetailPath } from "../lib/client/nav";
+import { restoreTriggerFocus, trackModalMount } from "../lib/client/focus-return";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./ui/dialog";
 
 /**
@@ -19,6 +20,17 @@ export function PlayerModal({
   loadingLabel?: string;
 }) {
   const router = useRouter();
+  // The slot keeps its last page when soft navigation leaves the player route (there is no
+  // catch-all route: it made Next re-prefetch linked routes in a loop). Render nothing then.
+  const pathname = usePathname();
+  const { leagueId } = useParams<{ leagueId?: string }>();
+  const visible = leagueId === undefined || isPlayerDetailPath(pathname, leagueId);
+  useEffect(() => {
+    if (!visible) return;
+    trackModalMount(true);
+    return () => trackModalMount(false);
+  }, [visible]);
+  if (!visible) return null;
   return (
     <Dialog open onOpenChange={(open) => !open && router.back()}>
       <DialogContent
