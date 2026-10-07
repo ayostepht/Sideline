@@ -41,7 +41,8 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 | P7b.9f | Weather not rendering on fixture data: root cause, fix and regression test | backend-engineer | 5 | P7b.9, P7b.11 | WX-4, WX-5 | Done (no server bug; stale build plus unpinned screens clock) | 1 | 188e6fe |
 | P7b.14 | Players detail route over the hard JS cap (220,112 B vs 204,800 B, was 193,914 B at G4) | frontend-engineer | 5 | none | PLAN 6.6 budgets | Done | 1 | a6eb37c |
 | P7b.13c | `pnpm screens` pins the game clock like e2e and refuses stale builds | devops-engineer | 5 | none | tooling | Done | 1 | 5c9bcf3 |
-| P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | In progress | 0 | |
+| P7b.10g | Trades soft-navigation title lost (WCAG 2.4.2, TRADE-2b); LINEUP-FLOW-4 mobile-pixel blank not-found flake (3/10) | frontend-engineer | 5 | P7b.12 | TRADE-5, UI2 | In progress | 0 | |
+| P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Done (531 passed; TRADE-2b red pending P7b.10g) | 1 | af9c331 |
 
 After each batch: code-reviewer (and ux-reviewer for UI batches 4 and 5). One combined mini-gate for Auto, Trades and weather after batch 5 (changed 2026-10-07 to save tokens; the e2e for all three land in P7b.12). Release v1.3.0.
 

@@ -41,7 +41,8 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
 - **Batch 4c done**: P7b.3f `2f594b5`, P7b.7g `5e8d30b`, P7b.10f `552d802`. Verify 1788 passed.
 - Done since Batch 4c: Trades UX re-check APPROVE (`docs/reviews/2026-10-07-p7b-batch4-ux-recheck.md`), P7b.13 `43e8f14` and P7b.13b `b0f67ad` (`fixtures:check` now passes), P7b.3g `07c6b36`, P7b.11 `bf3a290` (weather chips, verified on the gallery only).
 - P7b.9f `188e6fe` (no server bug), P7b.13c `5c9bcf3` (screens clock pin), P7b.14 `a6eb37c` (lazy Radix; every route under the cap). Verify 1807 passed.
-- **P7b.12 (qa) dispatched** on a free port (E2E_PORT override), because port 3000 is Steph's dev server. **The orchestrator's attempt to stop Steph's dev servers was denied by the permission classifier.** Steph was asked to stop `pnpm dev:lan` and `pnpm dev:worker`, plus stray agent servers on ports 3200 (PID 7748) and 3917 (PID 11365), before the final gate run. After P7b.12: the Batch 5 code and UX reviews, then the combined mini-gate, then a release proposal (v1.3.0).
+- **P7b.12 done** `af9c331`: e2e on `E2E_PORT=3400` gave 531 passed, 3 failed (TRADE-2b on desktop and iphone, the Trades soft-nav title bug; LINEUP-FLOW-4 mobile-pixel flake), 18 not run. The orchestrator was denied permission to stop Steph's dev servers; Steph was asked to stop them (and stray agent servers on PIDs 7748 and 11365) before the final gate.
+- **In flight:** P7b.10g (frontend: title bug plus the FLOW-4 flake, comparing against `cd266e7`) and the Batch 5 code review (`8fc0ddb..HEAD`). Next: the Batch 5 UX review (Lineup weather, Matchup, player card, Trades), the combined mini-gate, then a v1.3.0 release proposal to Steph.
 - **Weather e2e facts for P7b.12** (fixture DB, clock pinned at 2026-10-02T12:00:00Z, roster 1, week 4):
   - NYJ 11576, 12517, 13330 in `2026_04_NYJ_CHI`: wind flag, "Wind 21 mph".
   - BUF 4983 in `2026_04_NE_BUF`: precip, "Rain likely (80%)".
