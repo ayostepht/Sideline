@@ -35,9 +35,11 @@ Batches run in order; tasks inside a batch are file-disjoint. Contracts (P7b.1) 
 | P7b.3f | Finder: exclude Lopsided, rank by the smaller gain (ADR-022 7a, UX M1); surplus-position give pool (m4); dedupe perf assertion (m5) | analytics-engineer | 4c | P7b.3 | TRADE-2, TRADE-4 | Done | 1 | 2f594b5 |
 | P7b.7g | Trades cold-load: measure and fix the server path; batched roster read (UX M3, code m4) | backend-engineer | 4c | P7b.7f | TRADE-4 | Done | 1 | 5e8d30b |
 | P7b.10f | Trades and Auto UX fixes: touch popovers, 44px targets, Suspense streaming, before/after grid, selection chips, card actions (UX M1-M3, m1-m4; code m5, n1) | frontend-engineer | 4c | P7b.10 | TRADE-3..5, AUTO-1 | Done | 1 | 552d802 |
-| P7b.11 | UI: weather chips on Lineup, player card Next opponents, Matchup | frontend-engineer | 5 | P7b.9 | WX-4, WX-5 | In progress | 0 | |
+| P7b.11 | UI: weather chips on Lineup, player card Next opponents, Matchup | frontend-engineer | 5 | P7b.9 | WX-4, WX-5 | Done (visuals verified on gallery only) | 1 | bf3a290 |
 | P7b.13 | Screens route list adds Trades; `fixtures:check` applies the ADR-018 URL exemption and handles binary false positives | devops-engineer | 5 | none | tooling | Done (routes by devops; checker by sleeper-data as P7b.13b) | 1 | 43e8f14, b0f67ad |
-| P7b.3g | Finder variety: at most 2 suggestions per give set and per get set (UX re-check m4) | analytics-engineer | 5 | P7b.3f | TRADE-2 | In progress | 0 | |
+| P7b.3g | Finder variety: at most 2 suggestions per give set and per get set (UX re-check m4) | analytics-engineer | 5 | P7b.3f | TRADE-2 | Done | 1 | 07c6b36 |
+| P7b.9f | Weather not rendering on fixture data: root cause, fix and regression test | backend-engineer | 5 | P7b.9, P7b.11 | WX-4, WX-5 | In progress | 0 | |
+| P7b.14 | Players detail route over the hard JS cap (220,112 B vs 204,800 B, was 193,914 B at G4) | frontend-engineer | 5 | none | PLAN 6.6 budgets | In progress | 0 | |
 | P7b.12 | QA: e2e and a11y for Auto, Trades, weather; fixture DB weather rows | qa-engineer | 5 | P7b.8, P7b.10 (P7b.11 for weather specs) | all | Planned | 0 | |
 
 After each batch: code-reviewer (and ux-reviewer for UI batches 4 and 5). One combined mini-gate for Auto, Trades and weather after batch 5 (changed 2026-10-07 to save tokens; the e2e for all three land in P7b.12). Release v1.3.0.
