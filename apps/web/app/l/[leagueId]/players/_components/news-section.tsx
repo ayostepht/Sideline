@@ -1,11 +1,83 @@
 "use client";
 
-import type { PlayerNews } from "@sideline/shared";
+import type { PlayerNews, PlayerNewsItem } from "@sideline/shared";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { formatRelativeTime, needsNewsRefresh } from "./player-card-format";
+import {
+  formatRelativeTime,
+  isLongAnalysis,
+  needsNewsRefresh,
+  pickLatestNote,
+} from "./player-card-format";
 
 const REFRESH_DELAY_MS = 8000;
+
+function ExternalLink({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex min-h-11 items-center text-xs text-link underline-offset-4 hover:underline"
+    >
+      Read on ESPN
+      <span className="sr-only"> (opens in new tab)</span>
+    </a>
+  );
+}
+
+/** The newest player note: the update, then what it means for fantasy. */
+export function LatestNote({
+  item,
+  now,
+  defaultExpanded = false,
+}: {
+  item: PlayerNewsItem;
+  now: Date;
+  defaultExpanded?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  const long = isLongAnalysis(item.summary);
+  const time = formatRelativeTime(item.publishedAt, now);
+  return (
+    <div
+      className="flex flex-col gap-2 rounded-lg border bg-card p-3"
+      data-testid="player-news-latest"
+    >
+      <p className="text-xs font-medium text-muted-foreground">
+        <span className="uppercase tracking-wide text-foreground">Latest</span>
+        {time !== "" ? ` · ${time}` : ""}
+      </p>
+      <p className="break-words text-sm leading-6 text-foreground">{item.headline}</p>
+      {item.summary ? (
+        <>
+          <p
+            id={`news-analysis-${item.id}`}
+            className={`break-words text-sm leading-6 text-foreground ${
+              long && !expanded ? "line-clamp-4" : ""
+            }`}
+            data-testid="player-news-latest-analysis"
+          >
+            {item.summary}
+          </p>
+          {long ? (
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={`news-analysis-${item.id}`}
+              onClick={() => setExpanded((v) => !v)}
+              className="inline-flex min-h-11 w-fit items-center text-sm font-medium text-link underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2"
+              data-testid="player-news-latest-toggle"
+            >
+              {expanded ? "Show less" : "Show more"}
+            </button>
+          ) : null}
+        </>
+      ) : null}
+      {item.url ? <ExternalLink url={item.url} /> : null}
+    </div>
+  );
+}
 
 /** Recent news plus a one-shot background refresh request when the stored news is stale. */
 export function NewsSection({
@@ -22,7 +94,9 @@ export function NewsSection({
   const params = useParams<{ leagueId?: string }>();
   const leagueId = params.leagueId;
   const now = new Date(nowIso);
-  const items = (news?.items ?? []).slice(0, 5);
+  const all = news?.items ?? [];
+  const latest = pickLatestNote(all);
+  const items = (latest ? all.filter((n) => n.id !== latest.id) : all).slice(0, latest ? 4 : 5);
   const lastFetchedAt = news?.lastFetchedAt ?? null;
   const [checking, setChecking] = useState(false);
   const started = useRef(false);
@@ -74,44 +148,62 @@ export function NewsSection({
 
   return (
     <div className="flex flex-col gap-2">
-      {items.length === 0 ? (
+      {items.length === 0 && !latest ? (
         <p className="text-sm text-muted-foreground" data-testid="player-news-empty">
           No recent news.
         </p>
       ) : (
-        <ul className="flex flex-col divide-y" data-testid="player-news-list">
-          {items.map((n) => (
-            <li key={n.id} className="py-2 first:pt-0 last:pb-0" data-testid="player-news-item">
-              <h3 className="text-sm font-semibold leading-5">
-                {n.url ? (
-                  <a
-                    href={n.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-link underline-offset-4 hover:underline"
-                  >
-                    {n.headline}
-                    <span className="sr-only"> (opens in new tab)</span>
-                  </a>
-                ) : (
-                  n.headline
-                )}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {n.source}
-                {formatRelativeTime(n.publishedAt, now) !== ""
-                  ? ` · ${formatRelativeTime(n.publishedAt, now)}`
-                  : ""}
-              </p>
-              {n.summary ? (
-                <p className="mt-1 line-clamp-3 text-sm text-muted-foreground">{n.summary}</p>
-              ) : null}
-            </li>
-          ))}
-        </ul>
+        <>
+          {latest ? <LatestNote item={latest} now={now} /> : null}
+          {items.length > 0 ? (
+            <ul className="flex flex-col divide-y" data-testid="player-news-list">
+              {items.map((n) => (
+                <li key={n.id} className="py-2 first:pt-0 last:pb-0" data-testid="player-news-item">
+                  {n.kind === "note" ? (
+                    <p className="break-words text-sm font-medium leading-5">{n.headline}</p>
+                  ) : (
+                    <h3 className="text-sm font-semibold leading-5">
+                      {n.url ? (
+                        <a
+                          href={n.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-link underline-offset-4 hover:underline"
+                        >
+                          {n.headline}
+                          <span className="sr-only"> (opens in new tab)</span>
+                        </a>
+                      ) : (
+                        n.headline
+                      )}
+                    </h3>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {n.source}
+                    {formatRelativeTime(n.publishedAt, now) !== ""
+                      ? ` · ${formatRelativeTime(n.publishedAt, now)}`
+                      : ""}
+                  </p>
+                  {n.summary ? (
+                    <p
+                      className={`mt-1 break-words text-sm ${
+                        n.kind === "note"
+                          ? "line-clamp-2 text-foreground"
+                          : "line-clamp-3 text-muted-foreground"
+                      }`}
+                    >
+                      {n.summary}
+                    </p>
+                  ) : null}
+                  {n.kind === "note" && n.url ? <ExternalLink url={n.url} /> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </>
       )}
       <p className="text-xs text-muted-foreground">
-        News from ESPN
+        {latest ? "News from ESPN and RotoWire" : "News from ESPN"}
         {checking ? (
           <span role="status" data-testid="player-news-checking">
             {" · Checking for news..."}

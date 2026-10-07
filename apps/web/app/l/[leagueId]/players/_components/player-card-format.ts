@@ -72,3 +72,22 @@ export function needsNewsRefresh(lastFetchedAt: string | null | undefined, now: 
 }
 
 export { initials } from "../../../../../lib/client/initials";
+
+/** Analysis longer than this is clamped to ~4 lines on a phone, so it gets a Show more toggle. */
+export const LONG_ANALYSIS_CHARS = 240;
+
+export function isLongAnalysis(summary: string | null): boolean {
+  return (summary?.length ?? 0) > LONG_ANALYSIS_CHARS;
+}
+
+/** The newest news item of kind "note", or undefined. */
+export function pickLatestNote<T extends { kind: string; publishedAt: string }>(
+  items: readonly T[],
+): T | undefined {
+  let best: T | undefined;
+  for (const n of items) {
+    if (n.kind !== "note") continue;
+    if (!best || Date.parse(n.publishedAt) > Date.parse(best.publishedAt)) best = n;
+  }
+  return best;
+}
