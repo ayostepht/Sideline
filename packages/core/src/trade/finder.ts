@@ -1,17 +1,26 @@
 /**
- * TRADE-2 (PLAN 5.9, ADR-022 item 5): trade finder. Looks for 1-for-1, 2-for-1 (I give 2, get 1)
- * and 1-for-2 trades against every other team where BOTH teams' ROS lineup delta exceeds
- * {@link MIN_TRADE_GAIN}.
+ * TRADE-2 (PLAN 5.9, ADR-022 items 7 and 7a): trade finder. Looks for 1-for-1, 2-for-1 (I give 2,
+ * get 1) and 1-for-2 trades against every other team where BOTH teams' ROS lineup delta exceeds
+ * {@link MIN_TRADE_GAIN}. Trades whose `tradeFairness` is `lopsided` (TRADE-4) are excluded.
  *
  * Prefilter (needs): the heatmap is keyed by SLOT type (QB, RB, WR, TE, FLEX, ...). A slot type
  * maps to player positions via `SLOT_ELIGIBILITY` (FLEX -> RB/WR/TE, SUPER_FLEX -> QB/RB/WR/TE,
  * ...). For a given other team:
  * - GET positions = positions of slot types where my delta < 0 and theirs > 0 (they are strong
- *   where I am weak).
- * - GIVE positions = positions of slot types where my delta > 0 and theirs < 0.
- * Candidates are non-reserve players with a fantasy position in the set, the top
- * `maxCandidatesPerSide` (default {@link DEFAULT_MAX_CANDIDATES_PER_SIDE}) by rosValue desc
- * (ties by playerId). Ranking: their gain desc, my gain desc, then sorted player-id key.
+ *   where I am weak). The GET pool comes from THEIR surplus positions.
+ * - GIVE positions = positions of slot types where my delta > 0 and theirs < 0. The GIVE pool
+ *   comes from MY surplus positions.
+ * Pools: non-reserve players with a fantasy position in the set. Players are ranked by rosValue
+ * desc (ties by playerId) WITHIN each position, then the pool is filled round-robin by rank
+ * across the surplus positions (every position's best player, then every position's second
+ * best, ...) up to `maxCandidatesPerSide` (default {@link DEFAULT_MAX_CANDIDATES_PER_SIDE}).
+ * This keeps one deep position from crowding the others out of the cap.
+ *
+ * Ranking: `min(myGain, theirGain)` desc (both sides must gain meaningfully, so the other
+ * manager might accept), then my gain desc, then the sorted player-id key. The 2-for-1 shape
+ * is not specially guarded: a side that gains mostly by filling an empty slot with a second
+ * player produces a big gain for that side only, so the min-gain ranking (and the lopsided
+ * exclusion) already pushes it down.
  */
 import { SLOT_ELIGIBILITY } from "../optimizer/eligibility.js";
 import type { PositionalStrengthResult } from "../league/positional-heatmap.js";
@@ -61,10 +70,30 @@ function needPositions(
 }
 
 function candidates(team: TradeTeam, positions: ReadonlySet<string>, max: number): TradePlayer[] {
-  return team.players
-    .filter((p) => !p.reserve && p.fantasyPositions.some((pos) => positions.has(pos)))
-    .sort((a, b) => b.rosValue - a.rosValue || (a.playerId < b.playerId ? -1 : 1))
-    .slice(0, max);
+  const byPos = new Map<string, TradePlayer[]>();
+  for (const p of team.players) {
+    if (p.reserve) continue;
+    const pos = [...p.fantasyPositions].sort().find((x) => positions.has(x));
+    if (pos === undefined) continue;
+    const list = byPos.get(pos) ?? [];
+    list.push(p);
+    byPos.set(pos, list);
+  }
+  const better = (a: TradePlayer, b: TradePlayer) =>
+    b.rosValue - a.rosValue || (a.playerId < b.playerId ? -1 : 1);
+  for (const list of byPos.values()) list.sort(better);
+  const out: TradePlayer[] = [];
+  for (let rank = 0; out.length < max; rank++) {
+    const round: TradePlayer[] = [];
+    for (const list of byPos.values()) {
+      const p = list[rank];
+      if (p !== undefined) round.push(p);
+    }
+    if (round.length === 0) break;
+    round.sort(better);
+    for (const p of round) if (out.length < max) out.push(p);
+  }
+  return out;
 }
 
 function subsets(pool: readonly TradePlayer[], size: 1 | 2): string[][] {
@@ -120,7 +149,11 @@ export function findTrades(input: FindTradesInput): FindTradesResult {
             theirBase,
           );
           if (!r.ok) continue;
-          if (r.mine.rosLineupDelta > MIN_TRADE_GAIN && r.theirs.rosLineupDelta > MIN_TRADE_GAIN) {
+          if (
+            r.mine.rosLineupDelta > MIN_TRADE_GAIN &&
+            r.theirs.rosLineupDelta > MIN_TRADE_GAIN &&
+            r.fairness !== "lopsided"
+          ) {
             found.push({
               otherRosterId: other.rosterId,
               give: r.give,
@@ -135,9 +168,10 @@ export function findTrades(input: FindTradesInput): FindTradesResult {
       }
     }
   }
+  const minGain = (t: FoundTrade) => Math.min(t.mine.rosLineupDelta, t.theirs.rosLineupDelta);
   found.sort(
     (a, b) =>
-      b.theirs.rosLineupDelta - a.theirs.rosLineupDelta ||
+      minGain(b) - minGain(a) ||
       b.mine.rosLineupDelta - a.mine.rosLineupDelta ||
       (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0),
   );

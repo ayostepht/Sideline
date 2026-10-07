@@ -50,6 +50,5 @@ describe("findTrades performance", () => {
     const ms = performance.now() - start;
     expect(r.evaluatedCount).toBeGreaterThan(100);
     expect(ms, `took ${ms.toFixed(0)} ms for ${r.evaluatedCount} evaluations`).toBeLessThan(1500);
-    expect(ms).toBeLessThan(1500);
   });
 });
