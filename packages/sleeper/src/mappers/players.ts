@@ -22,6 +22,13 @@ function cleanGsis(value: string | null | undefined): string | null {
   return t ? t : null;
 }
 
+/** espn_id arrives as a number or a string; normalize to a trimmed string, empty becomes null. */
+function cleanEspnId(value: string | number | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  const t = String(value).trim();
+  return t ? t : null;
+}
+
 export function mapPlayer(raw: RawPlayer): Player {
   const composed = [raw.first_name, raw.last_name].filter(Boolean).join(" ").trim();
   return {
@@ -42,6 +49,7 @@ export function mapPlayer(raw: RawPlayer): Player {
     depthChartOrder: raw.depth_chart_order ?? null,
     searchRank: raw.search_rank ?? null,
     gsisId: cleanGsis(raw.gsis_id),
+    espnId: cleanEspnId(raw.espn_id),
   };
 }
 

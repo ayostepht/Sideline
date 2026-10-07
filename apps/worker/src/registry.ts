@@ -14,6 +14,7 @@ export const ALL_ORDER: readonly SyncJobName[] = [
   "stats",
   "nflverse",
   "projections",
+  "player_news",
 ];
 
 export interface JobRegistry {

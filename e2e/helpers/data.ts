@@ -8,16 +8,21 @@ export const DATA = {
   /** The fixture user's roster (manager_04) and a player on it. */
   myRosterId: 4,
   myTeamName: "Team 04",
-  myPlayerId: "9221", // Jahmyr Gibbs, on roster 4
+  myPlayerId: "9221", // Jahmyr Gibbs, on roster 4 (DET)
+  myPlayerName: "Jahmyr Gibbs",
+  myPlayerNflTeam: "DET",
   /** A rostered player owned by someone else: Patrick Mahomes on roster 3 "Team 03". */
   otherPlayerQuery: "mahomes",
   otherPlayerName: "Patrick Mahomes",
   otherPlayerId: "4046",
+  otherPlayerNflTeam: "KC",
   otherRosterId: 3,
   otherTeamName: "Team 03",
   /** A player on no roster in the fixture league. */
   freeAgentQuery: "jerry jeudy",
   freeAgentName: "Jerry Jeudy",
+  freeAgentId: "6783",
+  freeAgentNflTeam: "CLE",
   teamCount: 10,
   unknownLeagueId: "9999999999999999999",
 } as const;

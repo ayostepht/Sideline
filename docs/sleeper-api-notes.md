@@ -674,3 +674,25 @@ Worker decisions that follow from the API behavior above (no new endpoint facts)
 ```json
 { "projections_snapshot_rule": "fetched_at < kickoff_utc (strict)", "players_min_interval_hours": 24 }
 ```
+
+## ESPN news (unofficial)
+
+2026-10-06 (P7.2). Probed with 3 live GETs to ESPN (not Sleeper), User-Agent `Sideline (self-hosted)`. No key, no rate-limit headers seen. Undocumented, so it can change without notice. Client: `packages/providers/src/espn-news.ts`. Fixtures: `tests/fixtures/espn/` (public news, trimmed to 8 and 10 items).
+
+| Endpoint | Result |
+|---|---|
+| `https://site.api.espn.com/apis/fantasy/v2/games/ffl/news/players?playerId=<espnId>&limit=10` | 200, works. Use this for per-player news. Unknown id returns 200 with `feed: []`. |
+| same URL without `playerId` | 500 (`content-length: 99`). Do not use for a league-wide feed. |
+| `https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=50` | 200, about 165 KB for 50 items. Use this for the league-wide feed. |
+
+Sleeper `players.espn_id` equals the ESPN athlete id (3139477 is a well-known QB and returned his Rotowire items).
+
+Per-player shape: `{ timestamp, status: "success", resultsLimit, resultsCount, feed: [...] }`. Item fields we use: `id` (number), `headline`, `description` (often identical to headline), `story` (longer analysis text, plain text), `published` (ISO UTC), `playerId` (single athlete id), `links.mobile.href` (http, no `web` link). `type` was `Story`/`Rotowire`. No HTML observed, but the client strips tags anyway.
+
+Recent-feed shape: `{ header, link, articles: [...] }`. Item fields we use: `id`, `headline`, `description`, `published`, `links.web.href` (full espn.com URL), `categories[]`. Athletes are the categories with `type: "athlete"`, whose `athleteId` is the ESPN athlete id. About 1 in 5 items name several athletes, and about half name none (team or league stories), so the athlete list can be empty.
+
+Failure modes and limits: the no-`playerId` fantasy call returns 500; the timeout is 10 s and the client never retries (callers degrade to "no news"). `limit` is honored (10 for player, 50 for the feed). The client spaces calls at least 250 ms apart through a shareable limiter (`createMinIntervalLimiter`). Items with an unparseable `published` or missing `id`/`headline` are skipped with a warning; a payload whose list is missing or whose every item is invalid returns a `parse` failure.
+
+```json
+{ "id": 64077928, "type": "Rotowire", "headline": "Mahomes completed 15 of 30 passes ...", "published": "2026-10-05T00:49:46Z", "playerId": 3139477 }
+```

@@ -21,5 +21,24 @@ export const PlayerSchema = z.strictObject({
   depthChartOrder: z.number().nullable(),
   searchRank: z.number().nullable(),
   gsisId: z.string().nullable(),
+  /** ESPN athlete id. Optional: undefined or null leaves a stored value unchanged on upsert. */
+  espnId: z.string().nullable().optional(),
 });
 export type Player = z.infer<typeof PlayerSchema>;
+
+/**
+ * Sleeper CDN image for a player (ADR-020 item 3): the team logo for a DEF, otherwise the player
+ * thumbnail. Null for a DEF with no team. The browser loads this directly (CSP `img-src` allows
+ * `https://sleepercdn.com`); callers should show an initials fallback when it fails to load.
+ */
+export function playerHeadshotUrl(input: {
+  playerId: string;
+  position: string | null;
+  nflTeam: string | null;
+}): string | null {
+  if (input.position === "DEF") {
+    if (input.nflTeam === null || input.nflTeam.trim() === "") return null;
+    return `https://sleepercdn.com/images/team_logos/nfl/${encodeURIComponent(input.nflTeam.toLowerCase())}.png`;
+  }
+  return `https://sleepercdn.com/content/nfl/players/thumb/${encodeURIComponent(input.playerId)}.jpg`;
+}

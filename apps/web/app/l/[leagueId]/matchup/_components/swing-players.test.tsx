@@ -4,7 +4,14 @@ import { describe, expect, it } from "vitest";
 import { SwingPlayersList } from "./swing-players";
 
 const players: MatchupSwingPlayer[] = [
-  { playerId: "p1", name: "High Variance Guy", rosterId: 1, varianceContribution: 25 },
+  {
+    playerId: "p1",
+    name: "High Variance Guy",
+    rosterId: 1,
+    varianceContribution: 25,
+    nflTeam: "KC",
+    position: "WR",
+  },
   { playerId: "p2", name: "Steady Eddie", rosterId: 2, varianceContribution: 4 },
 ];
 
@@ -20,6 +27,14 @@ describe("SwingPlayersList", () => {
     // sqrt(25) = 5.0, sqrt(4) = 2.0
     expect(html).toContain("±5.0");
     expect(html).toContain("±2.0");
+  });
+
+  it("shows the team subline only when the team is known", () => {
+    const html = renderToStaticMarkup(
+      <SwingPlayersList players={players} yourRosterId={1} opponentTeamName="Rival Rosters" />,
+    );
+    expect(html.match(/data-testid="player-row-team"/g)).toHaveLength(1);
+    expect(html).toContain(">KC<");
   });
 
   it("renders a plain-language empty state instead of an empty list", () => {

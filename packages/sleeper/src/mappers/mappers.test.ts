@@ -179,6 +179,14 @@ describe("T1.2b mappers: players, projections, stats", () => {
     expect(mapPlayer({ player_id: "1" }).gsisId).toBeNull();
   });
 
+  it("normalizes espn_id from number or string, null when absent or empty", () => {
+    expect(mapPlayer({ player_id: "1", espn_id: 3139477 }).espnId).toBe("3139477");
+    expect(mapPlayer({ player_id: "1", espn_id: " 4430027 " }).espnId).toBe("4430027");
+    expect(mapPlayer({ player_id: "1", espn_id: "  " }).espnId).toBeNull();
+    expect(mapPlayer({ player_id: "1", espn_id: null }).espnId).toBeNull();
+    expect(mapPlayer({ player_id: "1" }).espnId).toBeNull();
+  });
+
   it("falls back to first plus last name, then id, for fullName", () => {
     expect(
       mapPlayer({ player_id: "ATL", first_name: "Atlanta", last_name: "Falcons" }).fullName,

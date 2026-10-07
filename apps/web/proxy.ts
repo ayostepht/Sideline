@@ -60,7 +60,7 @@ function withSecurityHeaders(response: NextResponse, https: boolean): NextRespon
       "default-src 'self'",
       scriptSrc,
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data:",
+      "img-src 'self' data: https://sleepercdn.com",
       "font-src 'self' data:",
       "connect-src 'self'",
       "frame-ancestors 'none'",

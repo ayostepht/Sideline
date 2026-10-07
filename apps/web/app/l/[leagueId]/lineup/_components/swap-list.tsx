@@ -1,11 +1,18 @@
 import type { LineupPlayer, LineupSwap } from "@sideline/shared";
 import { ArrowRight } from "lucide-react";
+import { PlayerLink } from "../../../../../components/player-link";
 import { cn } from "../../../../../lib/client/cn";
 import { formatSignedPoints, hasMaterialSwaps, playerById, swapDelta } from "./format";
 
-function nameOrEmpty(players: readonly LineupPlayer[], id: string | null): string {
-  if (id === null) return "Empty slot";
-  return playerById(players, id)?.name ?? `Player ${id}`;
+function NameOrEmpty({ players, id }: { players: readonly LineupPlayer[]; id: string | null }) {
+  if (id === null) return <>Empty slot</>;
+  const p = playerById(players, id);
+  if (!p) return <>{`Player ${id}`}</>;
+  return (
+    <PlayerLink playerId={id} className="inline-block py-1.5 -my-1.5">
+      {p.name}
+    </PlayerLink>
+  );
 }
 
 /**
@@ -31,8 +38,6 @@ export function SwapList({
       <ul className="flex flex-col divide-y rounded-card border bg-card">
         {swaps.map((swap, i) => {
           const delta = swapDelta(players, swap);
-          const outName = nameOrEmpty(players, swap.playerIdOut);
-          const inName = nameOrEmpty(players, swap.playerIdIn);
           return (
             <li
               // biome-ignore lint/suspicious/noArrayIndexKey: slot types can repeat (two FLEX)
@@ -57,11 +62,11 @@ export function SwapList({
               </div>
               <div className="flex items-start gap-2">
                 <span className="min-w-0 flex-1 whitespace-normal break-words leading-tight">
-                  {outName}
+                  <NameOrEmpty players={players} id={swap.playerIdOut} />
                 </span>
                 <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
                 <span className="min-w-0 flex-1 whitespace-normal break-words font-medium leading-tight">
-                  {inName}
+                  <NameOrEmpty players={players} id={swap.playerIdIn} />
                 </span>
               </div>
             </li>

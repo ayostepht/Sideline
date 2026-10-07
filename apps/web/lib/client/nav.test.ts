@@ -10,7 +10,9 @@ import {
   parseWeek,
   resolvePendingAfterUrlChange,
   resolveWeek,
+  isPlayerDetailPath,
   searchResultHref,
+  titlePathname,
   switchLeagueHref,
   withWeekParam,
 } from "./nav";
@@ -73,13 +75,13 @@ describe("nav matching", () => {
 
 describe("search", () => {
   const base = { playerId: "p 1", name: "A", position: "QB", nflTeam: "KC", injuryStatus: null };
-  it("links rostered players to the owner team with highlight", () => {
+  it("links rostered players to the player pop-up", () => {
     expect(searchResultHref(L, { ...base, owner: { rosterId: 4, teamName: "T" } })).toBe(
-      "/l/100/league/teams/4?highlight=p%201",
+      "/l/100/players/p%201",
     );
   });
-  it("returns null for free agents", () => {
-    expect(searchResultHref(L, { ...base, owner: null })).toBeNull();
+  it("opens the player pop-up for free agents too", () => {
+    expect(searchResultHref(L, { ...base, owner: null })).toBe("/l/100/players/p%201");
   });
   it("needs two characters", () => {
     expect(normalizeSearchQuery(" a ")).toBeNull();
@@ -154,5 +156,24 @@ describe("resolvePendingAfterUrlChange (m1: week-selector resync race)", () => {
 
     urlCommits(7); // the real latest replace finally lands
     expect(pending).toBeNull();
+  });
+});
+
+describe("player pop-up title path", () => {
+  it("detects player detail paths only", () => {
+    expect(isPlayerDetailPath("/l/100/players/p1", "100")).toBe(true);
+    expect(isPlayerDetailPath("/l/100/players/p1/", "100")).toBe(true);
+    expect(isPlayerDetailPath("/l/100/players", "100")).toBe(false);
+    expect(isPlayerDetailPath("/l/100/lineup", "100")).toBe(false);
+  });
+  it("keeps the page behind the pop-up", () => {
+    expect(titlePathname("/l/100/players/p1", "/l/100/lineup", "100")).toBe("/l/100/lineup");
+    expect(titlePathname("/l/100/players/p1", null, "100")).toBe("/l/100/players/p1");
+    expect(titlePathname("/l/100/waivers", "/l/100/lineup", "100")).toBe("/l/100/waivers");
+  });
+  it("keeps the underlying tab active while the pop-up is open", () => {
+    const shown = titlePathname("/l/100/players/p1", "/l/100/lineup", "100");
+    expect(isNavActive(shown, L, item("lineup"))).toBe(true);
+    expect(isNavActive(shown, L, item("players"))).toBe(false);
   });
 });

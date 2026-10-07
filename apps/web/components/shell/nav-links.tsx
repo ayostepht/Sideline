@@ -2,7 +2,6 @@
 
 import { Ellipsis } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { lazy, Suspense, useState } from "react";
 import {
   isNavActive,
@@ -15,6 +14,7 @@ import {
 import { cn } from "../../lib/client/cn";
 import { NAV_ICONS } from "./nav-icons";
 import { useExplicitWeek } from "./use-week";
+import { useShownPathname } from "./use-shown-pathname";
 
 const MoreSheet = lazy(() => import("./more-sheet"));
 
@@ -23,7 +23,7 @@ interface Props {
 }
 
 export function SidebarNav({ leagueId }: Props) {
-  const pathname = usePathname();
+  const pathname = useShownPathname(leagueId);
   const week = useExplicitWeek();
   return (
     <nav aria-label="Main" data-testid="nav-sidebar" className="flex flex-col gap-1">
@@ -111,7 +111,7 @@ function TabInner({
 }
 
 export function BottomTabs({ leagueId }: Props) {
-  const pathname = usePathname();
+  const pathname = useShownPathname(leagueId);
   const week = useExplicitWeek();
   const [armed, setArmed] = useState(false);
   const more = moreItems();

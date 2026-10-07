@@ -15,6 +15,8 @@ export interface JobContext {
   config: AppConfig;
   /** Aborted when the sync lease is lost or the worker shuts down. Jobs should stop promptly. */
   signal: AbortSignal;
+  /** Set only for a targeted on-demand request (a Sleeper player id for `player_news`). */
+  target?: string | null;
 }
 
 export interface JobResult {

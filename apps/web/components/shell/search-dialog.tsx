@@ -6,11 +6,12 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { rememberTrigger } from "../../lib/client/focus-return";
 import { normalizeSearchQuery, searchResultHref, SEARCH_DEBOUNCE_MS } from "../../lib/client/nav";
 import { InjuryBadge } from "../injury-badge";
+import { teamLabel } from "../team-label";
 import { PositionBadge } from "../position-badge";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet";
 
 type SearchState =
   | { kind: "idle" }
@@ -31,7 +32,6 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
   const [query, setQuery] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<SearchState>({ kind: "idle" });
-  const [freeAgent, setFreeAgent] = useState<PlayerSearchResult | null>(null);
 
   useEffect(() => {
     const q = normalizeSearchQuery(query);
@@ -71,10 +71,10 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
   }
 
   function select(r: PlayerSearchResult) {
-    const href = searchResultHref(leagueId, r);
     handleOpenChange(false);
-    if (href === null) setFreeAgent(r);
-    else router.push(href);
+    // Search opens the pop-up from no link; do not return focus to an older clicked name.
+    rememberTrigger(null);
+    router.push(searchResultHref(leagueId, r));
   }
 
   return (
@@ -103,50 +103,35 @@ export default function SearchDialog({ leagueId, open, onOpenChange }: Props) {
             <Command.List className="max-h-[min(60vh,420px)] overflow-y-auto p-2">
               <Status state={state} query={query} onRetry={() => setAttempt((n) => n + 1)} />
               {state.kind === "done"
-                ? state.results.map((r) => (
-                    <Command.Item
-                      key={r.playerId}
-                      value={r.playerId}
-                      onSelect={() => select(r)}
-                      data-testid="search-result"
-                      className="flex min-h-12 cursor-pointer items-center gap-2 rounded-control px-3 py-1 data-[selected=true]:bg-muted"
-                    >
-                      <PositionBadge position={r.position} />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">{r.name}</span>
-                          <InjuryBadge status={r.injuryStatus} />
+                ? state.results.map((r) => {
+                    const team = teamLabel(r.position, r.nflTeam);
+                    return (
+                      <Command.Item
+                        key={r.playerId}
+                        value={r.playerId}
+                        onSelect={() => select(r)}
+                        data-testid="search-result"
+                        className="flex min-h-12 cursor-pointer items-center gap-2 rounded-control px-3 py-1 data-[selected=true]:bg-muted"
+                      >
+                        <PositionBadge position={r.position} />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center gap-2">
+                            <span className="truncate text-sm font-medium">{r.name}</span>
+                            <InjuryBadge status={r.injuryStatus} />
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {team ? `${team} · ` : ""}
+                            {r.owner?.teamName ?? "Free agent"}
+                          </span>
                         </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          {r.nflTeam ?? "No team"} · {r.owner?.teamName ?? "Free agent"}
-                        </span>
-                      </span>
-                    </Command.Item>
-                  ))
+                      </Command.Item>
+                    );
+                  })
                 : null}
             </Command.List>
           </Command>
         </DialogContent>
       </Dialog>
-      <Sheet open={freeAgent !== null} onOpenChange={(o) => !o && setFreeAgent(null)}>
-        <SheetContent side="bottom" data-testid="search-free-agent-sheet">
-          <SheetHeader>
-            <SheetTitle>{freeAgent?.name}</SheetTitle>
-            <SheetDescription>Free agent</SheetDescription>
-          </SheetHeader>
-          {freeAgent ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <PositionBadge position={freeAgent.position} />
-              <span className="text-sm">{freeAgent.nflTeam ?? "No team"}</span>
-              <InjuryBadge status={freeAgent.injuryStatus} />
-              {freeAgent.injuryStatus === null ? (
-                <span className="text-sm text-muted-foreground">No injury designation</span>
-              ) : null}
-            </div>
-          ) : null}
-          <p className="mt-3 text-sm text-muted-foreground">Full player pages arrive soon.</p>
-        </SheetContent>
-      </Sheet>
     </>
   );
 }

@@ -2,7 +2,7 @@
  * Typed read helpers replacing the worker's raw SQL (apps/worker/src/jobs/db-reads.ts), same
  * semantics. Mapping old -> new is in each doc comment.
  */
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { SeasonTypeSchema, type NflState, type SeasonType } from "@sideline/shared";
 import type { DbHandle } from "./connection.js";
 import {
@@ -10,6 +10,8 @@ import {
   matchups,
   nflState,
   playerWeekProjections,
+  playerNews,
+  playerNewsFetches,
   playerWeekStats,
   players,
   schedule,
@@ -141,4 +143,95 @@ export function readNflStateFetchedAt(h: DbHandle): string | null {
 /** touchStateFetchedAt -> touchNflStateFetchedAt. */
 export function touchNflStateFetchedAt(h: DbHandle, fetchedAt: string): void {
   h.db.update(nflState).set({ fetchedAt }).where(eq(nflState.id, 1)).run();
+}
+
+export interface PlayerNewsItem {
+  id: string;
+  playerId: string;
+  headline: string;
+  summary: string | null;
+  url: string | null;
+  source: string;
+  publishedAt: string;
+  fetchedAt: string;
+}
+
+/** Newest-first news for one player (default limit 5). */
+export function readPlayerNews(
+  h: DbHandle,
+  playerId: string,
+  opts: { limit?: number } = {},
+): PlayerNewsItem[] {
+  return h.db
+    .select()
+    .from(playerNews)
+    .where(eq(playerNews.playerId, playerId))
+    .orderBy(desc(playerNews.publishedAt), desc(playerNews.id))
+    .limit(opts.limit ?? 5)
+    .all();
+}
+
+/** Latest `fetched_at` over all stored news for a player; null when none. Uses `player_news_player_idx`. */
+export function readPlayerNewsLastFetchedAt(h: DbHandle, playerId: string): string | null {
+  const row = h.db
+    .select({ m: sql<string | null>`max(${playerNews.fetchedAt})` })
+    .from(playerNews)
+    .where(eq(playerNews.playerId, playerId))
+    .get();
+  return row?.m ?? null;
+}
+
+/** Upserts the latest news fetch attempt for a player (one row per player). */
+export function recordPlayerNewsFetch(
+  h: DbHandle,
+  a: { playerId: string; attemptedAt: string; ok: boolean; itemCount: number },
+): void {
+  h.db
+    .insert(playerNewsFetches)
+    .values(a)
+    .onConflictDoUpdate({
+      target: playerNewsFetches.playerId,
+      set: { attemptedAt: a.attemptedAt, ok: a.ok, itemCount: a.itemCount },
+    })
+    .run();
+}
+
+/**
+ * Latest successful news fetch time for a player: the later of the last `ok` attempt and the
+ * newest stored news row's `fetched_at`. Failed attempts are ignored so they retry. Null when none.
+ */
+export function readPlayerNewsFetchedAt(h: DbHandle, playerId: string): string | null {
+  const attempt = h.db
+    .select({ at: playerNewsFetches.attemptedAt })
+    .from(playerNewsFetches)
+    .where(and(eq(playerNewsFetches.playerId, playerId), eq(playerNewsFetches.ok, true)))
+    .get();
+  const rows = readPlayerNewsLastFetchedAt(h, playerId);
+  const a = attempt?.at ?? null;
+  if (a === null) return rows;
+  if (rows === null) return a;
+  return a > rows ? a : rows;
+}
+
+/** player_id to ESPN id for players with a non-null ESPN id; all players when `playerIds` is omitted. */
+export function readPlayerEspnIds(h: DbHandle, playerIds?: readonly string[]): Map<string, string> {
+  const out = new Map<string, string>();
+  const collect = (rows: { id: string; e: string | null }[]): void => {
+    for (const r of rows) if (r.e !== null) out.set(r.id, r.e);
+  };
+  const sel = () => h.db.select({ id: players.playerId, e: players.espnId }).from(players);
+  if (playerIds === undefined) {
+    collect(sel().where(isNotNull(players.espnId)).all());
+    return out;
+  }
+  for (let i = 0; i < playerIds.length; i += 500) {
+    collect(
+      sel()
+        .where(
+          and(isNotNull(players.espnId), inArray(players.playerId, playerIds.slice(i, i + 500))),
+        )
+        .all(),
+    );
+  }
+  return out;
 }

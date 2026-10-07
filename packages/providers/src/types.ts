@@ -12,7 +12,13 @@ export interface ResultMeta {
 export type ProviderFailure = "disabled" | "network" | "parse" | "not_found";
 
 export type ProviderResult<T> =
-  { ok: true; data: T; meta: ResultMeta } | { ok: false; reason: ProviderFailure; message: string };
+  | { ok: true; data: T; meta: ResultMeta }
+  | {
+      ok: false;
+      reason: ProviderFailure;
+      message: string;
+      /** HTTP status when the failure was an HTTP error. */ status?: number;
+    };
 
 export interface PlayerRef {
   playerId: string;

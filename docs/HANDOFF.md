@@ -30,8 +30,10 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- Nothing. PERF-1 done (`fda1f65`): `getPlayerDetail` 16-call loop 2.2 s -> about 85 ms, which fixes the CI verify failure on GitHub runners. Review APPROVE, minors in PROGRESS backlog.
-- DOCS-1..3 docs audit done 2026-10-06 (committed). Historical records (gates, reviews, archive, backtests, ADR bodies) were left as written on purpose.
+- **Phase 7a player card (ADR-020), branch `phase/7-player-card`.** All tasks done through P7.8d `3ee5490`. Fix-round re-review (`docs/reviews/2026-10-06-p7-fixround-code.md`) found one Major test gap; P7.9 `cada111` added PLAYERCARD-15..20; PLAYERCARD-19 exposed a focus bug (leaving an open pop-up by soft navigation drops focus to body). P7.10 frontend fix in flight. Then present to Steph; merge to main is her call.
+- **Dev servers are STOPPED** for P7.10 (port 3000). Restart `pnpm dev:lan` and `pnpm dev:worker` (logs in /tmp/sideline-*-dev.log) when it reports.
+- **Blocker for P7.7, waiting on Steph:** pre-existing e2e clock time bomb (PROGRESS "Found during Phase 7a"). Asked whether the existing `fix/e2e-clock` worktree is hers/another session's, or whether to fix it here.
+- Dev worker restarted 2026-10-06 after P7.5 (migration 0002 applied). espn_ids fill on the next daily players sync.
 
 ## 4. Next steps (in order)
 

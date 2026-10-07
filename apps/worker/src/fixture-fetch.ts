@@ -52,6 +52,13 @@ export function fixturePathFor(rawUrl: string): { path: string; gzip: boolean } 
     if (m) return { path: `sleeper/${m[1]}/${m[2]}/${m[3]}.json`, gzip: false };
     return null;
   }
+  if (url.hostname === "site.api.espn.com") {
+    if (url.pathname.startsWith("/apis/fantasy/v2/games/ffl/news/players"))
+      return { path: "espn/player-news.json", gzip: false };
+    if (url.pathname.startsWith("/apis/site/v2/sports/football/nfl/news"))
+      return { path: "espn/nfl-news.json", gzip: false };
+    return null;
+  }
   if (url.hostname === "github.com") {
     const m =
       /^\/nflverse\/nflverse-data\/releases\/download\/([a-z_]+)\/([A-Za-z0-9_]+)\.csv\.gz$/.exec(

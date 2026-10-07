@@ -12,9 +12,12 @@ export const dynamic = "force-dynamic";
 
 export default async function LeagueLayout({
   children,
+  modal,
   params,
 }: {
   children: ReactNode;
+  /** Parallel slot: the player pop-up (intercepting route). Null when closed. */
+  modal: ReactNode;
   params: Promise<{ leagueId: string }>;
 }) {
   const { leagueId } = await params;
@@ -42,6 +45,7 @@ export default async function LeagueLayout({
       leagues={state.leagues}
     >
       {children}
+      {modal}
     </AppShell>
   );
 }

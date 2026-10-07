@@ -61,5 +61,6 @@ export const JOB_TABLES: Readonly<Record<SyncJobName, readonly string[]>> = {
   stats: ["player_week_stats"],
   projections: ["player_week_projections", "player_week_projection_snapshots"],
   nflverse: ["schedule"],
+  player_news: ["player_news"],
   backfill_2025: ["player_week_stats", "player_week_projections"],
 };

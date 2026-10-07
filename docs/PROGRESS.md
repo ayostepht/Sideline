@@ -11,10 +11,31 @@
 | 4 Waivers, players, Docker beta | G4 (human, optional) | `phase/4-waivers` (merged) | Done, G4 PASS 2026-10-03 (Steph approved) |
 | 5 Matchups and league intelligence | G5 | `phase/5-matchups` (merged) | Done, G5 PASS 2026-10-03 (no human checkpoint required) |
 | 6 Hardening and v1.0 | G6 (human) | `phase/6-hardening` (merged) | Done, G6 PASS 2026-10-04 (Steph approved). **v1.0.0 released.** |
+| 7a Player card (ADR-020) | mini-gate | `phase/7-player-card` | In progress |
 
 ## Resume point
 
 See `docs/HANDOFF.md` (the single source for resuming after a session limit or `/clear`).
+
+## Phase 7a task table (ADR-020)
+
+| ID | Title | Agent | Batch | Status | Attempts | Commit |
+|---|---|---|---|---|---|---|
+| P7.1 | DB: players.espn_id, player_news table, helpers, news sync job + on-demand target | backend-engineer | A | Done | 1 | 30e45e4 |
+| P7.2 | ESPN news provider client (zod, fixture, limiter) | sleeper-data-engineer | A | Done | 1 | e4fa039 |
+| P7.3 | Pop-up via intercepting route, clickable names app-wide, team subline | frontend-engineer | A | Done | 1 | 5080504 |
+| P7.4 | DTO (weekly rows, headshot, news) + getPlayerDetail + CSP | backend-engineer | B | Done | 1 | f6368c2 |
+| P7.5 | Persist espn_id; news worker job (scheduled + on-demand) | sleeper-data-engineer | B | Done | 1 | 1e9fa59 |
+| P7.5b | Review fixes: ESPN circuit breaker (M1), entity decode, attribution, dup espn ids | sleeper-data-engineer | B | Done | 1 | 259506e |
+| P7.6a | Player card: headshot, weekly table, news, refresh on open | frontend-engineer | C | Done | 1 | 0c04c89 |
+| P7.6b | Search opens pop-up, team on swing/riser rows, review m5/m6, header title | frontend-engineer | C | Done | 1 | 08c76f6 |
+| P7.8a | Review M1/m1: news fetch-attempt marker, count helper in db | backend-engineer | D | Done | 1 | c74522d |
+| P7.8b | Worker records news fetch attempts | sleeper-data-engineer | D | Done | 1 | 4aac7d0 |
+| P7.8c | Code review M3/m2/m5/n1 + UX M1-M4/m1/m2/m4/n1 + nav highlight in pop-up | frontend-engineer | D | Done | 1 | 2a0b262 |
+| P7.8d | Fix intermittent focus return on Escape (PLAYERCARD-3) | frontend-engineer | E | Done | 1 | 3ee5490 |
+| P7.9 | e2e: Back/Forward, second player from pop-up, leave via link in pop-up (re-review M1) | qa-engineer | F | Done | 1 | cada111 |
+| P7.10 | Focus to main when leaving an open pop-up by soft navigation (PLAYERCARD-19) | frontend-engineer | F | Done | 1 | e036945 |
+| P7.7 | e2e + a11y for pop-up and player card | qa-engineer | C | Done | 1 | 89830e3 |
 
 ## Earlier phases
 
@@ -23,6 +44,21 @@ Phase 0 and 1 task tables and the pre-triage backlog are in `docs/archive/progre
 ## Backlog (open items only)
 
 Remove an item when it is done; the archive keeps history.
+
+### Found during Phase 7a
+
+- P7.4 left the new `PlayerDetailResponse`/`MatchupSwingPlayer` fields optional (server always sets them) so existing UI test literals compile; tighten to required once P7.6 updates those literals (backend).
+- `projectedPts` in weekly rows comes from `league_player_week_points.proj_pts` (stored projection scored by the recompute hook), not strictly the last pre-kickoff snapshot.
+- No persisted "fetched, no news" marker: players with zero ESPN news re-queue a refresh on each pop-up open (bounded by dedupe and the 20-pending cap).
+- Weekly rows use the player's current team for past opponents/byes; traded players show wrong past opponents (review m3, known limit). Optional test for `state === null` (m4).
+- Flaky perf timing: `packages/core` `lineup-impact.perf.test.ts` (1039 ms vs 1000 ms budget) and `recommend.perf.test.ts` failed once each under parallel agent load during Phase 7a, passing on rerun. Same contention pattern as the G4/G5 lesson; watch, do not loosen.
+- UX m3: mixed chip weights on the player card; chart label lacks a unit (frontend). UX m5: Waivers is ~14,800 px tall at 390 with no pagination (frontend, pre-existing).
+- From P7.7: `pnpm test:a11y`'s `--grep UI2` filter doesn't narrow the run (devops). The e2e seed has no ESPN news or espn ids; `e2e/helpers/news.ts` writes rows directly (a seeded news row would be cleaner, sleeper-data). `tests/property/optimizer.property.test.ts` failed once in `pnpm verify` without a captured seed; if it recurs, keep the printed seed (analytics).
+- Fix-round re-review minors (`docs/reviews/2026-10-06-p7-fixround-code.md`): m2 clear focus trigger on non-modal navigation (frontend); m3 short cooldown for failed news fetches (backend); m4 PLAYERCARD-7 uses `window.next.router` (qa); n1 possible duplicate count formatter (frontend).
+- P7.6b follow-ups (frontend): sidebar/tab highlight reads "Players" while the pop-up is open (`isNavActive` uses the real pathname; use `titlePathname`); the week selector's `router.replace(pathname)` would navigate to `/players/<id>?week=` if used while the pop-up is open; focus after closing a pop-up opened from search lands on body.
+- Fixture-mode ESPN per-player feed always returns athlete 3139477; only a fixture player with that espn id gets per-player news in screens/e2e (P7.7 note).
+
+- **e2e clock time bomb (pre-existing, fails on `main` 77af184 too):** LINEUP-FLOW-5 fails on all 3 projects because the fixture's week-4 kickoffs (2026-10-02..06) are now in the past, so `isLocked(info, now)` (`packages/core/src/optimizer/locks.ts:25`, real `now` from `apps/web/lib/server/lineup.ts` ~442/571) locks every starter. Other clock-dependent e2e specs may follow. Fix: test-only `SIDELINE_NOW` override in lib/server, ignored in production (backend), set in `playwright.config.ts` webServer env (qa); or shift seeded kickoffs relative to now (qa). A `fix/e2e-clock` worktree at 77af184 exists (not created by this session; left alone). Will block the Phase 7a e2e run (P7.7) unless fixed first.
 
 ### Carried from Phase 6
 

@@ -31,6 +31,7 @@ describe("dueJobs", () => {
         projections: undefined,
         players: undefined,
         nflverse: undefined,
+        player_news: undefined,
       },
       false,
     );

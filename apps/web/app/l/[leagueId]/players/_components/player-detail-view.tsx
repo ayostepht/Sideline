@@ -1,6 +1,9 @@
 import type { PlayerDetailResponse } from "@sideline/shared";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import { formatCount } from "../../../../../lib/client/format-count";
+import { PlayerAvatar } from "../../../../../components/player-avatar";
+import { DialogTitle } from "../../../../../components/ui/dialog";
 import { DataFreshness } from "../../../../../components/data-freshness";
 import { InjuryBadge } from "../../../../../components/injury-badge";
 import { PositionBadge } from "../../../../../components/position-badge";
@@ -21,8 +24,11 @@ import {
   MOMENTUM_TONE,
   signalToTrend,
   sortedWeeklySeries,
+  usageEmptyMessage,
   USAGE_FIELD_LABEL,
 } from "./format";
+import { NewsSection } from "./news-section";
+import { WeeklyTable } from "./weekly-table";
 
 function Section({
   id,
@@ -47,36 +53,61 @@ export function PlayerDetailView({
   player,
   now,
   backHref,
+  inModal = false,
 }: {
   player: PlayerDetailResponse;
   now: Date;
-  backHref: string;
+  /** Omitted in the pop-up, where the close button replaces the back link. */
+  backHref?: string;
+  /** Renders the name as the dialog title (must sit inside a Dialog). */
+  inModal?: boolean;
 }) {
   const { scoring, usage, consistency, momentum } = player;
   const weeklySeries = sortedWeeklySeries(scoring.weeklySeries);
+  const weekly = player.weekly ?? [];
   const signalTrend = signalToTrend(player.signal);
 
   return (
     <div className="flex flex-col gap-3" data-testid="player-detail">
       <div>
-        <Link
-          href={backHref}
-          className="-ml-1 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-link underline-offset-4 hover:underline"
-          data-testid="player-back-link"
-        >
-          <ChevronLeft className="size-4" aria-hidden />
-          Players
-        </Link>
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight">{player.name}</h1>
-          <PositionBadge position={player.position} />
-          <InjuryBadge status={player.injuryStatus} />
+        {backHref !== undefined ? (
+          <Link
+            href={backHref}
+            className="-ml-1 inline-flex min-h-11 items-center gap-1 px-1 text-sm font-medium text-link underline-offset-4 hover:underline"
+            data-testid="player-back-link"
+          >
+            <ChevronLeft className="size-4" aria-hidden />
+            Players
+          </Link>
+        ) : null}
+        <div className="flex items-center gap-3 sm:gap-4">
+          <PlayerAvatar url={player.headshotUrl} name={player.name} />
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              {inModal ? (
+                <DialogTitle
+                  asChild
+                  className="min-w-0 break-words pr-0 text-2xl font-bold tracking-tight"
+                >
+                  <h1>{player.name}</h1>
+                </DialogTitle>
+              ) : (
+                <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight">
+                  {player.name}
+                </h1>
+              )}
+              <InjuryBadge status={player.injuryStatus} />
+            </div>
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span>{player.nflTeam ?? "No team"}</span>
+              <PositionBadge position={player.position} />
+              {player.status ? <span>{player.status}</span> : null}
+            </p>
+          </div>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {player.nflTeam ?? "No team"}
-          {player.status ? ` · ${player.status}` : ""}
-        </p>
-        <DataFreshness freshness={player.freshness} now={now} className="mt-2" />
+        {player.freshness.stale ? null : (
+          <DataFreshness freshness={player.freshness} now={now} className="mt-2" />
+        )}
       </div>
       <StaleBanner freshness={player.freshness} now={now} />
 
@@ -153,10 +184,22 @@ export function PlayerDetailView({
         />
       </Section>
 
+      <Section id="weekly" title="Week by week">
+        {weekly.length > 0 ? (
+          <WeeklyTable rows={weekly} position={player.position} />
+        ) : (
+          <p className="text-sm text-muted-foreground">No weekly results yet this season.</p>
+        )}
+      </Section>
+
+      <Section id="news" title="Recent news">
+        <NewsSection playerId={player.playerId} news={player.news} nowIso={now.toISOString()} />
+      </Section>
+
       <Section id="usage" title="Usage">
-        {usage.fields.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {usage.reasons[0]?.label ?? "No usage data tracked for this position."}
+        {usageEmptyMessage(usage) !== null ? (
+          <p className="text-sm text-muted-foreground" data-testid="player-usage-empty">
+            {usageEmptyMessage(usage)}
           </p>
         ) : (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -173,13 +216,15 @@ export function PlayerDetailView({
             ))}
           </div>
         )}
-        <ReasonChips
-          reasons={usage.reasons}
-          max={2}
-          trailing={
-            usage.reasons.length > 0 ? <WhySheet title="Usage" reasons={usage.reasons} /> : null
-          }
-        />
+        {usage.fields.length > 0 ? (
+          <ReasonChips
+            reasons={usage.reasons}
+            max={2}
+            trailing={
+              usage.reasons.length > 0 ? <WhySheet title="Usage" reasons={usage.reasons} /> : null
+            }
+          />
+        ) : null}
       </Section>
 
       <Section id="consistency" title="Boom and bust weeks">
@@ -203,7 +248,7 @@ export function PlayerDetailView({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant={MOMENTUM_TONE[momentum.label]}>{momentum.label}</Badge>
           <span className="text-sm tabular-nums text-muted-foreground">
-            {momentum.addCount} adds · {momentum.dropCount} drops
+            {formatCount(momentum.addCount)} adds · {formatCount(momentum.dropCount)} drops
           </span>
         </div>
         <ReasonChips

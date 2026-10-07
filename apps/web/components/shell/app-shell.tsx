@@ -6,7 +6,9 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { LeagueSwitcher } from "./league-switcher";
-import { activeNavKey, NAV_ITEMS } from "../../lib/client/nav";
+import { clearTrigger, isModalMounted, shouldSkipFocusMove } from "../../lib/client/focus-return";
+import { activeNavKey, isPlayerDetailPath, NAV_ITEMS } from "../../lib/client/nav";
+import { useShownPathname } from "./use-shown-pathname";
 import { HeaderDetailProvider, useHeaderDetail } from "./header-detail";
 import { BottomTabs, SidebarNav } from "./nav-links";
 import { WeekSelector } from "./week-selector";
@@ -44,10 +46,14 @@ export function AppShell(props: Props) {
 function ShellInner({ leagueId, leagueName, currentWeek, leagues, children }: Props) {
   const pathname = usePathname();
   const detail = useHeaderDetail();
-  const base = pageTitle(pathname, leagueId);
+  // The pop-up changes the URL but not the page behind it: keep that page's title.
+  const shownPath = useShownPathname(leagueId);
+  const base = pageTitle(shownPath, leagueId);
   const title = detail ? `${base} / ${detail}` : base;
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
+  const modalWasMounted = useRef(false);
+  const underlyingPath = useRef<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchLoaded, setSearchLoaded] = useState(false);
 
@@ -69,12 +75,28 @@ function ShellInner({ leagueId, leagueName, currentWeek, leagues, children }: Pr
 
   // Move focus to the page content after navigating (not on first load).
   useEffect(() => {
+    const nextIsPlayerPath = isPlayerDetailPath(pathname, leagueId);
+    const underlying = underlyingPath.current;
+    if (!nextIsPlayerPath) underlyingPath.current = pathname;
     if (firstRender.current) {
       firstRender.current = false;
       return;
     }
+    // Opening or closing the player pop-up keeps focus on the name (restored by the pop-up).
+    // A full-page player view (no pop-up) still moves focus like any other page.
+    const modalNow = isModalMounted();
+    const skip = shouldSkipFocusMove({
+      nextIsPlayerPath,
+      modalMountedNow: modalNow,
+      modalWasMounted: modalWasMounted.current,
+      nextIsUnderlyingPage: underlying === null || underlying === pathname,
+    });
+    modalWasMounted.current = modalNow;
+    // Any non-player destination other than a close-to-underlying forgets the old trigger.
+    if (!nextIsPlayerPath && !skip) clearTrigger();
+    if (skip) return;
     mainRef.current?.focus({ preventScroll: true });
-  }, [pathname]);
+  }, [pathname, leagueId]);
 
   return (
     <div className="min-h-dvh">

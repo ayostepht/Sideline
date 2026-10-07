@@ -1,6 +1,7 @@
 import type { PlayerListItem } from "@sideline/shared";
 import Link from "next/link";
 import { InjuryBadge } from "../../../../../components/injury-badge";
+import { teamLabel } from "../../../../../components/team-label";
 import { PositionBadge } from "../../../../../components/position-badge";
 import { TrendIndicator } from "../../../../../components/trend-indicator";
 import { formatDelta, formatPpg, playerHref, signalToTrend } from "./format";
@@ -43,7 +44,7 @@ export function PlayersList({
                     <InjuryBadge status={p.injuryStatus} />
                   </span>
                   <span className="block truncate text-xs text-muted-foreground">
-                    {p.nflTeam ?? "No team"}
+                    {teamLabel(p.position, p.nflTeam)}
                   </span>
                 </span>
                 <span className="shrink-0 text-right text-sm tabular-nums">
@@ -106,7 +107,7 @@ export function PlayersList({
                           <InjuryBadge status={p.injuryStatus} />
                         </span>
                         <span className="truncate text-xs text-muted-foreground">
-                          {p.nflTeam ?? "No team"}
+                          {teamLabel(p.position, p.nflTeam)}
                         </span>
                       </span>
                     </Link>

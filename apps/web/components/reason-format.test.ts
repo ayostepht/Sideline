@@ -51,3 +51,10 @@ describe("formatReasonValue", () => {
     expect(formatReasonValue(94.5945945945946)).toBe("94.6");
   });
 });
+
+describe("formatReasonValue momentum counts", () => {
+  it("uses thousands separators and no decimals", () => {
+    expect(formatReasonValue(59800, "TREND_MOMENTUM_ADDS")).toBe("59,800");
+    expect(formatReasonValue(120, "TREND_MOMENTUM_DROPS")).toBe("120");
+  });
+});

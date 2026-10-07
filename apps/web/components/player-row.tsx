@@ -3,13 +3,17 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { cn } from "../lib/client/cn";
 import { InjuryBadge } from "./injury-badge";
+import { PlayerLink } from "./player-link";
+import { teamLabel } from "./team-label";
 import { PositionBadge } from "./position-badge";
 
 export interface PlayerRowProps {
   name: string;
   position: string | null | undefined;
-  /** NFL team abbreviation. Omit when unknown (free agents, retired). */
+  /** NFL team abbreviation. Null shows "FA"; omitted shows nothing; DEF shows nothing. */
   team?: string | null;
+  /** When set, the name links to the player pop-up and the row is one big target. */
+  playerId?: string;
   injuryStatus?: string | null;
   /** Slot label such as "QB", "FLEX", "BN". */
   slot?: string;
@@ -34,6 +38,7 @@ export function PlayerRow({
   name,
   position,
   team,
+  playerId,
   injuryStatus,
   slot,
   stat,
@@ -47,10 +52,13 @@ export function PlayerRow({
   className,
 }: PlayerRowProps) {
   const interactive = href !== undefined || onClick !== undefined;
+  const linked = playerId !== undefined && !interactive;
+  const teamText = team === undefined ? null : teamLabel(position, team);
   const cls = cn(
+    linked && "relative",
     "flex min-h-11 w-full min-w-0 items-center gap-2 rounded-control border-l-4 px-2 py-1 text-left md:max-w-2xl",
     highlighted ? "border-primary bg-accent-soft" : "border-transparent bg-transparent",
-    interactive && "transition-colors duration-150 hover:bg-muted active:bg-border",
+    (interactive || linked) && "transition-colors duration-150 hover:bg-muted active:bg-border",
     className,
   );
   const content = (
@@ -67,7 +75,13 @@ export function PlayerRow({
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate text-base font-medium leading-5" title={name}>
             {highlighted ? <span className="sr-only">{highlightLabel}: </span> : null}
-            {name}
+            {linked ? (
+              <PlayerLink playerId={playerId} stretch>
+                {name}
+              </PlayerLink>
+            ) : (
+              name
+            )}
           </span>
           {highlighted ? (
             <span
@@ -81,7 +95,7 @@ export function PlayerRow({
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           <PositionBadge position={position} />
-          <span>{team ? team : "No team"}</span>
+          {teamText ? <span data-testid="player-row-team">{teamText}</span> : null}
           <InjuryBadge status={injuryStatus} detail={injuryDetail} />
           {meta}
         </span>

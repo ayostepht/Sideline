@@ -239,7 +239,7 @@ describe("format", () => {
       playerDetail({ playerId: "3", signal: null }),
     ];
     expect(risingRosterPlayers(details)).toEqual([
-      { playerId: "1", name: "Roster Player", position: "RB", source: "roster" },
+      { playerId: "1", name: "Roster Player", position: "RB", nflTeam: "KC", source: "roster" },
     ]);
 
     const candidates = [
@@ -247,18 +247,18 @@ describe("format", () => {
       candidate({ playerId: "11", trendSignal: "Steady" }),
     ];
     expect(risingFreeAgents(candidates)).toEqual([
-      { playerId: "10", name: "Cand One", position: "WR", source: "freeAgent" },
+      { playerId: "10", name: "Cand One", position: "WR", nflTeam: "SF", source: "freeAgent" },
     ]);
   });
 
   it("combines risers, roster first, capped to the limit", () => {
     const roster = [
-      { playerId: "1", name: "A", position: "RB", source: "roster" as const },
-      { playerId: "2", name: "B", position: "WR", source: "roster" as const },
+      { playerId: "1", name: "A", position: "RB", nflTeam: null, source: "roster" as const },
+      { playerId: "2", name: "B", position: "WR", nflTeam: null, source: "roster" as const },
     ];
     const freeAgents = [
-      { playerId: "3", name: "C", position: "TE", source: "freeAgent" as const },
-      { playerId: "4", name: "D", position: "QB", source: "freeAgent" as const },
+      { playerId: "3", name: "C", position: "TE", nflTeam: null, source: "freeAgent" as const },
+      { playerId: "4", name: "D", position: "QB", nflTeam: null, source: "freeAgent" as const },
     ];
     expect(selectRisers(roster, freeAgents, 3).map((r) => r.playerId)).toEqual(["1", "2", "3"]);
     expect(selectRisers([], [])).toEqual([]);

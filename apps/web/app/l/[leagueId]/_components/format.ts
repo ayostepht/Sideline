@@ -94,6 +94,7 @@ export interface RiserRow {
   playerId: string;
   name: string;
   position: string | null;
+  nflTeam: string | null;
   source: "roster" | "freeAgent";
 }
 
@@ -102,7 +103,13 @@ export interface RiserRow {
 export function risingRosterPlayers(details: readonly PlayerDetailResponse[]): RiserRow[] {
   return details
     .filter((d) => d.signal === "Rising")
-    .map((d) => ({ playerId: d.playerId, name: d.name, position: d.position, source: "roster" }));
+    .map((d) => ({
+      playerId: d.playerId,
+      name: d.name,
+      position: d.position,
+      nflTeam: d.nflTeam,
+      source: "roster",
+    }));
 }
 
 /** Free-agent half of Home's risers card: `WaiverCandidate`s (from `getWaivers`'s `bestAvailable`
@@ -116,6 +123,7 @@ export function risingFreeAgents(candidates: readonly WaiverCandidate[]): RiserR
       playerId: c.playerId,
       name: c.name,
       position: c.position,
+      nflTeam: c.nflTeam,
       source: "freeAgent",
     }));
 }

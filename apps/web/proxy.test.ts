@@ -41,6 +41,9 @@ describe("proxy", () => {
       const res = proxy(req("/"));
       expect(res.headers.get("x-content-type-options")).toBe("nosniff");
       expect(res.headers.get("content-security-policy")).toContain("default-src 'self'");
+      expect(res.headers.get("content-security-policy")).toContain(
+        "img-src 'self' data: https://sleepercdn.com",
+      );
     });
   });
 

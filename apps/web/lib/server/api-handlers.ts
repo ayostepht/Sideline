@@ -34,7 +34,7 @@ import { getLineup } from "./lineup";
 import { getMatchup } from "./matchup";
 import { getOnboardingStatus, selectLeague, startOnboarding } from "./onboarding";
 import { gameNow } from "./game-clock";
-import { getPlayerDetail, getPlayersList } from "./players";
+import { getPlayerDetail, getPlayersList, requestPlayerNewsRefresh } from "./players";
 import { withMigratedDb } from "./sync";
 import { getWaivers } from "./waivers";
 
@@ -389,5 +389,25 @@ export function handlePlayerDetail(
     const r = getPlayerDetail(h, idOk.data, playerIdOk.data, now);
     if (!r.ok) return errorResult(404, "not_found", "League or player not found.");
     return { status: 200, body: PlayerDetailResponseSchema.parse(r.data) };
+  });
+}
+
+/** POST /api/l/[leagueId]/players/[playerId]/news/refresh. 202 `{ queued }`. */
+export function handlePlayerNewsRefresh(
+  leagueId: string,
+  playerId: string,
+  now: Date = new Date(),
+): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(400, "invalid_id", "Invalid league id.");
+  const playerOk = z
+    .string()
+    .regex(/^[A-Za-z0-9_-]{1,64}$/)
+    .safeParse(playerId);
+  if (!playerOk.success) return errorResult(400, "invalid_id", "Invalid player id.");
+  return withMigratedDb((h) => {
+    const r = requestPlayerNewsRefresh(h, idOk.data, playerOk.data, now);
+    if (!r.ok) return errorResult(404, "not_found", "League or player not found.");
+    return { status: 202, body: r.data };
   });
 }

@@ -111,8 +111,17 @@ test.describe("Players explorer (TREND-1..5)", () => {
     await expect(page.getByTestId("player-detail")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: DATA.otherPlayerName })).toBeVisible();
 
-    await page.getByTestId("player-back-link").click();
-    await expect(page).toHaveURL(new RegExp(`${L}/players$`));
+    // From the list the detail opens as a pop-up (P7.3): no back link, the browser Back closes it.
+    await expect(page.getByTestId("player-modal")).toBeVisible();
+    await expect(page.getByRole("dialog", { name: DATA.otherPlayerName })).toBeVisible();
+    await expect(page.getByTestId("player-back-link")).toHaveCount(0);
+    await page.goBack();
+    await expect(page.getByTestId("player-modal")).toHaveCount(0);
+    await expect(page.getByTestId("player-detail")).toHaveCount(0);
+    // The list page is back and still has its filtered search text.
+    await expect(page.getByTestId("players-search-input")).toHaveValue(DATA.otherPlayerQuery);
+    // Back returns to the list with its search kept.
+    await expect(page).toHaveURL(new RegExp(`${L}/players(\\?.*)?$`));
   });
 
   test("PLAYERS-FLOW-6: the player detail page renders its trend sections directly from a URL", async ({

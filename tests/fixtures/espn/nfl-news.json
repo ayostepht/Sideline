@@ -1,0 +1,549 @@
+{
+ "header": "NFL News",
+ "articles": [
+  {
+   "id": 40699880,
+   "type": "Story",
+   "headline": "Fantasy football buzz: Revitalizing offense just got harder for Jalen Hurts",
+   "description": "Jalen Hurts and the Eagles' offense will have an even more difficult time righting the ship without RT Lane Johnson.",
+   "published": "2026-10-06T22:14:42Z",
+   "lastModified": "2026-10-06T22:14:42Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/fantasy/football/story/_/id/40699880/fantasy-football-injuries-position-battles-nfl-news-analysis"
+    }
+   },
+   "categories": [
+    {
+     "type": "athlete",
+     "description": "Sam LaPorta",
+     "athleteId": 4430027
+    },
+    {
+     "type": "athlete",
+     "description": "Tetairoa McMillan",
+     "athleteId": 4685472
+    },
+    {
+     "type": "athlete",
+     "description": "Omarion Hampton",
+     "athleteId": 4685382
+    },
+    {
+     "type": "athlete",
+     "description": "George Kittle",
+     "athleteId": 3040151
+    },
+    {
+     "type": "athlete",
+     "description": "Kenneth Walker III",
+     "athleteId": 4567048
+    },
+    {
+     "type": "athlete",
+     "description": "Aaron Jones Sr",
+     "athleteId": 3042519
+    },
+    {
+     "type": "athlete",
+     "description": "Ollie Gordon II",
+     "athleteId": 4711533
+    },
+    {
+     "type": "athlete",
+     "description": "Woody Marks",
+     "athleteId": 4429059
+    },
+    {
+     "type": "athlete",
+     "description": "Tony Pollard",
+     "athleteId": 3916148
+    },
+    {
+     "type": "athlete",
+     "description": "Carnell Tate",
+     "athleteId": 4871023
+    },
+    {
+     "type": "athlete",
+     "description": "Tucker Kraft",
+     "athleteId": 4572680
+    },
+    {
+     "type": "athlete",
+     "description": "Dontayvion Wicks",
+     "athleteId": 4428850
+    },
+    {
+     "type": "athlete",
+     "description": "Marvin Harrison Jr",
+     "athleteId": 4432708
+    },
+    {
+     "type": "athlete",
+     "description": "Cam Skattebo",
+     "athleteId": 4696981
+    },
+    {
+     "type": "athlete",
+     "description": "Brenton Strange",
+     "athleteId": 4430539
+    },
+    {
+     "type": "athlete",
+     "description": "Brian Thomas Jr",
+     "athleteId": 4432773
+    },
+    {
+     "type": "athlete",
+     "description": "Chase Brown",
+     "athleteId": 4362238
+    },
+    {
+     "type": "athlete",
+     "description": "Kyle Monangai",
+     "athleteId": 4608686
+    },
+    {
+     "type": "athlete",
+     "description": "Braelon Allen",
+     "athleteId": 4685247
+    },
+    {
+     "type": "athlete",
+     "description": "Rhamondre Stevenson",
+     "athleteId": 4569173
+    },
+    {
+     "type": "athlete",
+     "description": "James Cook III",
+     "athleteId": 4379399
+    },
+    {
+     "type": "athlete",
+     "description": "Rachaad White",
+     "athleteId": 4697815
+    },
+    {
+     "type": "athlete",
+     "description": "Chris Olave",
+     "athleteId": 4361370
+    },
+    {
+     "type": "athlete",
+     "description": "Tyler Shough",
+     "athleteId": 4360689
+    },
+    {
+     "type": "athlete",
+     "description": "Juwan Johnson",
+     "athleteId": 3929645
+    },
+    {
+     "type": "athlete",
+     "description": "Devaughn Vele",
+     "athleteId": 4569559
+    },
+    {
+     "type": "athlete",
+     "description": "CJ Donaldson",
+     "athleteId": 5081999
+    },
+    {
+     "type": "athlete",
+     "description": "Alvin Kamara",
+     "athleteId": 3054850
+    },
+    {
+     "type": "athlete",
+     "description": "Michael Penix Jr",
+     "athleteId": 4360423
+    },
+    {
+     "type": "athlete",
+     "description": "Bijan Robinson",
+     "athleteId": 4430807
+    },
+    {
+     "type": "athlete",
+     "description": "Brian Robinson Jr",
+     "athleteId": 4241474
+    },
+    {
+     "type": "athlete",
+     "description": "Drake London",
+     "athleteId": 4426502
+    },
+    {
+     "type": "athlete",
+     "description": "Jalen Hurts",
+     "athleteId": 4040715
+    },
+    {
+     "type": "athlete",
+     "description": "Saquon Barkley",
+     "athleteId": 3929630
+    },
+    {
+     "type": "athlete",
+     "description": "Lane Johnson",
+     "athleteId": 15797
+    },
+    {
+     "type": "athlete",
+     "description": "DeVonta Smith",
+     "athleteId": 4241478
+    }
+   ]
+  },
+  {
+   "id": 49949224,
+   "type": "Story",
+   "headline": "Rest-of-season rankings: Tetairoa McMillan, George Kittle rise while Jalen Hurts slips",
+   "description": "Need a quick free agent pickup -- or roster overhaul -- after Week 4? These rankings are designed to help.",
+   "published": "2026-10-06T18:17:19Z",
+   "lastModified": "2026-10-06T18:17:19Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/fantasy/football/story/_/id/49949224/fantasy-football-2026-updated-rest-season-rankings"
+    }
+   },
+   "categories": [
+    {
+     "type": "athlete",
+     "description": "Brock Bowers",
+     "athleteId": 4432665
+    },
+    {
+     "type": "athlete",
+     "description": "George Kittle",
+     "athleteId": 3040151
+    },
+    {
+     "type": "athlete",
+     "description": "CeeDee Lamb",
+     "athleteId": 4241389
+    },
+    {
+     "type": "athlete",
+     "description": "Ja'Marr Chase",
+     "athleteId": 4362628
+    },
+    {
+     "type": "athlete",
+     "description": "Nico Collins",
+     "athleteId": 4258173
+    },
+    {
+     "type": "athlete",
+     "description": "Tetairoa McMillan",
+     "athleteId": 4685472
+    },
+    {
+     "type": "athlete",
+     "description": "DeVonta Smith",
+     "athleteId": 4241478
+    },
+    {
+     "type": "athlete",
+     "description": "Rashee Rice",
+     "athleteId": 4428331
+    },
+    {
+     "type": "athlete",
+     "description": "Ladd McConkey",
+     "athleteId": 4612826
+    },
+    {
+     "type": "athlete",
+     "description": "Tyreek Hill",
+     "athleteId": 3116406
+    },
+    {
+     "type": "athlete",
+     "description": "Emanuel Wilson",
+     "athleteId": 4887558
+    },
+    {
+     "type": "athlete",
+     "description": "Travis Etienne Jr",
+     "athleteId": 4239996
+    },
+    {
+     "type": "athlete",
+     "description": "Jadarian Price",
+     "athleteId": 4685512
+    },
+    {
+     "type": "athlete",
+     "description": "Alvin Kamara",
+     "athleteId": 3054850
+    },
+    {
+     "type": "athlete",
+     "description": "Omarion Hampton",
+     "athleteId": 4685382
+    },
+    {
+     "type": "athlete",
+     "description": "Bhayshul Tuten",
+     "athleteId": 4882093
+    },
+    {
+     "type": "athlete",
+     "description": "Chuba Hubbard",
+     "athleteId": 4241416
+    },
+    {
+     "type": "athlete",
+     "description": "Kenneth Walker III",
+     "athleteId": 4567048
+    },
+    {
+     "type": "athlete",
+     "description": "Bryce Young",
+     "athleteId": 4685720
+    },
+    {
+     "type": "athlete",
+     "description": "Jalen Hurts",
+     "athleteId": 4040715
+    },
+    {
+     "type": "athlete",
+     "description": "Kirk Cousins",
+     "athleteId": 14880
+    },
+    {
+     "type": "athlete",
+     "description": "Deshaun Watson",
+     "athleteId": 3122840
+    },
+    {
+     "type": "athlete",
+     "description": "Justin Herbert",
+     "athleteId": 4038941
+    },
+    {
+     "type": "athlete",
+     "description": "Lamar Jackson",
+     "athleteId": 3916387
+    },
+    {
+     "type": "athlete",
+     "description": "Brock Purdy",
+     "athleteId": 4361741
+    }
+   ]
+  },
+  {
+   "id": 50117652,
+   "type": "Story",
+   "headline": "Knockout league pickups: Jaxon Smith-Njigba, Ja'Marr Chase among big names available in Week 5",
+   "description": "Tristan H. Cockcroft lists the most common players on eliminated teams and finds how much FAB to spend this week.",
+   "published": "2026-10-06T17:36:34Z",
+   "lastModified": "2026-10-06T17:36:34Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/fantasy/football/story/_/id/50117652/fantasy-football-knockout-waiver-wire-free-agent-pickups-nfl-week-5"
+    }
+   },
+   "categories": [
+    {
+     "type": "athlete",
+     "description": "Rashee Rice",
+     "athleteId": 4428331
+    },
+    {
+     "type": "athlete",
+     "description": "Justin Jefferson",
+     "athleteId": 4262921
+    },
+    {
+     "type": "athlete",
+     "description": "Saquon Barkley",
+     "athleteId": 3929630
+    },
+    {
+     "type": "athlete",
+     "description": "Jeremiyah Love",
+     "athleteId": 4870808
+    },
+    {
+     "type": "athlete",
+     "description": "Garrett Wilson",
+     "athleteId": 4569618
+    },
+    {
+     "type": "athlete",
+     "description": "Ja'Marr Chase",
+     "athleteId": 4362628
+    },
+    {
+     "type": "athlete",
+     "description": "Jaxon Smith-Njigba",
+     "athleteId": 4430878
+    }
+   ]
+  },
+  {
+   "id": 50117945,
+   "type": "HeadlineNews",
+   "headline": "NFL Referees Association to challenge officials' suspensions",
+   "description": "The NFL Referees Association said it will challenge the severity of the suspensions of two officials for unprofessional conduct.",
+   "published": "2026-10-06T18:29:03Z",
+   "lastModified": "2026-10-06T18:29:03Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/nfl/story/_/id/50117945/nfl-referees-association-challenge-officials-suspensions"
+    }
+   },
+   "categories": [
+    {
+     "type": "team",
+     "description": "Arizona Cardinals"
+    },
+    {
+     "type": "athlete",
+     "description": "Trey McBride",
+     "athleteId": 4361307
+    },
+    {
+     "type": "team",
+     "description": "Minnesota Vikings"
+    },
+    {
+     "type": "athlete",
+     "description": "Eric Wilson",
+     "athleteId": 3056916
+    }
+   ]
+  },
+  {
+   "id": 50119780,
+   "type": "Story",
+   "headline": "MVP?! 3 keys to watch if Panthers QB Bryce Young is on that path",
+   "description": "The 2023 first-round pick's start -- he leads the NFL with 1,268 passing yards -- puts him in the MVP conversation.",
+   "published": "2026-10-06T22:49:31Z",
+   "lastModified": "2026-10-06T22:49:31Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/nfl/story/_/id/50119780/carolina-panthers-qb-bryce-young-3-keys-mvp-path"
+    }
+   },
+   "categories": [
+    {
+     "type": "team",
+     "description": "Carolina Panthers"
+    },
+    {
+     "type": "athlete",
+     "description": "Bryce Young",
+     "athleteId": 4685720
+    }
+   ]
+  },
+  {
+   "id": 50119243,
+   "type": "Media",
+   "headline": "Dan Orlovsky: Lane Johnson's retirement a 'significant loss' for Eagles",
+   "description": "Dan Orlovsky: Lane Johnson's retirement a 'significant loss' for Eagles",
+   "published": "2026-10-06T20:29:07Z",
+   "lastModified": "2026-10-06T20:29:07Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/video/clip/_/id/50119243/lane-johnson-retirement-significant-loss-eagles",
+     "self": {
+      "href": "https://www.espn.com/video/clip/_/id/50119243/lane-johnson-retirement-significant-loss-eagles",
+      "dsi": {
+       "href": "https://www.espn.com/video/clip?id=f564a5297e9af"
+      }
+     }
+    }
+   },
+   "categories": [
+    {
+     "type": "athlete",
+     "description": "Lane Johnson",
+     "athleteId": 15797
+    },
+    {
+     "type": "team",
+     "description": "Philadelphia Eagles"
+    }
+   ]
+  },
+  {
+   "id": 50119127,
+   "type": "Media",
+   "headline": "Ian Rapoport: Eagles all-pro OT Lane Johnson announces retirement",
+   "description": "Ian Rapoport: Eagles all-pro OT Lane Johnson announces retirement",
+   "published": "2026-10-06T20:11:06Z",
+   "lastModified": "2026-10-06T20:11:06Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/video/clip/_/id/50119127/eagles-all-pro-ot-lane-johnson-announces-retirement",
+     "self": {
+      "href": "https://www.espn.com/video/clip/_/id/50119127/eagles-all-pro-ot-lane-johnson-announces-retirement",
+      "dsi": {
+       "href": "https://www.espn.com/video/clip?id=512db090c5d80"
+      }
+     }
+    }
+   },
+   "categories": [
+    {
+     "type": "team",
+     "description": "Philadelphia Eagles"
+    },
+    {
+     "type": "athlete",
+     "description": "Lane Johnson",
+     "athleteId": 15797
+    }
+   ]
+  },
+  {
+   "id": 50119375,
+   "type": "Story",
+   "headline": "Fantasy football consistency ratings for 2026",
+   "description": "The consistency ratings weigh how consistent, as well as how start-worthy, players have been in ESPN fantasy football leagues in 2026.",
+   "published": "2026-10-06T21:43:24Z",
+   "lastModified": "2026-10-06T21:43:24Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/fantasy/football/story/_/id/50119375/2026-fantasy-football-rankings-start-sit"
+    }
+   },
+   "categories": []
+  },
+  {
+   "id": 49954186,
+   "type": "Story",
+   "headline": "Fantasy football consistency ratings: 2024 to 2026",
+   "description": "The consistency ratings weigh both how consistent and how start-worthy players have been from 2024 to 2026.",
+   "published": "2026-10-06T21:44:26Z",
+   "lastModified": "2026-10-06T21:44:26Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/fantasy/football/story/_/id/49954186/fantasy-football-rankings-consistency-ratings-start-sit-value"
+    }
+   },
+   "categories": []
+  },
+  {
+   "id": 49803708,
+   "type": "Story",
+   "headline": "Fantasy football flex and superflex rankings for Week 5",
+   "description": "Trying to decide between a couple of closely ranked players this week? Eric Karabell's rankings are here to help.",
+   "published": "2026-10-06T19:15:39Z",
+   "lastModified": "2026-10-06T19:15:39Z",
+   "links": {
+    "web": {
+     "href": "https://www.espn.com/fantasy/football/story/_/id/49803708/fantasy-football-superflex-rankings-2026-qb-rb-wr-te"
+    }
+   },
+   "categories": []
+  }
+ ]
+}

@@ -28,10 +28,17 @@ import {
   type ScoringWeek,
 } from "@sideline/core";
 import {
+  enqueuePlayerNewsRequest,
   lastSuccessAt,
   readLeaguePlayerWeekPoints,
   readPlayers as readPlayersDb,
+  readNflState,
+  readPlayerNews,
+  countPendingTargetedRequests,
+  readPlayerNewsFetchedAt,
   readPlayerUsageWeeks,
+  readPlayerWeekPointsWithProjections,
+  readTeamSchedule,
   readPlayerWeekPoints,
   readPlayerWeekPositionRanks,
   readTrending,
@@ -40,8 +47,11 @@ import {
 } from "@sideline/db";
 import {
   computeFreshness,
+  playerHeadshotUrl,
   SYNC_CADENCE_MS,
   type PlayerDetailResponse,
+  type PlayerNews,
+  type PlayerWeekRow,
   type PlayerListItem,
   type PlayersListRequest,
   type PlayersListResponse,
@@ -212,6 +222,90 @@ function consistencyWeeksFor(
   }));
 }
 
+/** Only http(s) links pass through; anything else (javascript:, data:, garbage) becomes null. */
+export function sanitizeNewsUrl(url: string | null): string | null {
+  if (url === null) return null;
+  try {
+    const u = new URL(url);
+    return u.protocol === "http:" || u.protocol === "https:" ? u.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function playerNewsFor(h: DbHandle, playerId: string): PlayerNews {
+  return {
+    items: readPlayerNews(h, playerId, { limit: 5 }).map((n) => ({
+      id: n.id,
+      headline: n.headline,
+      summary: n.summary,
+      url: sanitizeNewsUrl(n.url),
+      source: n.source,
+      publishedAt: n.publishedAt,
+    })),
+    lastFetchedAt: readPlayerNewsFetchedAt(h, playerId),
+  };
+}
+
+/** P7.4 weekly table: weeks 1..latest completed (state week - 1; all 18 if the stored state is a
+ * later season), plus the current week only when it already has stats. Newest first. */
+function weeklyRowsFor(
+  h: DbHandle,
+  leagueId: string,
+  league: LeagueRow,
+  player: FullPlayerRow,
+  consistencyWeeks: readonly {
+    week: number;
+    positionRank: number;
+    isBoom: boolean;
+    isBust: boolean;
+  }[],
+): PlayerWeekRow[] {
+  const state = readNflState(h);
+  const points = readPlayerWeekPointsWithProjections(h, leagueId, league.season, player.playerId);
+  const byWeek = new Map(points.map((r) => [r.week, r] as const));
+  let completed: number;
+  let currentWeek: number | null = null;
+  if (state === null) {
+    completed = Math.max(0, ...points.filter((r) => r.actualPts !== null).map((r) => r.week));
+  } else if (state.season > league.season) {
+    completed = 18;
+  } else if (state.season < league.season) {
+    completed = 0;
+  } else {
+    completed = Math.max(0, state.week - 1);
+    currentWeek = state.week;
+  }
+  const last =
+    currentWeek !== null && byWeek.get(currentWeek)?.actualPts != null ? currentWeek : completed;
+  const sched =
+    player.team === null
+      ? null
+      : readTeamSchedule(h, league.season, player.team, Math.max(last, 1));
+  const gameByWeek = new Map((sched?.games ?? []).map((g) => [g.week, g] as const));
+  const cons = new Map(consistencyWeeks.map((c) => [c.week, c] as const));
+  const rows: PlayerWeekRow[] = [];
+  for (let week = last; week >= 1; week -= 1) {
+    const pts = byWeek.get(week);
+    const game = gameByWeek.get(week);
+    const actual = pts?.actualPts ?? null;
+    const c = actual === null ? undefined : cons.get(week);
+    rows.push({
+      week,
+      opponent: game?.opponent ?? null,
+      isHome: game?.isHome ?? null,
+      isBye: sched !== null && game === undefined && sched.populatedWeeks.has(week),
+      actualPts: actual,
+      projectedPts: pts?.projPts ?? null,
+      positionRank: c !== undefined && c.positionRank > 0 ? c.positionRank : null,
+      isBoom: c?.isBoom ?? false,
+      isBust: c?.isBust ?? false,
+      inProgress: currentWeek === week && week > completed,
+    });
+  }
+  return rows;
+}
+
 /**
  * T4.5's player detail: full profile plus every TREND-1..5 computation. `not_found` covers both an
  * unknown league and an unknown player id (404 either way; see players.test.ts).
@@ -300,6 +394,37 @@ export function getPlayerDetail(
         reasons: momentum.reasons,
       },
       freshness: freshnessFor(h, now),
+      headshotUrl: playerHeadshotUrl({
+        playerId: player.playerId,
+        position: player.position,
+        nflTeam: player.team,
+      }),
+      weekly: weeklyRowsFor(h, leagueId, league, player, consistency.weeks),
+      news: playerNewsFor(h, playerId),
     },
   };
+}
+
+export const NEWS_REFRESH_STALE_MS = 60 * 60 * 1000;
+/** Cap on queued targeted news requests, so the endpoint cannot flood the worker. */
+export const NEWS_REFRESH_MAX_PENDING = 20;
+
+/** POST news/refresh: queues a worker refresh when news is missing or older than 60 minutes and
+ * fewer than 20 targeted requests are already pending. `not_found` for an unknown league/player. */
+export function requestPlayerNewsRefresh(
+  h: DbHandle,
+  leagueId: string,
+  playerId: string,
+  now: Date,
+): Lookup<{ queued: boolean }> {
+  if (readLeague(h, leagueId) === null) return { ok: false, reason: "not_found" };
+  if (readPlayersDb(h, [playerId])[0] === undefined) return { ok: false, reason: "not_found" };
+  const last = readPlayerNewsFetchedAt(h, playerId);
+  if (last !== null && now.getTime() - Date.parse(last) < NEWS_REFRESH_STALE_MS) {
+    return { ok: true, data: { queued: false } };
+  }
+  const pending = countPendingTargetedRequests(h, "player_news");
+  if (pending >= NEWS_REFRESH_MAX_PENDING) return { ok: true, data: { queued: false } };
+  const { created } = enqueuePlayerNewsRequest(h, playerId, now.toISOString());
+  return { ok: true, data: { queued: created } };
 }

@@ -713,3 +713,69 @@ export function readLeagueTransactions(h: DbHandle, leagueId: string): LeagueTra
     createdAt: r.createdAt,
   }));
 }
+
+export interface PlayerWeekProjectionPointsRow {
+  week: number;
+  actualPts: number | null;
+  projPts: number | null;
+}
+
+/** One player's league-scored actual and projected points per week, ordered by week. Uses
+ * `lpwp_player_idx`. */
+export function readPlayerWeekPointsWithProjections(
+  h: DbHandle,
+  leagueId: string,
+  season: number,
+  playerId: string,
+): PlayerWeekProjectionPointsRow[] {
+  return h.db
+    .select({
+      week: leaguePlayerWeekPoints.week,
+      actualPts: leaguePlayerWeekPoints.actualPts,
+      projPts: leaguePlayerWeekPoints.projPts,
+    })
+    .from(leaguePlayerWeekPoints)
+    .where(
+      and(
+        eq(leaguePlayerWeekPoints.leagueId, leagueId),
+        eq(leaguePlayerWeekPoints.season, season),
+        eq(leaguePlayerWeekPoints.playerId, playerId),
+      ),
+    )
+    .orderBy(leaguePlayerWeekPoints.week)
+    .all();
+}
+
+export interface TeamGameRow {
+  week: number;
+  opponent: string;
+  isHome: boolean;
+}
+
+/** One team's games for weeks 1..`throughWeek`, plus the weeks in that range that have any game
+ * league-wide (a team with no game in a populated week is on a bye). Uses the schedule home/away
+ * and season/week indexes. */
+export function readTeamSchedule(
+  h: DbHandle,
+  season: number,
+  team: string,
+  throughWeek: number,
+): { games: TeamGameRow[]; populatedWeeks: Set<number> } {
+  const rows = h.sqlite
+    .prepare(
+      `SELECT week, home, away FROM schedule
+       WHERE season = ? AND week BETWEEN 1 AND ? AND (home = ? OR away = ?)`,
+    )
+    .all(season, throughWeek, team, team) as { week: number; home: string; away: string }[];
+  const weekRows = h.sqlite
+    .prepare("SELECT DISTINCT week FROM schedule WHERE season = ? AND week BETWEEN 1 AND ?")
+    .all(season, throughWeek) as { week: number }[];
+  return {
+    games: rows.map((r) => ({
+      week: r.week,
+      opponent: r.home === team ? r.away : r.home,
+      isHome: r.home === team,
+    })),
+    populatedWeeks: new Set(weekRows.map((r) => r.week)),
+  };
+}

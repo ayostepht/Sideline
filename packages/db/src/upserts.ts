@@ -58,6 +58,8 @@ interface TableSpec {
   keys: readonly string[];
   /** Columns written but not part of the change test. */
   volatile?: readonly string[];
+  /** Columns where a null incoming value keeps the stored value (never cleared by an upsert). */
+  keepIfNull?: readonly string[];
 }
 
 function buildSql(spec: TableSpec, extraWhere?: string): string {
@@ -65,8 +67,11 @@ function buildSql(spec: TableSpec, extraWhere?: string): string {
   const keys = new Set(spec.keys);
   const setCols = spec.columns.filter((c) => !keys.has(c));
   const diffCols = setCols.filter((c) => !volatile.has(c));
-  const set = setCols.map((c) => `${c} = excluded.${c}`).join(", ");
-  const diff = diffCols.map((c) => `${spec.table}.${c} IS NOT excluded.${c}`).join(" OR ");
+  const keep = new Set(spec.keepIfNull ?? []);
+  const incoming = (c: string): string =>
+    keep.has(c) ? `COALESCE(excluded.${c}, ${spec.table}.${c})` : `excluded.${c}`;
+  const set = setCols.map((c) => `${c} = ${incoming(c)}`).join(", ");
+  const diff = diffCols.map((c) => `${spec.table}.${c} IS NOT ${incoming(c)}`).join(" OR ");
   const where = extraWhere === undefined ? `(${diff})` : `(${diff}) AND (${extraWhere})`;
   return (
     `INSERT INTO ${spec.table} (${spec.columns.join(", ")}) VALUES (${spec.columns
@@ -239,10 +244,12 @@ const PLAYERS: TableSpec = {
     "depth_chart_order",
     "search_rank",
     "gsis_id",
+    "espn_id",
     "updated_at",
   ],
   keys: ["player_id"],
   volatile: ["updated_at"],
+  keepIfNull: ["espn_id"],
 };
 
 /** Chunked into transactions of 500 rows. */
@@ -268,6 +275,7 @@ export function upsertPlayers(
     p.depthChartOrder,
     p.searchRank,
     p.gsisId,
+    p.espnId ?? null,
     updatedAt,
   ]);
 }
@@ -634,4 +642,54 @@ export function replaceTrending(
     return n;
   });
   return { rowsChanged: tx.immediate() };
+}
+
+const PLAYER_NEWS: TableSpec = {
+  table: "player_news",
+  columns: [
+    "id",
+    "player_id",
+    "headline",
+    "summary",
+    "url",
+    "source",
+    "published_at",
+    "fetched_at",
+  ],
+  keys: ["id"],
+  volatile: ["fetched_at"],
+};
+
+/** One ESPN (or other provider) news item for one player. `id` is namespaced, e.g. `espn:<story>:<player>`. */
+export interface PlayerNewsRow {
+  id: string;
+  playerId: string;
+  headline: string;
+  summary: string | null;
+  url: string | null;
+  source: string;
+  /** ISO 8601. */
+  publishedAt: string;
+  /** ISO 8601. Written on insert and on a real change, not part of the change test. */
+  fetchedAt: string;
+}
+
+/** Idempotent: re-upserting identical items counts 0 (only `fetched_at` differs). */
+export function upsertPlayerNews(h: DbHandle, rows: readonly PlayerNewsRow[]): UpsertResult {
+  return runUpsert(h, PLAYER_NEWS, rows, (n) => [
+    n.id,
+    n.playerId,
+    n.headline,
+    n.summary,
+    n.url,
+    n.source,
+    n.publishedAt,
+    n.fetchedAt,
+  ]);
+}
+
+/** Deletes news published before `olderThanIso`; returns the number of rows deleted. */
+export function prunePlayerNews(h: DbHandle, opts: { olderThanIso: string }): number {
+  return h.sqlite.prepare("DELETE FROM player_news WHERE published_at < ?").run(opts.olderThanIso)
+    .changes;
 }

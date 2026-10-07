@@ -71,6 +71,7 @@ export function TeamView({
       >
         <PlayerRow
           name={displayName(p)}
+          {...(unknown ? {} : { playerId: p.playerId })}
           position={unknown ? null : p.position}
           {...(unknown ? {} : { team: p.nflTeam })}
           injuryStatus={unknown ? null : p.injuryStatus}
