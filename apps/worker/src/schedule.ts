@@ -23,6 +23,7 @@ export const DEFAULT_CADENCES: Cadences = {
   matchups: { every: everyOf("matchups"), inWindowEvery: 2 * MIN },
   transactions: { every: everyOf("transactions") },
   players: { cron: "30 4 * * *" },
+  player_ids: { cron: "45 4 * * *" },
   trending: { every: everyOf("trending") },
   stats: { every: everyOf("stats") },
   projections: { every: everyOf("projections") },

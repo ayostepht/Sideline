@@ -37,6 +37,7 @@ const worker = new Worker({
           sleeper: { fetch: fixtureFetch },
           nflverse: { fetch: fixtureFetch },
           espn: { fetch: fixtureFetch },
+          playerIds: { fetch: fixtureFetch },
         }),
   ),
   ...(fixtureFetch === null ? {} : { sleeper: { fetch: fixtureFetch } }),

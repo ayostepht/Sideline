@@ -10,6 +10,7 @@ export const ALL_ORDER: readonly SyncJobName[] = [
   "matchups",
   "transactions",
   "players",
+  "player_ids",
   "trending",
   "stats",
   "nflverse",

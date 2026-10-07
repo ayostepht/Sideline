@@ -1,6 +1,7 @@
 import type { Job } from "../types.js";
 import type { SleeperJobDeps } from "./common.js";
 import { backfillJob, playersJob, projectionsJob, statsJob, trendingJob } from "./data-jobs.js";
+import { playerIdsJob, type PlayerIdsJobDeps } from "./player-ids-job.js";
 import { playerNewsJob, type PlayerNewsJobDeps } from "./player-news-job.js";
 import { nflverseJob, type NflverseJobDeps } from "./nflverse-job.js";
 import {
@@ -40,17 +41,24 @@ export function createSleeperJobs(
  * Registration point: the worker and the CLI both build their registry from this list.
  *
  */
-export const registeredJobs: Job[] = [...createSleeperJobs(), nflverseJob(), playerNewsJob()];
+export const registeredJobs: Job[] = [
+  ...createSleeperJobs(),
+  nflverseJob(),
+  playerIdsJob(),
+  playerNewsJob(),
+];
 
 /** Every job, with injected fetches (tests and db:seed:fixtures). */
 export function createAllJobs(deps: {
   sleeper?: SleeperJobDeps;
   nflverse?: NflverseJobDeps;
   espn?: PlayerNewsJobDeps;
+  playerIds?: PlayerIdsJobDeps;
 }): Job[] {
   return [
     ...createSleeperJobs(deps.sleeper ?? {}, deps.nflverse ?? {}),
     nflverseJob(deps.nflverse ?? {}),
+    playerIdsJob(deps.playerIds ?? {}),
     playerNewsJob(deps.espn ?? {}),
   ];
 }

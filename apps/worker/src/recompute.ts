@@ -57,6 +57,7 @@ export const JOB_TABLES: Readonly<Record<SyncJobName, readonly string[]>> = {
   matchups: ["matchups"],
   transactions: ["transactions"],
   players: ["players"],
+  player_ids: ["players"],
   trending: ["trending"],
   stats: ["player_week_stats"],
   projections: ["player_week_projections", "player_week_projection_snapshots"],
