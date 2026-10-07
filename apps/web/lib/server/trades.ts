@@ -87,6 +87,51 @@ function ref(refs: ReadonlyMap<string, TradePlayerRef>, id: string): TradePlayer
   return refs.get(id) ?? { playerId: id, name: id, position: null, nflTeam: null };
 }
 
+/** Core reason codes whose `value` is a player id and whose core label embeds that id. */
+const PLAYER_REASON_CODES = new Set([
+  "TRADE_ENTERS_LINEUP",
+  "TRADE_LEAVES_LINEUP",
+  "TRADE_AUTO_DROP",
+]);
+
+/** Player ids named by reasons, so their names can be loaded before relabeling. */
+function reasonPlayerIds(reasons: readonly Reason[]): string[] {
+  return reasons.flatMap((r) =>
+    PLAYER_REASON_CODES.has(r.code) && typeof r.value === "string" ? [r.value] : [],
+  );
+}
+
+/**
+ * M1 (P7b.7f): rebuild labels that core writes with raw player ids, using the resolved player
+ * names. `value` stays the player id. `own` is true for my side (and shared reasons).
+ */
+function relabel(
+  reasons: readonly Reason[],
+  refs: ReadonlyMap<string, TradePlayerRef>,
+  own: boolean,
+): Reason[] {
+  const who = own ? "your" : "their";
+  return reasons.map((r) => {
+    if (!PLAYER_REASON_CODES.has(r.code) || typeof r.value !== "string") return r;
+    const name = ref(refs, r.value).name;
+    switch (r.code) {
+      case "TRADE_ENTERS_LINEUP":
+        return { ...r, label: `${name} joins ${who} best lineup` };
+      case "TRADE_LEAVES_LINEUP":
+        return { ...r, label: `${name} leaves ${who} best lineup` };
+      default:
+        return {
+          ...r,
+          label: own ? `Drops ${name} to make room` : `They drop ${name} to make room`,
+        };
+    }
+  });
+}
+
+function sideReasonIds(...sides: readonly TradeSideResult[]): string[] {
+  return sides.flatMap((s) => [...s.dropped, ...reasonPlayerIds(s.reasons)]);
+}
+
 // ---- Playoff odds ----
 
 interface PlayoffContext {
@@ -100,11 +145,42 @@ const NO_PLAYOFF_REASON: Reason = {
   label: "Playoff odds are not available (no regular-season games left or playoff setup unknown)",
 };
 
+/** M2: finder suggestions past the top N skip the playoff sim, which is not the same as unavailable. */
+const PLAYOFF_NOT_COMPUTED_REASON: Reason = {
+  code: "TRADE_PLAYOFF_NOT_COMPUTED",
+  label: "Playoff odds shown for the top 10 only",
+};
+
+type PlayoffPair = { before: number; after: number };
+/** `null` = truly unavailable; `"not_computed"` = skipped on purpose (finder beyond top N). */
+type PlayoffState = PlayoffPair | null | "not_computed";
+
+const BaselineSchema = z.array(z.tuple([z.number().int(), z.number()]));
+
+/** Cache key shared by the finder result and the baseline playoff sim (m1, m2). */
+function tradeInputsHash(h: DbHandle): string {
+  const payload = JSON.stringify({
+    rosters: lastSuccessAt(h, "rosters"),
+    stats: lastSuccessAt(h, "stats"),
+    projections: lastSuccessAt(h, "projections"),
+    state: lastSuccessAt(h, "state"),
+    matchups: lastSuccessAt(h, "matchups"),
+    leagues: lastSuccessAt(h, "league"),
+    players: lastSuccessAt(h, "players"),
+  });
+  return createHash("sha256").update(payload).digest("hex").slice(0, 16);
+}
+
 function playoffContext(h: DbHandle, leagueId: string, now: Date): PlayoffContext | null {
   const build = loadPlayoffOddsBuild(h, leagueId, now);
   if (build === null || build.input.schedule.length === 0) return null;
+  const key = { leagueId, week: 0, kind: "trade-playoff-before", inputsHash: tradeInputsHash(h) };
+  const cached = BaselineSchema.safeParse(getComputed(h, key));
+  if (cached.success) return { build, before: new Map(cached.data) };
   const sim = simulatePlayoffOdds(build.input);
-  return { build, before: new Map(sim.teams.map((t) => [t.rosterId, t.playoffPct] as const)) };
+  const entries = sim.teams.map((t) => [t.rosterId, t.playoffPct] as [number, number]);
+  putComputed(h, key, entries, now);
+  return { build, before: new Map(entries) };
 }
 
 /** Playoff pct per roster after shifting the given teams' mean weekly score. */
@@ -123,10 +199,12 @@ function playoffAfter(
 function impact(
   side: TradeSideResult,
   refs: ReadonlyMap<string, TradePlayerRef>,
-  playoff: { before: number; after: number } | null,
+  playoff: PlayoffState,
+  own: boolean,
 ): TradeTeamImpact {
-  const reasons: Reason[] = [...side.reasons];
-  if (playoff === null) reasons.push(NO_PLAYOFF_REASON);
+  const reasons: Reason[] = relabel(side.reasons, refs, own);
+  if (playoff === "not_computed") reasons.push(PLAYOFF_NOT_COMPUTED_REASON);
+  else if (playoff === null) reasons.push(NO_PLAYOFF_REASON);
   else {
     reasons.push({
       code: "TRADE_PLAYOFF_DELTA",
@@ -140,9 +218,10 @@ function impact(
     rosLineupBefore: side.rosLineupBefore,
     rosLineupAfter: side.rosLineupAfter,
     rosLineupDelta: side.rosLineupDelta,
-    playoffPctBefore: playoff?.before ?? null,
-    playoffPctAfter: playoff?.after ?? null,
-    playoffPctDelta: playoff === null ? null : playoff.after - playoff.before,
+    playoffPctBefore: typeof playoff === "object" && playoff !== null ? playoff.before : null,
+    playoffPctAfter: typeof playoff === "object" && playoff !== null ? playoff.after : null,
+    playoffPctDelta:
+      typeof playoff === "object" && playoff !== null ? playoff.after - playoff.before : null,
     dropped: side.dropped.map((id) => ref(refs, id)),
     reasons,
   };
@@ -151,10 +230,7 @@ function impact(
 function playoffFor(
   ctx: PlayoffContext | null,
   trade: { mine: TradeSideResult; theirs: TradeSideResult },
-): {
-  mine: { before: number; after: number } | null;
-  theirs: { before: number; after: number } | null;
-} {
+): { mine: PlayoffPair | null; theirs: PlayoffPair | null } {
   if (ctx === null) return { mine: null, theirs: null };
   const after = playoffAfter(
     ctx,
@@ -221,17 +297,17 @@ export function evaluateTradeForLeague(
   const refs = refsFor(h, [
     ...result.give,
     ...result.get,
-    ...result.mine.dropped,
-    ...result.theirs.dropped,
+    ...sideReasonIds(result.mine, result.theirs),
+    ...reasonPlayerIds(result.reasons),
   ]);
   const po = playoffFor(playoffContext(h, leagueId, now), result);
   const response = TradeEvaluateResponseSchema.parse({
     give: result.give.map((id) => ref(refs, id)),
     get: result.get.map((id) => ref(refs, id)),
-    mine: impact(result.mine, refs, po.mine),
-    theirs: impact(result.theirs, refs, po.theirs),
+    mine: impact(result.mine, refs, po.mine, true),
+    theirs: impact(result.theirs, refs, po.theirs, false),
     fairness: result.fairness,
-    reasons: result.reasons,
+    reasons: relabel(result.reasons, refs, true),
     freshness: freshnessFor(h, now),
   });
   return { ok: true, data: response };
@@ -244,30 +320,19 @@ const CachedFinderSchema = z.strictObject({
   evaluatedCount: z.number().int().min(0),
 });
 
-function finderHash(h: DbHandle): string {
-  const payload = JSON.stringify({
-    rosters: lastSuccessAt(h, "rosters"),
-    stats: lastSuccessAt(h, "stats"),
-    projections: lastSuccessAt(h, "projections"),
-    state: lastSuccessAt(h, "state"),
-    matchups: lastSuccessAt(h, "matchups"),
-  });
-  return createHash("sha256").update(payload).digest("hex").slice(0, 16);
-}
-
 function toSuggestion(
   t: FoundTrade,
   refs: ReadonlyMap<string, TradePlayerRef>,
-  po: ReturnType<typeof playoffFor>,
+  po: { mine: PlayoffState; theirs: PlayoffState },
 ): TradeSuggestion {
   return {
     otherRosterId: t.otherRosterId,
     give: t.give.map((id) => ref(refs, id)),
     get: t.get.map((id) => ref(refs, id)),
-    mine: impact(t.mine, refs, po.mine),
-    theirs: impact(t.theirs, refs, po.theirs),
+    mine: impact(t.mine, refs, po.mine, true),
+    theirs: impact(t.theirs, refs, po.theirs, false),
     fairness: t.fairness,
-    reasons: t.reasons,
+    reasons: relabel(t.reasons, refs, true),
   };
 }
 
@@ -285,7 +350,7 @@ export function findTradesForLeague(
   if (me === undefined) return { ok: false, reason: "no_team" };
 
   const kind = `trade-finder:${String(myRosterId)}`;
-  const inputsHash = finderHash(h);
+  const inputsHash = tradeInputsHash(h);
   const cached = getComputed(h, { leagueId, week: 0, kind, inputsHash });
   if (cached !== null) {
     const parsed = CachedFinderSchema.safeParse(cached);
@@ -313,14 +378,23 @@ export function findTradesForLeague(
 
   const refs = refsFor(
     h,
-    found.suggestions.flatMap((t) => [...t.give, ...t.get, ...t.mine.dropped, ...t.theirs.dropped]),
+    found.suggestions.flatMap((t) => [
+      ...t.give,
+      ...t.get,
+      ...sideReasonIds(t.mine, t.theirs),
+      ...reasonPlayerIds(t.reasons),
+    ]),
   );
   const ctx = found.suggestions.length > 0 ? playoffContext(h, leagueId, now) : null;
   const suggestions = found.suggestions.map((t, i) =>
     toSuggestion(
       t,
       refs,
-      i < TRADE_FINDER_PLAYOFF_TOP_N ? playoffFor(ctx, t) : { mine: null, theirs: null },
+      i < TRADE_FINDER_PLAYOFF_TOP_N
+        ? playoffFor(ctx, t)
+        : ctx === null
+          ? { mine: null, theirs: null }
+          : { mine: "not_computed" as const, theirs: "not_computed" as const },
     ),
   );
   const payload = CachedFinderSchema.parse({ suggestions, evaluatedCount: found.evaluatedCount });

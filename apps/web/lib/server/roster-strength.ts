@@ -332,7 +332,13 @@ export function getTradeTeams(h: DbHandle, leagueId: string, now: Date): Lookup<
 
   const kind = "trade-teams";
   const week = 0;
-  const inputsHash = inputsHashFor(h);
+  // Also depends on league settings (roster positions) and player names/positions.
+  const inputsHash = createHash("sha256")
+    .update(
+      `${inputsHashFor(h)}:${JSON.stringify([lastSuccessAt(h, "league"), lastSuccessAt(h, "players")])}`,
+    )
+    .digest("hex")
+    .slice(0, 16);
   const cached = getComputed(h, { leagueId, week, kind, inputsHash });
   if (cached !== null) {
     const parsed = TradeTeamsResultSchema.safeParse(cached);

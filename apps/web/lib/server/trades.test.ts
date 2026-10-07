@@ -1,5 +1,5 @@
 import { evaluateTrade } from "@sideline/core";
-import { schema, setSleeperUserId, type DbHandle } from "@sideline/db";
+import { finishRun, schema, setSleeperUserId, startRun, type DbHandle } from "@sideline/db";
 import {
   TRADE_FINDER_PLAYOFF_TOP_N,
   TradeEvaluateResponseSchema,
@@ -294,6 +294,142 @@ describe("findTradesForLeague", () => {
     const h = setup();
     expect(ok(findTradesForLeague(h, "L1", SEED_NOW)).suggestions).toEqual([]);
     expect(findTradesForLeague(h, "nope", SEED_NOW)).toEqual({ ok: false, reason: "not_found" });
+  });
+});
+
+describe("P7b.7f review fixes", () => {
+  const FINDER_PROJECTIONS: Record<string, number> = {
+    p4: 30,
+    p8: 30,
+    p12: 28,
+    p1: 3,
+    p5: 3,
+    p9: 3,
+    p2: 4,
+    p6: 4,
+    p10: 3,
+    ...Object.fromEntries(Array.from({ length: 24 }, (_, k) => [`p${25 + k}`, 10])),
+    p13: 25,
+    p17: 25,
+    p21: 24,
+    p14: 22,
+    p18: 22,
+    p16: 3,
+    p20: 3,
+    p24: 3,
+  };
+  const ID = /\bp\d+\b|\b\d{3,}\b/;
+
+  it("labels name players, never bare ids (evaluate and finder)", () => {
+    const h = setup();
+    insertSchedule(h, 4);
+    skew(h);
+    const ev = ok(
+      evaluateTradeForLeague(
+        h,
+        "L1",
+        { otherRosterId: 2, give: ["p4"], get: ["p9", "p10"] },
+        SEED_NOW,
+      ),
+    );
+    const evReasons = [...ev.mine.reasons, ...ev.theirs.reasons, ...ev.reasons];
+    const named = evReasons.filter((r) =>
+      ["TRADE_ENTERS_LINEUP", "TRADE_LEAVES_LINEUP", "TRADE_AUTO_DROP"].includes(r.code),
+    );
+    expect(named.length).toBeGreaterThan(0);
+    for (const r of evReasons) expect(r.label).not.toMatch(ID);
+    const drop = ev.mine.reasons.find((r) => r.code === "TRADE_AUTO_DROP");
+    expect(drop?.label).toMatch(/^Drops Player Number\d+ to make room$/);
+    expect(typeof drop?.value).toBe("string");
+    expect(String(drop?.value)).toMatch(/^p\d+$/);
+
+    const h2 = setup({ rosterCount: 4, rosterSize: 12, playerCount: 60 });
+    insertSchedule(h2, 4);
+    project(h2, FINDER_PROJECTIONS);
+    const found = ok(findTradesForLeague(h2, "L1", SEED_NOW));
+    expect(found.suggestions.length).toBeGreaterThan(0);
+    for (const s of found.suggestions) {
+      for (const r of [...s.mine.reasons, ...s.theirs.reasons, ...s.reasons]) {
+        expect(r.label).not.toMatch(ID);
+      }
+    }
+  });
+
+  it("suggestions past the top N say not computed, not unavailable", () => {
+    const h = setup({ rosterCount: 4, rosterSize: 12, playerCount: 60 });
+    insertSchedule(h, 4);
+    project(h, FINDER_PROJECTIONS);
+    const res = ok(findTradesForLeague(h, "L1", SEED_NOW));
+    expect(res.suggestions.length).toBeGreaterThan(TRADE_FINDER_PLAYOFF_TOP_N);
+    const late = res.suggestions[TRADE_FINDER_PLAYOFF_TOP_N];
+    const codes = [...(late?.mine.reasons ?? []), ...(late?.theirs.reasons ?? [])].map(
+      (r) => r.code,
+    );
+    expect(codes).toContain("TRADE_PLAYOFF_NOT_COMPUTED");
+    expect(codes).not.toContain("TRADE_PLAYOFF_UNAVAILABLE");
+    const top = res.suggestions[0];
+    expect(top?.mine.reasons.map((r) => r.code)).not.toContain("TRADE_PLAYOFF_NOT_COMPUTED");
+
+    // Truly unavailable (no schedule): every suggestion says unavailable.
+    const h2 = setup({ rosterCount: 4, rosterSize: 12, playerCount: 60 });
+    project(h2, FINDER_PROJECTIONS);
+    const none = ok(findTradesForLeague(h2, "L1", SEED_NOW));
+    for (const s of none.suggestions) {
+      const c = s.mine.reasons.map((r) => r.code);
+      expect(c).toContain("TRADE_PLAYOFF_UNAVAILABLE");
+      expect(c).not.toContain("TRADE_PLAYOFF_NOT_COMPUTED");
+    }
+  });
+
+  it("league and players syncs invalidate the trade caches", () => {
+    const h = setup();
+    insertSchedule(h, 4);
+    skew(h);
+    const count = (kind: string) =>
+      (
+        h.sqlite.prepare("SELECT COUNT(*) AS n FROM computed_cache WHERE kind = ?").get(kind) as {
+          n: number;
+        }
+      ).n;
+    ok(findTradesForLeague(h, "L1", SEED_NOW));
+    expect(count("trade-finder:1")).toBe(1);
+    expect(count("trade-teams")).toBe(1);
+    for (const job of ["league", "players"]) {
+      const before = count("trade-teams");
+      const at = new Date(`2026-10-0${job === "league" ? 5 : 6}T00:00:00.000Z`);
+      finishRun(
+        h,
+        startRun(h, job as "league" | "players", at),
+        { status: "success", callsMade: 1, rowsChanged: 0, error: null },
+        at,
+      );
+      ok(findTradesForLeague(h, "L1", SEED_NOW));
+      expect(count("trade-teams")).toBe(before + 1);
+    }
+    expect(count("trade-finder:1")).toBeGreaterThanOrEqual(3);
+  });
+
+  it("caches the baseline playoff sim and reuses it for evaluate and finder", () => {
+    const h = setup();
+    insertSchedule(h, 4);
+    skew(h);
+    const req = { otherRosterId: 2, give: ["p4"], get: ["p9"] };
+    const a = ok(evaluateTradeForLeague(h, "L1", req, SEED_NOW));
+    const n = h.sqlite
+      .prepare("SELECT COUNT(*) AS n FROM computed_cache WHERE kind = 'trade-playoff-before'")
+      .get() as { n: number };
+    expect(n.n).toBe(1);
+    const b = ok(evaluateTradeForLeague(h, "L1", req, SEED_NOW));
+    expect(b).toEqual(a);
+    ok(findTradesForLeague(h, "L1", SEED_NOW));
+    const n2 = h.sqlite
+      .prepare("SELECT COUNT(*) AS n FROM computed_cache WHERE kind = 'trade-playoff-before'")
+      .get() as { n: number };
+    expect(n2.n).toBe(1);
+    const li = ok(getLeagueIntelligence(h, "L1", SEED_NOW));
+    expect(a.mine.playoffPctBefore).toBe(
+      li.teams.find((t) => t.rosterId === 1)?.playoffOdds?.playoffPct,
+    );
   });
 });
 

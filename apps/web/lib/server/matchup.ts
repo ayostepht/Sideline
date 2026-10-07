@@ -51,7 +51,7 @@ import {
   readHistory,
   readPositionCv,
   readProjections,
-} from "./lineup.js";
+} from "./lineup-inputs.js";
 
 export type Lookup<T> =
   { ok: true; data: T } | { ok: false; reason: "not_found" | "no_team" | "no_opponent" };
