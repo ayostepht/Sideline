@@ -60,6 +60,8 @@ interface TableSpec {
   volatile?: readonly string[];
   /** Columns where a null incoming value keeps the stored value (never cleared by an upsert). */
   keepIfNull?: readonly string[];
+  /** Columns that keep the stored value when this SQL condition (over `excluded.` and the table) holds. */
+  keepWhen?: { columns: readonly string[]; condition: string };
 }
 
 function buildSql(spec: TableSpec, extraWhere?: string): string {
@@ -68,8 +70,13 @@ function buildSql(spec: TableSpec, extraWhere?: string): string {
   const setCols = spec.columns.filter((c) => !keys.has(c));
   const diffCols = setCols.filter((c) => !volatile.has(c));
   const keep = new Set(spec.keepIfNull ?? []);
+  const keepWhen = new Set(spec.keepWhen?.columns ?? []);
   const incoming = (c: string): string =>
-    keep.has(c) ? `COALESCE(excluded.${c}, ${spec.table}.${c})` : `excluded.${c}`;
+    keep.has(c)
+      ? `COALESCE(excluded.${c}, ${spec.table}.${c})`
+      : keepWhen.has(c)
+        ? `CASE WHEN ${spec.keepWhen?.condition ?? "0"} THEN ${spec.table}.${c} ELSE excluded.${c} END`
+        : `excluded.${c}`;
   const set = setCols.map((c) => `${c} = ${incoming(c)}`).join(", ");
   const diff = diffCols.map((c) => `${spec.table}.${c} IS NOT ${incoming(c)}`).join(" OR ");
   const where = extraWhere === undefined ? `(${diff})` : `(${diff}) AND (${extraWhere})`;
@@ -659,6 +666,11 @@ const PLAYER_NEWS: TableSpec = {
   ],
   keys: ["id"],
   volatile: ["fetched_at"],
+  // A stored note is never downgraded by a later article with the same id: keep its kind and full analysis.
+  keepWhen: {
+    columns: ["kind", "summary"],
+    condition: "excluded.kind = 'article' AND player_news.kind = 'note'",
+  },
 };
 
 /** One ESPN (or other provider) news item for one player. `id` is namespaced, e.g. `espn:<story>:<player>`. */

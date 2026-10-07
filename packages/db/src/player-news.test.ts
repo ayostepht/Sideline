@@ -76,6 +76,25 @@ describe("player_news upsert, prune, read", () => {
     expect(readPlayerNews(h, "p1")[0]?.kind).toBe("note");
   });
 
+  it("never downgrades a stored note to an article, but a note upgrades an article", () => {
+    const at = "2026-10-05T00:00:00.000Z";
+    const long = "n".repeat(900);
+    const note = { ...news("n1", "p1", at), kind: "note" as const, summary: long };
+    upsertPlayerNews(h, [note]);
+    const art = { ...news("n1", "p1", at), summary: "a".repeat(400) };
+    expect(upsertPlayerNews(h, [art]).rowsChanged).toBe(0);
+    const row = readPlayerNews(h, "p1")[0];
+    expect(row?.kind).toBe("note");
+    expect(row?.summary).toBe(long);
+
+    upsertPlayerNews(h, [{ ...news("n2", "p2", at), summary: "short" }]);
+    const r = upsertPlayerNews(h, [
+      { ...news("n2", "p2", at), kind: "note", summary: "full note" },
+    ]);
+    expect(r.rowsChanged).toBe(1);
+    expect(readPlayerNews(h, "p2")[0]).toMatchObject({ kind: "note", summary: "full note" });
+  });
+
   it("is idempotent and counts a changed headline once", () => {
     const base = news("espn:1:p1", "p1", "2026-10-01T00:00:00.000Z");
     const rows = [base];
