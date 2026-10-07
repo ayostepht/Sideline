@@ -30,8 +30,8 @@ Last updated: 2026-10-06. **v1.0.0 RELEASED.** G6 PASS (Steph approved), `phase/
 
 ## 3. In flight
 
-- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Done: P7.1 (`30e45e4`), P7.2 (`e4fa039`). In flight: P7.3 (frontend, pop-up plus names), P7.5 (sleeper-data, espn_id plus news job; also fixes the red worker typecheck/test that P7.1's new job name caused). P7.4 (backend DTO) waits for P7.3 to land (shared contract rule). Then P7.6, P7.7, reviews.
-- The running `pnpm dev:worker` predates migration 0002; restart it after P7.5 lands so it migrates.
+- **Phase 7a player card (ADR-019), branch `phase/7-player-card`.** Done: P7.1 `30e45e4`, P7.2 `e4fa039`, P7.5 `1e9fa59`, P7.3 `5080504`. In flight: P7.4 (backend: weekly rows, headshotUrl, news in detail DTO, news refresh POST route, CSP sleepercdn, team on swing/riser rows); code review of A+P7.5; qa triage of e2e LINEUP-FLOW-5 (fails on branch, unknown if pre-existing). Next: P7.6 frontend (headshot, weekly table, news, refresh on open; search results open the pop-up too, replacing the "Full player pages arrive soon" sheet, per Steph's "always clickable"; team on swing/riser rows; page header title behind pop-up), then P7.7 qa, UX review.
+- Dev worker restarted 2026-10-06 after P7.5 (migration 0002 applied). espn_ids fill on the next daily players sync.
 
 ## 4. Next steps (in order)
 
