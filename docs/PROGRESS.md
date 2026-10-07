@@ -51,6 +51,7 @@ Remove an item when it is done; the archive keeps history.
 
 - **`pnpm fixtures:check` reports 8 pre-existing leaks on main** (README.md, docs/DECISIONS.md, docs/HANDOFF.md, docs/self-hosting.md, unraid/sideline.xml at `name#0`, plus three G2 screenshots at `name#10`). Most likely the ADR-018 GitHub-handle URLs the commit-time scan already strips, plus OCR or binary false positives in old screenshots. The checker needs the same URL exemption (devops-engineer). Not introduced by Phase 7b.
 - **nflverse sometimes tags London games with the home team's `stadium_id`** (2026 JAX at Tottenham carries `JAX00`), so the weather lookup would use Jacksonville's forecast. Fix candidate: also store and match nflverse `stadium` name (P7b.4 report, `docs/sleeper-api-notes.md`).
+- **Batch 1-2 review minors m4, m5** (`docs/reviews/2026-10-07-p7b-batch12-code.md`): the finder's give pool favors my top players over surplus-position players (tuning); the duplicate perf assertion in `finder.perf.test.ts`.
 - **`fast-check` is a root devDependency but not a `packages/core` one**; P7b.3 used a seeded loop instead. Add it to core if property tests there are wanted (devops-engineer).
 
 ### Found during fix/news-ids (2026-10-07, review `docs/reviews/2026-10-07-news-ids-code.md`)
