@@ -2,18 +2,20 @@
 
 import type { Reason } from "@sideline/shared";
 import { ArrowDown, ArrowUp, HelpCircle } from "lucide-react";
-import { useId, useState, type ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { cn } from "../lib/client/cn";
+import { createLazyLoader, useLazyModule } from "../lib/client/lazy-module";
 import { formatImpact, formatProjectedPoints, formatReasonValue } from "./reason-format";
 import { Button } from "./ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "./ui/sheet";
 
 export interface WhyBodyProps {
   summary?: { label: string; value: string | number } | undefined;
@@ -85,46 +87,90 @@ export interface WhySheetProps extends WhyBodyProps {
   defaultOpen?: boolean;
 }
 
-export function WhySheet({
-  title,
-  summary,
-  reasons,
-  trigger,
-  open,
-  onOpenChange,
-  defaultOpen,
-}: WhySheetProps) {
-  const [inner, setInner] = useState(defaultOpen ?? false);
-  const descId = useId();
-  const isOpen = open ?? inner;
+const loader = createLazyLoader(() => import("./why-sheet-impl"));
+
+const DEFAULT_TRIGGER = (
+  <Button variant="ghost" size="sm" className="min-h-11 gap-1 px-2" data-testid="why-trigger">
+    <HelpCircle className="size-4" aria-hidden />
+    Why?
+  </Button>
+);
+
+type TriggerProps = {
+  onClick?: (e: MouseEvent) => void;
+  "aria-expanded"?: boolean;
+  "aria-haspopup"?: "dialog";
+};
+
+/**
+ * The sheet code (Radix dialog) loads on first hover, focus or touch to keep route JS small. Until then the
+ * trigger renders as a plain button; a tap before the code arrives opens the sheet on load (and
+ * reports `onOpenChange(true)` in controlled mode). Focus on the trigger is kept across the swap.
+ * If the code fails to load, a tap expands the numbers inline instead.
+ */
+export function WhySheet(props: WhySheetProps) {
+  const host = useRef<HTMLSpanElement>(null);
+  const hadFocus = useRef(false);
+  const [tapped, setTapped] = useState(false);
+  // Load on intent (hover, focus, touch) so pages that never open it do not download the code.
+  const [intent, setIntent] = useState(false);
+  const { mod, failed } = useLazyModule(loader, {
+    enabled: intent || tapped || props.defaultOpen === true || props.open === true,
+    onBeforeSwap: () => {
+      hadFocus.current = host.current?.contains(document.activeElement) ?? false;
+    },
+  });
+  useLayoutEffect(() => {
+    if (mod && hadFocus.current && !tapped) {
+      host.current?.querySelector<HTMLElement>("button, a, [role=button]")?.focus();
+    }
+    hadFocus.current = false;
+  }, [mod, tapped]);
+
+  let body: ReactNode;
+  if (mod) {
+    const Impl = mod.default;
+    body = <Impl {...props} defaultOpen={props.defaultOpen === true || tapped} />;
+  } else {
+    const trigger = props.trigger ?? DEFAULT_TRIGGER;
+    const onTap = (e: MouseEvent): void => {
+      (isValidElement(trigger) ? (trigger.props as TriggerProps).onClick : undefined)?.(e);
+      if (failed) {
+        setTapped((t) => !t);
+        return;
+      }
+      setTapped(true);
+      props.onOpenChange?.(true);
+    };
+    const triggerEl = isValidElement(trigger)
+      ? cloneElement(trigger as ReactElement<TriggerProps>, {
+          onClick: onTap,
+          ...(failed
+            ? { "aria-expanded": tapped }
+            : { "aria-haspopup": "dialog" as const, "aria-expanded": false }),
+        })
+      : trigger;
+    body = (
+      <>
+        <span
+          className="contents"
+          onPointerOver={() => setIntent(true)}
+          onPointerDown={() => setIntent(true)}
+          onFocus={() => setIntent(true)}
+        >
+          {triggerEl}
+        </span>
+        {failed && tapped ? (
+          <div role="region" aria-label={props.title} data-testid="why-inline">
+            <WhyBody summary={props.summary} reasons={props.reasons} />
+          </div>
+        ) : null}
+      </>
+    );
+  }
   return (
-    <Sheet
-      open={isOpen}
-      onOpenChange={(o) => {
-        setInner(o);
-        onOpenChange?.(o);
-      }}
-    >
-      <SheetTrigger asChild>
-        {trigger ?? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-h-11 gap-1 px-2"
-            data-testid="why-trigger"
-          >
-            <HelpCircle className="size-4" aria-hidden />
-            Why?
-          </Button>
-        )}
-      </SheetTrigger>
-      <SheetContent aria-describedby={descId} data-testid="why-sheet">
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription id={descId}>The numbers behind this pick.</SheetDescription>
-        </SheetHeader>
-        <WhyBody summary={summary} reasons={reasons} />
-      </SheetContent>
-    </Sheet>
+    <span ref={host} className="contents">
+      {body}
+    </span>
   );
 }

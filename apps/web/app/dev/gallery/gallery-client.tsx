@@ -155,7 +155,8 @@ export function GalleryClient({
             Top free agents overall.
           </TabsContent>
         </Tabs>
-        <ToggleGroup type="single" defaultValue="projected" aria-label="Lineup mode">
+        <ToggleGroup type="single" defaultValue="auto" aria-label="Lineup mode">
+          <ToggleGroupItem value="auto">Auto</ToggleGroupItem>
           <ToggleGroupItem value="projected">Projected</ToggleGroupItem>
           <ToggleGroupItem value="safe">Safe</ToggleGroupItem>
           <ToggleGroupItem value="upside">Upside</ToggleGroupItem>

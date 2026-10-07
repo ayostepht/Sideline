@@ -4,7 +4,7 @@ Single source for resuming after a session limit or `/clear`. The orchestrator u
 
 Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills missing `players.espn_id` from DynastyProcess's crosswalk (ADR-021; Sleeper had ESPN ids for only 46 of 155 rostered players), players-guard bypass when no ESPN ids are stored (6h cooldown), and the player card's Next opponents section (next 4 weeks, DvP grades, context only per ADR-014). v1.2.0 earlier today: news sync fix, usage_week persisted, RotoWire notes lead the news. Remote: `origin` is https://github.com/ayostepht/Sideline (public).
 
-**This is a clean point to `/clear`.** Phase 7 (P1 backlog) planning is the natural next step, but has not started -- do not begin it without Steph's go-ahead, since this is new scope beyond what she's approved so far.
+**Phase 7b (selective) is planned, not started** (ADR-022, branch `phase/7b-selective`): Auto lineup (default mode), trade analyzer and finder (own nav item), weather (Open-Meteo, context only). Steph approved the scope and answered every product question on 2026-10-07. Notifications are skipped; "view as team" is dropped; multi-user support is the next roadmap item after 7b. v1.2.1 is deployed on Steph's Unraid.
 
 ## 1. Resume in five steps
 
@@ -30,16 +30,44 @@ Last updated: 2026-10-07. **v1.2.1 released**: daily `player_ids` job fills miss
 
 ## 3. In flight
 
-- Nothing. fix/news-ids merged and released as v1.2.1 (NEWS-IDS-1..4, OPP-1..3; reviews `docs/reviews/2026-10-07-news-ids-{code,ux}.md`; Minors in the PROGRESS backlog). Verified: `pnpm verify` 1638 passed, full e2e + a11y 465 passed. On Steph's Unraid: after updating, run `--job=player_ids` then `--job=player_news` via the in-container CLI (`cd /app/worker && setpriv --reuid=$PUID --regid=$PGID --clear-groups node node_modules/tsx/dist/cli.mjs src/cli/sync.ts --once --job=...`), or wait for the 04:45 cron. Steph's next idea: an opt-in AI-written weekly outlook (explore with her first; costs money; PLAN.md lists LLM recap as P2).
-- Nothing. Phase 7a (player card, ADR-020) done: every player name opens a pop-up (intercepting route, own URL), team under names, headshots from sleepercdn, a week-by-week table, ESPN news via the worker (`player_news`, `player_news_fetches`, migrations 0002 and 0003). History: `docs/archive/progress-phase7a.md`; reviews `docs/reviews/2026-10-06-p7-*`. Merge resolution: FIX-CLOCK kept ADR-019, the player card became ADR-020 (branch commits say ADR-019).
-- Merged main: `pnpm verify` 1586 passed; full e2e 465 passed (LINEUP-FLOW-5 green via the pinned game clock).
-- News on real data appears after the next daily `/players/nfl` sync fills `players.espn_id`.
+- **P7b.1 done** (`7f5ac4c`, verify 1656 passed; the orchestrator's integration fix passes `resolvedMode` in `lineup/page.tsx`). Its code review is folded into Batch 2's review.
+- **Batch 2 done**: P7b.2 `6be1eda` (db), P7b.3 `a3ea5e5` (core trade, finder 181 ms), P7b.4 `cffc00f` (providers Open-Meteo). `pnpm verify` 1712 passed. The `weather` job name is still parked for P7b.6: `sync.ts` adds `"weather"` after `player_news` plus `weather: 3 * HOUR_MS`; `contracts.test.ts:306` job count 14 to 15; `recompute.ts` `JOB_TABLES` adds `weather: ["game_weather"]`.
+- Batch 1-2 review: APPROVE, no Blocker/Major (`docs/reviews/2026-10-07-p7b-batch12-code.md`). m1 goes to P7b.9, m2 to P7b.6, m3 to P7b.8, m4 and m5 to the backlog.
+- **Batch 3 done**: P7b.6 `3b6118c` (worker weather job, job name now committed), P7b.5 `24a8b72` (Auto, default `auto`), P7b.7 `830f9d6` (trade server and GET routes: finder 228 ms, evaluate 37 ms). `pnpm verify` 1750 passed.
+- Batch 3 review: CHANGES REQUIRED, 2 Majors (`docs/reviews/2026-10-07-p7b-batch3-code.md`).
+- **Batch 4a done**: P7b.6f `58c64ac`, P7b.7f `b67cca6` (`lineup.ts` re-exports the moved readers because the QA test `tests/integration/sim-league-wired` imports them), P7b.8 `0ef710b`. Verify 1759 passed; build OK.
+- **Batch 4 done**: P7b.9 `571ba04` (weather fields: `LineupPlayer.weather`, `NextOpponentWeek.weather`, `MatchupSwingPlayer.weather`; `WEATHER` reasons), P7b.10 `8fc0ddb` (Trades route). Verify 1778 passed.
+- Batch 4 code review: APPROVE (minors in the backlog). UX review: CHANGES REQUIRED, 3 Majors (`docs/reviews/2026-10-07-p7b-batch4-ux.md`). ADR-022 item 7a amends the finder ranking: exclude Lopsided, rank by the smaller gain. **Tell Steph about 7a; she may overrule.**
+- **Batch 4c done**: P7b.3f `2f594b5`, P7b.7g `5e8d30b`, P7b.10f `552d802`. Verify 1788 passed.
+- Done since Batch 4c: Trades UX re-check APPROVE (`docs/reviews/2026-10-07-p7b-batch4-ux-recheck.md`), P7b.13 `43e8f14` and P7b.13b `b0f67ad` (`fixtures:check` now passes), P7b.3g `07c6b36`, P7b.11 `bf3a290` (weather chips, verified on the gallery only).
+- P7b.9f `188e6fe` (no server bug), P7b.13c `5c9bcf3` (screens clock pin), P7b.14 `a6eb37c` (lazy Radix; every route under the cap). Verify 1807 passed.
+- **P7b.12 done** `af9c331`: e2e on `E2E_PORT=3400` gave 531 passed, 3 failed (TRADE-2b on desktop and iphone, the Trades soft-nav title bug; LINEUP-FLOW-4 mobile-pixel flake), 18 not run. The orchestrator was denied permission to stop Steph's dev servers; Steph was asked to stop them (and stray agent servers on PIDs 7748 and 11365) before the final gate.
+- Batch 5 code review: CHANGES REQUIRED (`docs/reviews/2026-10-07-p7b-batch5-code.md`). M1 fixed in `ac0aa42`. P7b.10g `33767f1` fixed the Trades title.
+- Steph approved stopping the orphaned `pnpm dev:lan` and `pnpm dev:worker` (started by an earlier session); they are stopped and port 3000 is free. Do not restart them unless she asks.
+- **First 7b gate run (2026-10-07): FAIL.** Passed: U1, U2a, U3a, U4, U3b. Failed:
+  - U2b: `sync-failures.integration` gets an MSW unhandled request, probably the weather job.
+  - UI1/UI2: LINEUP-FLOW-5 and WX-4d/4e fail on all projects; they passed at `af9c331`.
+  - UI4: Trades screenshot `networkidle` timeout.
+  - UI3: Lighthouse transferred script over 204,800 B on Lineup 212,925, Waivers 212,498, Players 206,465. Lazy chunks still count.
+- P7b.G1: `02c1f2d` (integration Open-Meteo mock) and `0b6a286` (the gate server now pins `SIDELINE_GAME_CLOCK`). P7b.G2: `cf2c583` (load-on-intent; lighter error boundaries; no viewport prefetch). **Second gate run:** U1, U2a, U2b, U3a, U4, UI3 and UI4 PASS. UI1/UI2 failed 18 tests, all popover/sheet tests (TRADE-4, AUTO-1b, WX-5, gallery `?open=why`), a regression from `cf2c583`: the placeholder lacks `aria-haspopup`, and `?open=why` never loads.
+- P7b.G3 `b499617`. **G7b PASS** on the third run (`docs/gates/G7b.md`): 10 passed, U3c skipped; e2e 548, a11y 552.
+- **Waiting on Steph:** v1.3.0 release approval (merge `phase/7b-selective` to main, tag `v1.3.0` and `gate-G7b`, push to origin so CI publishes the image). Also confirm ADR-022 item 7a. The dev server and worker are stopped; restart only if she asks.
+- **Weather e2e facts for P7b.12** (fixture DB, clock pinned at 2026-10-02T12:00:00Z, roster 1, week 4):
+  - NYJ 11576, 12517, 13330 in `2026_04_NYJ_CHI`: wind flag, "Wind 21 mph".
+  - BUF 4983 in `2026_04_NE_BUF`: precip, "Rain likely (80%)".
+  - JAX/CIN 12490, 9224 in `2026_04_JAX_CIN`: cold, "Cold: 21°F".
+  - MIN 11792, 5849, DEF "MIN" in `2026_04_MIA_MIN`: indoors, no chips.
+  - DAL 3294, 8137 and DET 11646, 7547: forecast with no flags, no chips.
+  - `/players/4046` (KC, `2026_04_KC_LV`): Indoors in Next opponents.
+  - `2026_04_LA_PHI` is unavailable; no roster 1 player is in it.
+- Before that, Planning committed on `phase/7b-selective` (ADR-022, PLAN.md 5.4 AUTO-1, 5.9 TRADE-3..5, new 5.10 WX-1..5, section 8 multi-user, PROGRESS.md "Phase 7b task table"). Baseline `pnpm verify` on 2026-10-07: 1638 passed.
 
 ## 4. Next steps (in order)
 
-1. **Unraid deploy in progress (2026-10-06).** Repo is public at github.com/ayostepht/Sideline; CI publishes `ghcr.io/ayostepht/sideline`. Template fixed [OPS-1]. Steph's to-dos: set the GHCR package Public, install via `my-sideline.xml` (v1.1.1 is now the latest tag). No APP_PASSWORD: it sits behind NPM + Authentik.
-2. **Remaining Phase 7 (P1 backlog) planning is the natural next step** (7a player card is done), per PLAN.md section 9's suggested order: notifications (Home Assistant webhook first, then ntfy and Discord), trade analyzer and finder, Auto lineup mode, weekly backtest job, league history, weather, offline caching, "view as team." Each follows the same brief/verify/review cycle and ends with a mini-gate. **Do not start Phase 7 without Steph's explicit go-ahead** -- PLAN.md only has a suggested feature order, not a task table, so the first real step is planning it (likely an Explore pass plus an ADR, same precedent as every prior phase).
-3. Restarting `pnpm dev:lan`/`pnpm dev:worker` is no longer withheld -- both are running now at Steph's request. Stop them only for a gate-affecting run (section 2's standing lesson), and restart after.
+1. **Collect the in-flight results** (see section 3). Batch 5 is P7b.11 (frontend weather chips), P7b.12 (qa e2e and a11y for Auto, Trades and weather, plus `nav.spec` More sheet; devops adds `/trades` to `scripts/screens/routes.json`). Batch 3 was P7b.5 (backend, Auto in `getLineup`, flip the request default to `auto`), P7b.6 (sleeper-data, worker `weather` job; pre-apply the parked job-name patch), P7b.7 (backend, trade server and API). P7b.5 and P7b.7 are both backend-engineer with disjoint files (`lineup.ts` and `(main)/page.tsx`'s server read vs new `trades.ts`, `roster-strength.ts` export and `app/api/.../trades`). Write the brief from PROGRESS.md's task table, ADR-022 and PLAN.md AUTO-1, TRADE-1..5, WX-1..5. Exploration facts to pass along: `LineupModeSchema` is in `packages/shared/src/api/lineup.ts:6-7`, and `LineupResponseSchema` is strict; `ReasonSchema` is in `packages/shared/src/reason.ts`; sync job names and cadences are in `packages/shared/src/sync.ts`.
+2. Then Batches 2 to 5 per the task table, with code review after every batch, UX review after batches 4 and 5, and mini-gates (Auto after batch 4; Trades and weather after batch 5). Release v1.3.0.
+3. Exploration facts for later briefs: `getMatchup` (`apps/web/lib/server/matchup.ts`) sims the current Sleeper starters at the median, cached `matchup-sim:${rosterId}`, about 10 ms; the Lineup page doesn't call it today, but Home does. Roster strength `rosValueFor` and `rosValueByPlayer` (`apps/web/lib/server/roster-strength.ts:166,248`) are internal and need exporting for trades. `simulatePlayoffOdds` (`packages/core/src/league/playoff-odds.ts:131`) inputs are built in `league-intelligence.ts:255-299`. The heatmap is keyed by slot type (FLEX included). The `schedule` table has `roof` but no stadium/coords, and nflverse games.csv has `stadium_id`. Worker job template: `apps/worker/src/jobs/player-ids-job.ts`. The next migration is 0005.
+4. `pnpm dev:lan` and `pnpm dev:worker` may be running for Steph's testing; stop them before any gate-affecting run.
 
 ## 5. Briefs
 

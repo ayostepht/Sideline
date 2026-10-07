@@ -5,7 +5,7 @@ export const MIN_SEARCH_CHARS = 2;
 export const SEARCH_DEBOUNCE_MS = 200;
 
 export type NavKey =
-  "home" | "lineup" | "matchup" | "waivers" | "players" | "league" | "team" | "settings";
+  "home" | "lineup" | "matchup" | "waivers" | "players" | "league" | "trades" | "team" | "settings";
 
 export interface NavItem {
   key: NavKey;
@@ -21,6 +21,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { key: "waivers", label: "Waivers", segment: "waivers" },
   { key: "players", label: "Players", segment: "players" },
   { key: "league", label: "League", segment: "league" },
+  { key: "trades", label: "Trades", segment: "trades" },
   { key: "team", label: "My Team", segment: "team" },
   { key: "settings", label: "Settings", segment: "settings" },
 ];

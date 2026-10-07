@@ -32,14 +32,31 @@ import {
 } from "@sideline/db";
 import type { DbHandle } from "@sideline/db";
 import {
+  AUTO_SAFE_ABOVE,
+  AUTO_UPSIDE_BELOW,
   computeFreshness,
   LineupResponseSchema,
   SYNC_CADENCE_MS,
   type LineupMode,
+  type LineupModeChoice,
   type LineupPlayer,
   type LineupResponse,
+  type Reason,
 } from "@sideline/shared";
 import { z } from "zod";
+import { getMatchup } from "./matchup.js";
+import { weatherByGame, weatherReasons } from "./weather.js";
+import {
+  opponentRosterIdFor,
+  readByeWeeks,
+  readHistory,
+  readPositionCv,
+  readProjections,
+  toNflverseTeam,
+} from "./lineup-inputs.js";
+
+// Re-exported for existing callers (tests/integration) that import these from `./lineup`.
+export { readByeWeeks, readHistory, readPositionCv, readProjections, opponentRosterIdFor };
 
 export type Lookup<T> = { ok: true; data: T } | { ok: false; reason: "not_found" | "no_team" };
 
@@ -86,10 +103,7 @@ function mean(values: readonly number[]): number {
   return values.length === 0 ? 0 : values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-/** Sleeper uses `LAR`; nflverse (`schedule`, `defense_vs_position`) uses `LA`. */
-export function toNflverseTeam(sleeperTeam: string): string {
-  return sleeperTeam === "LAR" ? "LA" : sleeperTeam;
-}
+export { toNflverseTeam };
 
 interface LineupLeagueRow {
   league_id: string;
@@ -145,34 +159,9 @@ function readPlayers(h: DbHandle, ids: string[]): Map<string, LineupPlayerRow> {
   return out;
 }
 
-/** Bye week per team: the one week in 1..18 where the team is absent (only with all 18 weeks
- * loaded). Exported for T5.4b's matchup simulation fix round: a byed starter must be forced to a
- * fixed, zero-variance 0 rather than drawn from `weeklyStandardDeviation`'s (possibly nonzero)
- * `sd` for a week they are mathematically guaranteed not to play (see `matchup.ts`'s `buildStarter`). */
-export function readByeWeeks(h: DbHandle, season: number): Map<string, number> {
-  const rows = h.sqlite
-    .prepare("SELECT week, home, away FROM schedule WHERE season = ? AND week BETWEEN 1 AND 18")
-    .all(season) as { week: number; home: string; away: string }[];
-  const allWeeks = new Set<number>();
-  const byTeam = new Map<string, Set<number>>();
-  for (const r of rows) {
-    allWeeks.add(r.week);
-    for (const t of [r.home, r.away]) {
-      const set = byTeam.get(t) ?? new Set<number>();
-      set.add(r.week);
-      byTeam.set(t, set);
-    }
-  }
-  const out = new Map<string, number>();
-  if (allWeeks.size < 18) return out;
-  for (const [team, weeks] of byTeam) {
-    const absent = [...allWeeks].filter((w) => !weeks.has(w));
-    if (absent.length === 1 && absent[0] !== undefined) out.set(team, absent[0]);
-  }
-  return out;
-}
-
 interface ScheduleEntry {
+  gameId: string;
+  week: number;
   opponent: string;
   kickoffUtc: string | null;
   kickoffApproximate: boolean;
@@ -182,10 +171,11 @@ interface ScheduleEntry {
 function readWeekSchedule(h: DbHandle, season: number, week: number): Map<string, ScheduleEntry> {
   const rows = h.sqlite
     .prepare(
-      `SELECT home, away, kickoff_utc AS kickoffUtc, kickoff_approximate AS kickoffApproximate
+      `SELECT game_id AS gameId, home, away, kickoff_utc AS kickoffUtc, kickoff_approximate AS kickoffApproximate
        FROM schedule WHERE season = ? AND week = ?`,
     )
     .all(season, week) as {
+    gameId: string;
     home: string;
     away: string;
     kickoffUtc: string | null;
@@ -195,11 +185,15 @@ function readWeekSchedule(h: DbHandle, season: number, week: number): Map<string
   for (const r of rows) {
     const approximate = r.kickoffApproximate !== 0;
     out.set(r.home, {
+      gameId: r.gameId,
+      week,
       opponent: r.away,
       kickoffUtc: r.kickoffUtc,
       kickoffApproximate: approximate,
     });
     out.set(r.away, {
+      gameId: r.gameId,
+      week,
       opponent: r.home,
       kickoffUtc: r.kickoffUtc,
       kickoffApproximate: approximate,
@@ -251,183 +245,64 @@ export function readDefenseVsPosition(
   return out;
 }
 
-/**
- * Minimum number of a player's own weekly `actual_pts` samples required before their own
- * coefficient of variation can contribute to {@link readPositionCv}'s position average.
- *
- * Lowered from 4 to 2 (follow-up to the T3.8a/352af52 pooling fix, found by ux-reviewer at the
- * real app's week 4 the same day): population sd of a *single* sample is always exactly 0 and
- * carries no variability signal at all, so 1 week never qualifies. But sd of *two* samples is
- * already nonzero whenever the two differ - the common case for real weekly fantasy scores - so
- * 2 is the lowest threshold that still means something for an individual player's own estimate.
- *
- * 4's original rationale ("one or two noisy weeks would dominate the average") conflated two
- * different noise sources: a single player's own CV estimate from 2-3 weeks is indeed noisy, but
- * {@link MIN_PLAYERS_FOR_POSITION_CV} below controls for exactly that by requiring breadth
- * (several independent players) before the position-level average is trusted at all - which is
- * the right lever, since averaging many independent noisy-but-unbiased per-player estimates
- * reduces the aggregate's variance even though each individual contribution is itself noisy.
- * Requiring 4 weeks *per player* instead left a realistic week-4 league (where most rostered
- * players have at most 1-3 of their own weeks so far) with literally zero qualifying players at
- * any position, collapsing `readPositionCv`'s map to empty and, via the caller's `?? 0` fallback
- * and `weeklyStandardDeviation`'s shrinkage formula, every player's `sd` to exactly 0 - erasing
- * all Safe/Upside separation from Projected for the entire league.
- */
-const MIN_WEEKS_FOR_PLAYER_CV = 2;
-
-/**
- * Minimum number of qualifying players (each with at least {@link MIN_WEEKS_FOR_PLAYER_CV} of
- * their own weekly samples) required before a position's averaged CV is trusted at all. This is
- * the breadth lever described above: one qualifying player's own CV, even on its own, is a single
- * noisy point estimate and must never single-handedly set a position's prior when there's no one
- * else to average it against. 2 is the lowest value for which "averaged alongside other players"
- * is literally true; below it there is no averaging happening at all.
- */
-const MIN_PLAYERS_FOR_POSITION_CV = 2;
-
-/**
- * Position-level coefficient of variation prior for PROJ-2's shrinkage formula
- * (`weeklyStandardDeviation`): the average, across qualifying players at a position, of each
- * player's OWN week-to-week CV (that player's own sd / mean over their own weekly `actual_pts`).
- *
- * This is deliberately NOT computed by pooling every player's weekly points into one flat list
- * and taking that list's sd / mean. Pooling conflates between-player dispersion (a star RB
- * scoring 20+ next to a deep-bench RB scoring 1-2, every week) with the within-player variability
- * PROJ-2 actually needs as a shrinkage prior for a low-sample player, and produces a CV far
- * larger than any individual player's real week-to-week swing - inflating `sd` in
- * `weeklyStandardDeviation` enough to collapse `floorAndCeiling`'s floor to 0 for most low-sample
- * players (found in T3.8a frontend QA against the fixture DB; see `lineup.test.ts`).
- */
-/** Exported for T5.4b's matchup simulation data function, which needs the identical shrinkage
- * prior `getLineup`'s Safe/Upside modes use (see this function's own doc comment for why). */
-export function readPositionCv(h: DbHandle, leagueId: string, season: number): Map<string, number> {
-  const rows = h.sqlite
-    .prepare(
-      `SELECT p.position AS position, lpwp.player_id AS playerId, lpwp.actual_pts AS actualPts
-       FROM league_player_week_points lpwp
-       JOIN players p ON p.player_id = lpwp.player_id
-       WHERE lpwp.league_id = ? AND lpwp.season = ? AND lpwp.actual_pts IS NOT NULL`,
-    )
-    .all(leagueId, season) as { position: string | null; playerId: string; actualPts: number }[];
-
-  const byPositionPlayer = new Map<string, Map<string, number[]>>();
-  for (const r of rows) {
-    if (r.position === null) continue;
-    const byPlayer = byPositionPlayer.get(r.position) ?? new Map<string, number[]>();
-    const arr = byPlayer.get(r.playerId) ?? [];
-    arr.push(r.actualPts);
-    byPlayer.set(r.playerId, arr);
-    byPositionPlayer.set(r.position, byPlayer);
-  }
-
-  const out = new Map<string, number>();
-  for (const [position, byPlayer] of byPositionPlayer) {
-    const perPlayerCvs: number[] = [];
-    for (const values of byPlayer.values()) {
-      // Too few of this player's own weeks to estimate their own CV meaningfully; skip rather
-      // than let one or two noisy samples dominate the position average.
-      if (values.length < MIN_WEEKS_FOR_PLAYER_CV) continue;
-      const m = mean(values);
-      if (m === 0) continue; // Same divide-by-zero guard as before, applied per player now.
-      const variance = mean(values.map((v) => (v - m) ** 2));
-      perPlayerCvs.push(Math.sqrt(variance) / m);
-    }
-    // Fewer than MIN_PLAYERS_FOR_POSITION_CV qualifying players: no breadth to average across,
-    // so leave the position out rather than trust a single noisy point estimate alone. The
-    // caller already treats a missing entry as 0 via `?? 0`.
-    if (perPlayerCvs.length < MIN_PLAYERS_FOR_POSITION_CV) continue;
-    out.set(position, mean(perPlayerCvs));
-  }
-  return out;
-}
-
-/** Exported for T5.4b's matchup simulation data function, which needs this week's median
- * projection per starter (the same lookup `getLineup`'s "projected" mode uses). */
-export function readProjections(
-  h: DbHandle,
-  leagueId: string,
-  season: number,
-  week: number,
-  playerIds: string[],
-): Map<string, number> {
-  const out = new Map<string, number>();
-  if (playerIds.length === 0) return out;
-  const marks = playerIds.map(() => "?").join(",");
-  const rows = h.sqlite
-    .prepare(
-      `SELECT player_id AS playerId, proj_pts AS projPts FROM league_player_week_points
-       WHERE league_id = ? AND season = ? AND week = ? AND proj_pts IS NOT NULL
-         AND player_id IN (${marks})`,
-    )
-    .all(leagueId, season, week, ...playerIds) as { playerId: string; projPts: number }[];
-  for (const r of rows) out.set(r.playerId, r.projPts);
-  return out;
-}
-
-/** Each eligible player's actual points for weeks strictly before `week` (for variance/floor-ceiling).
- * Exported for T5.4b's matchup simulation data function, which feeds the same history into
- * `weeklyStandardDeviation` for its own starters. */
-export function readHistory(
-  h: DbHandle,
-  leagueId: string,
-  season: number,
-  week: number,
-  playerIds: string[],
-): Map<string, number[]> {
-  const out = new Map<string, number[]>();
-  if (playerIds.length === 0) return out;
-  const marks = playerIds.map(() => "?").join(",");
-  const rows = h.sqlite
-    .prepare(
-      `SELECT player_id AS playerId, actual_pts AS actualPts FROM league_player_week_points
-       WHERE league_id = ? AND season = ? AND week < ? AND actual_pts IS NOT NULL
-         AND player_id IN (${marks})`,
-    )
-    .all(leagueId, season, week, ...playerIds) as { playerId: string; actualPts: number }[];
-  for (const r of rows) {
-    const arr = out.get(r.playerId) ?? [];
-    arr.push(r.actualPts);
-    out.set(r.playerId, arr);
-  }
-  return out;
-}
-
-/** Exported for T5.4b's matchup simulation data function, which needs the identical matchup-id
- * pairing logic to find who a roster is playing this week. */
-export function opponentRosterIdFor(
-  h: DbHandle,
-  leagueId: string,
-  week: number,
-  rosterId: number,
-): number | null {
-  const mine = h.sqlite
-    .prepare(
-      `SELECT matchup_id AS matchupId FROM matchups WHERE league_id = ? AND week = ? AND roster_id = ?`,
-    )
-    .get(leagueId, week, rosterId) as { matchupId: number | null } | undefined;
-  if (mine === undefined || mine.matchupId === null) return null;
-  const other = h.sqlite
-    .prepare(
-      `SELECT roster_id AS rosterId FROM matchups
-       WHERE league_id = ? AND week = ? AND matchup_id = ? AND roster_id != ?`,
-    )
-    .get(leagueId, week, mine.matchupId, rosterId) as { rosterId: number } | undefined;
-  return other?.rosterId ?? null;
-}
-
-function inputsHashFor(h: DbHandle): string {
+function inputsHashFor(h: DbHandle, now: Date): string {
   const payload = JSON.stringify({
     rosters: lastSuccessAt(h, "rosters"),
     stats: lastSuccessAt(h, "stats"),
     projections: lastSuccessAt(h, "projections"),
+    weather: lastSuccessAt(h, "weather"),
+    // The synthesized "No forecast" window moves with time; re-evaluate every 3 hours.
+    weatherWindow: Math.floor(now.getTime() / (3 * 60 * 60 * 1000)),
   });
   // A cheap, stable digest; cryptographic strength is not needed, only determinism.
   return createHash("sha256").update(payload).digest("hex").slice(0, 16);
 }
 
+/** Test seam: the win-probability source Auto reads. Defaults to the cached `getMatchup` sim. */
+export interface LineupDeps {
+  getMatchup?: typeof getMatchup;
+}
+
+/**
+ * AUTO-1 / ADR-022: pick the concrete mode from the roster's current-starters median win
+ * probability. Falls back to `projected` (with `AUTO_FALLBACK`) when there is no usable sim.
+ * Reads `getMatchup` only, so the Auto lineup never feeds back into the sim.
+ */
+function resolveAutoMode(
+  h: DbHandle,
+  leagueId: string,
+  week: number,
+  rosterId: number,
+  now: Date,
+  deps: LineupDeps,
+): { mode: LineupMode; reason: Reason } {
+  const fallback = (why: string): { mode: LineupMode; reason: Reason } => ({
+    mode: "projected",
+    reason: { code: "AUTO_FALLBACK", label: `Auto used Projected: ${why}` },
+  });
+  // getMatchup sims the roster's current Sleeper starters, so only this week is meaningful.
+  if (week !== readNflState(h)?.week) return fallback("not the current week");
+  const sim = (deps.getMatchup ?? getMatchup)(h, leagueId, { week, rosterId }, now);
+  if (!sim.ok) {
+    return fallback(sim.reason === "no_opponent" ? "no matchup this week" : "no forecast yet");
+  }
+  const p = sim.data.winProbability;
+  const mode: LineupMode =
+    p < AUTO_UPSIDE_BELOW ? "upside" : p > AUTO_SAFE_ABOVE ? "safe" : "projected";
+  const name = mode === "upside" ? "Upside" : mode === "safe" ? "Safe" : "Projected";
+  return {
+    mode,
+    reason: {
+      code: "AUTO_MODE",
+      label: `Auto picked ${name}: ${Math.round(p * 100)}% to win`,
+      value: p,
+    },
+  };
+}
+
 export interface LineupRequest {
   week?: number;
-  mode: LineupMode;
+  mode: LineupModeChoice;
   rosterId?: number;
 }
 
@@ -440,6 +315,7 @@ export function getLineup(
   leagueId: string,
   request: LineupRequest,
   now: Date,
+  deps: LineupDeps = {},
 ): Lookup<LineupResponse> {
   const league = readLeague(h, leagueId);
   if (league === null) return { ok: false, reason: "not_found" };
@@ -462,9 +338,22 @@ export function getLineup(
     rosterId = mine.id;
   }
 
-  const mode = request.mode;
-  const kind = `lineup:${mode}:${rosterId}`;
-  const inputsHash = inputsHashFor(h);
+  const requestedMode = request.mode;
+  if (requestedMode === "auto") {
+    const auto = resolveAutoMode(h, leagueId, week, rosterId, now, deps);
+    // Reuse the concrete mode's cached entry; `auto` itself is never cached, so a changed win
+    // probability resolves differently on the next request.
+    const concrete = getLineup(h, leagueId, { week, mode: auto.mode, rosterId }, now, deps);
+    if (!concrete.ok) return concrete;
+    return {
+      ok: true,
+      data: { ...concrete.data, mode: "auto", resolvedMode: auto.mode, modeReason: auto.reason },
+    };
+  }
+  const mode: LineupMode = requestedMode;
+  const modeReason: Reason | null = null;
+  const kind = `lineup:${requestedMode}:${rosterId}`;
+  const inputsHash = inputsHashFor(h, now);
   const cached = getComputed(h, { leagueId, week, kind, inputsHash });
   if (cached !== null) {
     const parsed = LineupResponseSchema.safeParse(cached);
@@ -492,6 +381,7 @@ export function getLineup(
   const history = readHistory(h, leagueId, league.season, week, eligibleIds);
 
   const recommendPlayers: RecommendLineupPlayer[] = [];
+  const gameByPlayer = new Map<string, ScheduleEntry>();
   const matchupInfoByPlayer = new Map<
     string,
     { grade: MatchupGradeLetter | null; label: string | null }
@@ -544,6 +434,7 @@ export function getLineup(
       }
     }
     matchupInfoByPlayer.set(playerId, { grade, label });
+    if (scheduleEntry !== undefined) gameByPlayer.set(playerId, scheduleEntry);
 
     const isBye = ownTeam !== null && byes.get(ownTeam) === week;
 
@@ -571,11 +462,25 @@ export function getLineup(
     now,
   });
 
+  // WX-4: context only. One batched read; never feeds values or the optimizer.
+  const weather = weatherByGame(
+    h,
+    league.season,
+    [...gameByPlayer.values()].map((g) => ({
+      gameId: g.gameId,
+      week: g.week,
+      kickoffUtc: g.kickoffUtc,
+    })),
+    now,
+  );
+
   const players_: LineupPlayer[] = recommendPlayers.map((rp) => {
     const p = players.get(rp.playerId);
     const matchupInfo = matchupInfoByPlayer.get(rp.playerId) ?? { grade: null, label: null };
     const reasons = recommendResult.playerReasons[rp.playerId] ?? [];
     const locked = reasons.some((r) => r.code === "LOCKED");
+    const game = gameByPlayer.get(rp.playerId);
+    const gameWeather = game === undefined ? null : (weather.get(game.gameId) ?? null);
     const availability = applyAvailability({
       status: rp.status,
       isBye: rp.isBye,
@@ -594,7 +499,8 @@ export function getLineup(
       matchupLabel: matchupInfo.label,
       locked,
       kickoffApproximate: rp.kickoffApproximate,
-      reasons: [...reasons],
+      weather: gameWeather,
+      reasons: [...reasons, ...weatherReasons(gameWeather)],
     };
   });
 
@@ -602,7 +508,9 @@ export function getLineup(
     leagueId,
     rosterId,
     week,
-    mode,
+    mode: requestedMode,
+    resolvedMode: mode,
+    modeReason,
     optimalAssignment: recommendResult.optimalAssignment,
     currentAssignment: recommendResult.currentAssignment,
     swaps: recommendResult.swaps,

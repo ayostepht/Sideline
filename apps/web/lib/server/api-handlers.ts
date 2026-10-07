@@ -13,6 +13,9 @@ import {
   PlayersListResponseSchema,
   SelectLeagueRequestSchema,
   SleeperUsernameSchema,
+  TradeEvaluateRequestSchema,
+  TradeEvaluateResponseSchema,
+  TradeFinderResponseSchema,
   AppSettingsSchema,
   WaiverRequestSchema,
   WaiverResponseSchema,
@@ -36,6 +39,7 @@ import { getOnboardingStatus, selectLeague, startOnboarding } from "./onboarding
 import { gameNow } from "./game-clock";
 import { getPlayerDetail, getPlayersList, requestPlayerNewsRefresh } from "./players";
 import { withMigratedDb } from "./sync";
+import { evaluateTradeForLeague, findTradesForLeague } from "./trades";
 import { getWaivers } from "./waivers";
 
 type Env = Record<string, string | undefined>;
@@ -409,5 +413,57 @@ export function handlePlayerNewsRefresh(
     const r = requestPlayerNewsRefresh(h, idOk.data, playerOk.data, now);
     if (!r.ok) return errorResult(404, "not_found", "League or player not found.");
     return { status: 202, body: r.data };
+  });
+}
+
+const splitIds = (v: string | null): string[] =>
+  v === null
+    ? []
+    : v
+        .split(",")
+        .map((x) => x.trim())
+        .filter((x) => x !== "");
+
+/** P7b.7: GET /api/l/[leagueId]/trades/evaluate?other=<rosterId>&give=<id,id>&get=<id,id>. */
+export function handleTradeEvaluate(
+  leagueId: string,
+  params: URLSearchParams,
+  now: Date = gameNow(),
+): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(404, "not_found", "League not found.");
+  const other = params.get("other");
+  const parsed = TradeEvaluateRequestSchema.safeParse({
+    otherRosterId: other === null || other.trim() === "" ? undefined : Number(other),
+    give: splitIds(params.get("give")),
+    get: splitIds(params.get("get")),
+  });
+  if (!parsed.success) return invalid(parsed.error);
+  return withMigratedDb((h) => {
+    const r = evaluateTradeForLeague(h, idOk.data, parsed.data, now);
+    if (!r.ok) {
+      if (r.reason === "invalid") return errorResult(400, r.code, r.message);
+      if (r.reason === "no_team") {
+        return errorResult(404, "no_team", "No roster found for the stored Sleeper user.");
+      }
+      return errorResult(404, "not_found", "League not found.");
+    }
+    return { status: 200, body: TradeEvaluateResponseSchema.parse(r.data) };
+  });
+}
+
+/** P7b.7: GET /api/l/[leagueId]/trades/finder (suggested trades for my team). */
+export function handleTradeFinder(leagueId: string, now: Date = gameNow()): ApiResult {
+  const idOk = z.string().min(1).max(64).safeParse(leagueId);
+  if (!idOk.success) return errorResult(404, "not_found", "League not found.");
+  return withMigratedDb((h) => {
+    const r = findTradesForLeague(h, idOk.data, now);
+    if (!r.ok) {
+      if (r.reason === "no_team") {
+        return errorResult(404, "no_team", "No roster found for the stored Sleeper user.");
+      }
+      return errorResult(404, "not_found", "League not found.");
+    }
+    return { status: 200, body: TradeFinderResponseSchema.parse(r.data) };
   });
 }

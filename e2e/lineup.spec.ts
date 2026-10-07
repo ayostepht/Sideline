@@ -16,7 +16,7 @@ import { FIXTURE } from "./helpers/servers";
  * not assumed).
  */
 test.describe("Lineup (LINEUP-5/6/9)", () => {
-  test("LINEUP-FLOW-1: default visit shows my own lineup, Projected mode, with Open in Sleeper", async ({
+  test("LINEUP-FLOW-1: default visit shows my own lineup, Auto mode, with Open in Sleeper", async ({
     page,
   }) => {
     await page.goto(`${L}/lineup`);
@@ -24,11 +24,13 @@ test.describe("Lineup (LINEUP-5/6/9)", () => {
     await expect(page.getByRole("heading", { level: 1, name: "Lineup" })).toBeVisible();
     await expect(page.getByTestId("lineup-mine-badge")).toBeVisible();
     await expect(page.getByTestId("lineup-viewing-label")).toContainText("Your lineup");
-    await expect(page.getByTestId("lineup-mode-toggle-projected")).toHaveAttribute(
+    await expect(page.getByTestId("lineup-mode-toggle-auto")).toHaveAttribute(
       "aria-current",
       "true",
     );
-    await expect(page.getByTestId("lineup-mode-toggle-safe")).not.toHaveAttribute("aria-current");
+    await expect(page.getByTestId("lineup-mode-toggle-projected")).not.toHaveAttribute(
+      "aria-current",
+    );
     await expect(page.getByTestId("lineup-open-in-sleeper")).toBeVisible();
     // The roster toggle offers the current opponent, not a way back to the viewer's own roster
     // (already there).
@@ -70,9 +72,7 @@ test.describe("Lineup (LINEUP-5/6/9)", () => {
   }) => {
     await page.goto(`${L}/lineup`);
     await page.getByTestId("lineup-roster-toggle-opponent").click();
-    await expect(page).toHaveURL(
-      new RegExp(`${L}/lineup\\?week=4&mode=projected&roster=${DATA.otherRosterId}$`),
-    );
+    await expect(page).toHaveURL(new RegExp(`${L}/lineup\\?week=4&roster=${DATA.otherRosterId}$`));
     await expect(page.getByTestId("lineup-page")).toBeVisible();
     await expect(page.getByTestId("lineup-mine-badge")).toHaveCount(0);
     await expect(page.getByTestId("lineup-open-in-sleeper")).toHaveCount(0);
@@ -82,7 +82,7 @@ test.describe("Lineup (LINEUP-5/6/9)", () => {
     const back = page.getByTestId("lineup-roster-toggle-mine");
     await expect(back).toBeVisible();
     await back.click();
-    await expect(page).toHaveURL(new RegExp(`${L}/lineup\\?week=4&mode=projected$`));
+    await expect(page).toHaveURL(new RegExp(`${L}/lineup\\?week=4$`));
     await expect(page.getByTestId("lineup-mine-badge")).toBeVisible();
   });
 

@@ -52,6 +52,7 @@ import {
   restOfSeasonProjection,
   type RecommendLineupPlayer,
   type RestOfSeasonWeek,
+  type TradeTeam,
 } from "@sideline/core";
 import {
   getComputed,
@@ -295,4 +296,85 @@ export function getRosterStrength(
   const parsed = RosterStrengthResultsSchema.parse(results);
   putComputed(h, { leagueId, week, kind, inputsHash }, parsed, now);
   return { ok: true, data: parsed };
+}
+
+export interface TradeTeamsResult {
+  rosterPositions: string[];
+  teams: TradeTeam[];
+}
+
+const TradeTeamsResultSchema = z.strictObject({
+  rosterPositions: z.array(z.string()),
+  teams: z.array(
+    z.strictObject({
+      rosterId: z.number().int(),
+      players: z.array(
+        z.strictObject({
+          playerId: z.string(),
+          fantasyPositions: z.array(z.string()),
+          rosValue: z.number(),
+          reserve: z.boolean(),
+        }),
+      ),
+    }),
+  ),
+});
+
+/**
+ * P7b.7: per-roster {@link TradeTeam} inputs for the trade evaluator and finder. Every rostered
+ * player appears with the same ROS value `getRosterStrength` uses; IR and taxi players carry
+ * `reserve: true` (they never start and are never auto-dropped). Cached in `computed_cache`
+ * (`kind = "trade-teams"`, `week = 0`) under the same inputs hash as `getRosterStrength`.
+ */
+export function getTradeTeams(h: DbHandle, leagueId: string, now: Date): Lookup<TradeTeamsResult> {
+  const league = readLeague(h, leagueId);
+  if (league === null) return { ok: false, reason: "not_found" };
+
+  const kind = "trade-teams";
+  const week = 0;
+  // Also depends on league settings (roster positions) and player names/positions.
+  const inputsHash = createHash("sha256")
+    .update(
+      `${inputsHashFor(h)}:${JSON.stringify([lastSuccessAt(h, "league"), lastSuccessAt(h, "players")])}`,
+    )
+    .digest("hex")
+    .slice(0, 16);
+  const cached = getComputed(h, { leagueId, week, kind, inputsHash });
+  if (cached !== null) {
+    const parsed = TradeTeamsResultSchema.safeParse(cached);
+    if (parsed.success) return { ok: true, data: parsed.data };
+  }
+
+  const rosterPositions = parseList(league.roster_positions_json);
+  const rosterRows = readRosters(h, leagueId);
+  const currentWeek = Math.min(Math.max(readNflState(h)?.week ?? 1, 1), DEFAULT_SEASON_WEEKS);
+
+  const idsByRoster = new Map<number, { ids: string[]; reserve: Set<string> }>();
+  const allIds = new Set<string>();
+  for (const row of rosterRows) {
+    const reserve = new Set([...parseList(row.reserve_json), ...parseList(row.taxi_json)]);
+    const ids = new Set([...parseList(row.players_json), ...reserve]);
+    ids.delete("0");
+    idsByRoster.set(row.roster_id, { ids: [...ids], reserve });
+    for (const id of ids) allIds.add(id);
+  }
+  const playersById = new Map(readPlayers(h, [...allIds]).map((p) => [p.playerId, p] as const));
+  const points = readLeaguePoints(h, leagueId, league.season);
+
+  const teams: TradeTeam[] = rosterRows.map((row) => {
+    const entry = idsByRoster.get(row.roster_id);
+    return {
+      rosterId: row.roster_id,
+      players: (entry?.ids ?? []).map((id) => ({
+        playerId: id,
+        fantasyPositions: playersById.get(id)?.fantasyPositions ?? [],
+        rosValue: rosValueFor(points.get(id), currentWeek),
+        reserve: entry?.reserve.has(id) ?? false,
+      })),
+    };
+  });
+
+  const data = TradeTeamsResultSchema.parse({ rosterPositions, teams });
+  putComputed(h, { leagueId, week, kind, inputsHash }, data, now);
+  return { ok: true, data };
 }

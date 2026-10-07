@@ -247,7 +247,7 @@ async function runCheck(args: Args): Promise<number> {
     console.error("check: no files to scan");
     return 1;
   }
-  const leaks = findLeaks(files, identifiers);
+  const leaks = findLeaks(files, identifiers, { urlHandles: [env.username] });
   console.log(
     `check: ${files.length} files, ${identifiers.ids.length} ids, ${identifiers.names.length} names, ${identifiers.avatars.length} avatars scanned; ${fetcher.calls.length} network calls`,
   );

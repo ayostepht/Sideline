@@ -1,9 +1,11 @@
 import type { LineupMode, LineupPlayer, LineupSlotAssignment } from "@sideline/shared";
+import { WeatherInfo } from "../../../../../components/weather-info";
 import { Lock, Plus } from "lucide-react";
 import { MatchupGrade } from "../../../../../components/matchup-grade";
 import { PlayerRow } from "../../../../../components/player-row";
 import { Badge } from "../../../../../components/ui/badge";
-import { WhySheet } from "../../../../../components/why-sheet";
+import { WeatherChips, weatherChipsFromReasons } from "../../../../../components/weather";
+import { WhySheetEager as WhySheet } from "../../../../../components/why-sheet-eager";
 import { formatValue, MODE_STAT_LABEL, playerById } from "./format";
 
 /**
@@ -27,11 +29,18 @@ export function SlotColumn({
   showReasons: boolean;
   testid: string;
 }) {
+  const hasWeather = assignment.some((slot) => {
+    const pl = playerById(players, slot.playerId);
+    return pl !== null && weatherChipsFromReasons(pl.reasons).length > 0;
+  });
   return (
     <section aria-labelledby={`${testid}-h`} data-testid={testid}>
-      <h2 id={`${testid}-h`} className="sl-label sl-mark mb-1">
-        {title}
-      </h2>
+      <div className="mb-1 flex items-center justify-between">
+        <h2 id={`${testid}-h`} className="sl-label sl-mark">
+          {title}
+        </h2>
+        {hasWeather ? <WeatherInfo /> : null}
+      </div>
       <div className="flex flex-col divide-y rounded-card border bg-card">
         {assignment.length === 0 ? (
           <p className="px-3 py-2 text-sm text-muted-foreground">No slots configured.</p>
@@ -84,6 +93,10 @@ export function SlotColumn({
                     ) : null}
                   </>
                 }
+              />
+              <WeatherChips
+                chips={weatherChipsFromReasons(player.reasons)}
+                className="px-2 pb-1.5"
               />
               {showReasons ? (
                 <div className="px-2 pb-2">

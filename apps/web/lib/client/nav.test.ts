@@ -4,6 +4,8 @@ import {
   stepWeek,
   clampWeek,
   isNavActive,
+  moreItems,
+  primaryItems,
   navHref,
   NAV_ITEMS,
   normalizeSearchQuery,
@@ -51,6 +53,17 @@ describe("week params", () => {
   it("sets week and keeps other params", () => {
     expect(withWeekParam("mode=safe&week=2", 5)).toBe("mode=safe&week=5");
     expect(withWeekParam("", 30)).toBe("week=18");
+  });
+});
+
+describe("Trades nav item", () => {
+  it("comes right after League and lives in the More sheet", () => {
+    const keys = NAV_ITEMS.map((i) => i.key);
+    expect(keys.indexOf("trades")).toBe(keys.indexOf("league") + 1);
+    expect(moreItems().map((i) => i.key)).toContain("trades");
+    expect(primaryItems().map((i) => i.key)).not.toContain("trades");
+    expect(primaryItems()).toHaveLength(4);
+    expect(activeNavKey("/l/100/trades", L)).toBe("trades");
   });
 });
 

@@ -30,3 +30,5 @@ export * from "./api/waiver.js";
 export * from "./api/players.js";
 export * from "./api/matchup.js";
 export * from "./api/league-intelligence.js";
+export * from "./api/trades.js";
+export * from "./api/weather.js";

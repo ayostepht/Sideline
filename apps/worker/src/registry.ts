@@ -14,6 +14,7 @@ export const ALL_ORDER: readonly SyncJobName[] = [
   "trending",
   "stats",
   "nflverse",
+  "weather",
   "projections",
   "player_news",
 ];

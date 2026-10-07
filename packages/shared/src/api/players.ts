@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { FreshnessSchema } from "./freshness.js";
 import { ReasonSchema } from "../reason.js";
+import { GameWeatherSchema } from "./weather.js";
 
 /**
  * T4.5c (PLAN 4.5, TREND-1..5): players list (paginated, filterable) and player detail DTOs.
@@ -206,6 +207,8 @@ export const NextOpponentWeekSchema = z.strictObject({
   /** 1 = allows the most points at the position (easiest). */
   rank: z.number().int().nullable(),
   totalTeams: z.number().int().nullable(),
+  /** WX-4: that game's forecast, context only. Null on a bye or when the game is beyond 7 days. */
+  weather: GameWeatherSchema.nullable().optional(),
 });
 export type NextOpponentWeek = z.infer<typeof NextOpponentWeekSchema>;
 

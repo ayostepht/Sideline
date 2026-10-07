@@ -1,9 +1,13 @@
 import { ArrowDown, ArrowUp } from "lucide-react";
 import type { Reason } from "@sideline/shared";
 import { cn } from "../lib/client/cn";
+import { kindFromLabel, WeatherChip } from "./weather";
 import { formatImpact, formatProjectedPoints, formatReasonValue } from "./reason-format";
 
 export function ReasonChip({ reason }: { reason: Reason }) {
+  if (reason.code === "WEATHER") {
+    return <WeatherChip kind={kindFromLabel(reason.label)} label={reason.label} />;
+  }
   const imp = formatImpact(reason.impact);
   const proj = formatProjectedPoints(reason.projectedPoints);
   const value = formatReasonValue(reason.value, reason.code);
@@ -57,8 +61,8 @@ export function ReasonChips({ reasons, max, className, trailing }: ReasonChipsPr
       aria-label="Reasons"
       data-testid="reason-chips"
     >
-      {shown.map((r) => (
-        <ReasonChip key={r.code} reason={r} />
+      {shown.map((r, i) => (
+        <ReasonChip key={`${r.code}:${String(i)}`} reason={r} />
       ))}
       {hidden > 0 ? (
         <li className="text-[13px] text-muted-foreground tabular-nums sm:text-xs">

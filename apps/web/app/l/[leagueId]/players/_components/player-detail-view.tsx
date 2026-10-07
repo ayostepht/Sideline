@@ -1,9 +1,9 @@
 import type { PlayerDetailResponse } from "@sideline/shared";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { formatCount } from "../../../../../lib/client/format-count";
 import { PlayerAvatar } from "../../../../../components/player-avatar";
-import { DialogTitle } from "../../../../../components/ui/dialog";
 import { DataFreshness } from "../../../../../components/data-freshness";
 import { InjuryBadge } from "../../../../../components/injury-badge";
 import { PositionBadge } from "../../../../../components/position-badge";
@@ -54,14 +54,14 @@ export function PlayerDetailView({
   player,
   now,
   backHref,
-  inModal = false,
+  heading,
 }: {
   player: PlayerDetailResponse;
   now: Date;
   /** Omitted in the pop-up, where the close button replaces the back link. */
   backHref?: string;
-  /** Renders the name as the dialog title (must sit inside a Dialog). */
-  inModal?: boolean;
+  /** Replaces the plain name heading. The pop-up passes a dialog title so this file stays free of dialog code. */
+  heading?: ReactNode;
 }) {
   const { scoring, usage, consistency, momentum } = player;
   const weeklySeries = sortedWeeklySeries(scoring.weeklySeries);
@@ -85,14 +85,7 @@ export function PlayerDetailView({
           <PlayerAvatar url={player.headshotUrl} name={player.name} />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              {inModal ? (
-                <DialogTitle
-                  asChild
-                  className="min-w-0 break-words pr-0 text-2xl font-bold tracking-tight"
-                >
-                  <h1>{player.name}</h1>
-                </DialogTitle>
-              ) : (
+              {heading ?? (
                 <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight">
                   {player.name}
                 </h1>

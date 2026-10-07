@@ -1,7 +1,8 @@
 import { schema, type DbHandle } from "@sideline/db";
 import { LineupResponseSchema, type LineupResponse } from "@sideline/shared";
 import { afterEach, describe, expect, it } from "vitest";
-import { getLineup, type Lookup } from "./lineup";
+import { getLineup, type LineupDeps, type Lookup } from "./lineup";
+import type { getMatchup } from "./matchup";
 import { SEED_NOW, seedLeague } from "./test-seed";
 import { useTempDb, type TempDb } from "./test-utils";
 
@@ -44,6 +45,82 @@ function insertPoints(
 }
 
 describe("getLineup", () => {
+  it("echoes the concrete mode as resolvedMode with a null modeReason", () => {
+    const h = setup({ rosterCount: 2 });
+    for (const mode of ["projected", "safe", "upside"] as const) {
+      const d = ok(getLineup(h, "L1", { mode, rosterId: 1 }, SEED_NOW));
+      expect(d.mode).toBe(mode);
+      expect(d.resolvedMode).toBe(mode);
+      expect(d.modeReason).toBeNull();
+    }
+  });
+
+  describe("auto mode", () => {
+    const stub =
+      (p: number): typeof getMatchup =>
+      () =>
+        ({ ok: true, data: { winProbability: p } }) as unknown as ReturnType<typeof getMatchup>;
+    const run = (h: DbHandle, deps: LineupDeps) =>
+      ok(getLineup(h, "L1", { mode: "auto", rosterId: 1 }, SEED_NOW, deps));
+
+    it.each([
+      [0.28, "upside", "Auto picked Upside: 28% to win"],
+      [0.35, "projected", "Auto picked Projected: 35% to win"],
+      [0.5, "projected", "Auto picked Projected: 50% to win"],
+      [0.65, "projected", "Auto picked Projected: 65% to win"],
+      [0.72, "safe", "Auto picked Safe: 72% to win"],
+    ] as const)("win probability %s resolves to %s", (p, mode, label) => {
+      const h = setup({ rosterCount: 2 });
+      const d = run(h, { getMatchup: stub(p) });
+      expect(d.mode).toBe("auto");
+      expect(d.resolvedMode).toBe(mode);
+      expect(d.modeReason).toEqual({ code: "AUTO_MODE", label, value: p });
+      const concrete = ok(getLineup(h, "L1", { mode, rosterId: 1 }, SEED_NOW));
+      expect(d.optimalAssignment).toEqual(concrete.optimalAssignment);
+    });
+
+    it("falls back to projected when the matchup has no opponent", () => {
+      const h = setup({ rosterCount: 2 });
+      const d = run(h, {
+        getMatchup: () => ({ ok: false, reason: "no_opponent" }),
+      });
+      expect(d.resolvedMode).toBe("projected");
+      expect(d.modeReason).toEqual({
+        code: "AUTO_FALLBACK",
+        label: "Auto used Projected: no matchup this week",
+      });
+    });
+
+    it("falls back for a week that is not the current week without simming", () => {
+      const h = setup({ rosterCount: 2 });
+      let calls = 0;
+      const d = ok(
+        getLineup(h, "L1", { mode: "auto", rosterId: 1, week: 9 }, SEED_NOW, {
+          getMatchup: (...args) => {
+            calls += 1;
+            return stub(0.1)(...args);
+          },
+        }),
+      );
+      expect(calls).toBe(0);
+      expect(d.resolvedMode).toBe("projected");
+      expect(d.modeReason?.code).toBe("AUTO_FALLBACK");
+    });
+
+    it("re-resolves when the win probability changes (no stale auto entry)", () => {
+      const h = setup({ rosterCount: 2 });
+      expect(run(h, { getMatchup: stub(0.2) }).resolvedMode).toBe("upside");
+      expect(run(h, { getMatchup: stub(0.8) }).resolvedMode).toBe("safe");
+    });
+
+    it("runs against the real matchup sim", () => {
+      const h = setup({ rosterCount: 2 });
+      const d = ok(getLineup(h, "L1", { mode: "auto", rosterId: 1 }, SEED_NOW));
+      expect(d.mode).toBe("auto");
+      expect(d.modeReason).not.toBeNull();
+    });
+  });
+
   it("assembles a full realistic roster into a valid response", () => {
     const h = setup({ rosterCount: 4, rosterSize: 8, playerCount: 60 });
     insertPoints(

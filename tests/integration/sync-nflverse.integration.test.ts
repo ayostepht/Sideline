@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { createSleeperServer, recordedFixtureRoot } from "../msw/server.js";
 import {
   createNflverseMock,
+  createOpenMeteoMock,
   createSyncHarness,
   EXPECTED_COUNTS,
   gamesCsv,
@@ -18,7 +19,7 @@ let h: SyncHarness | undefined;
 beforeAll(() => server.listen());
 beforeEach(() => {
   nfl = createNflverseMock();
-  server.use(nfl.handler);
+  server.use(nfl.handler, createOpenMeteoMock().handler);
 });
 afterEach(() => {
   h?.cleanup();

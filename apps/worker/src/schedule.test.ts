@@ -33,6 +33,7 @@ describe("dueJobs", () => {
         player_ids: undefined,
         nflverse: undefined,
         player_news: undefined,
+        weather: undefined,
       },
       false,
     );

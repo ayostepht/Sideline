@@ -1,5 +1,5 @@
 import { DbError } from "../../../../../../components/db-error";
-import { PlayerModal } from "../../../../../../components/player-modal";
+import { PlayerModal, PlayerModalTitle } from "../../../../../../components/player-modal";
 import { getPlayerDetail } from "../../../../../../lib/server/players";
 import { readPage } from "../../../_components/load";
 import { PlayerDetailView } from "../../../players/_components/player-detail-view";
@@ -35,7 +35,11 @@ export default async function PlayerModalPage({
   }
   return (
     <PlayerModal>
-      <PlayerDetailView player={read.value.data} now={read.now} inModal />
+      <PlayerDetailView
+        player={read.value.data}
+        now={read.now}
+        heading={<PlayerModalTitle>{read.value.data.name}</PlayerModalTitle>}
+      />
     </PlayerModal>
   );
 }

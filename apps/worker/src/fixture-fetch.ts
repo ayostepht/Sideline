@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
+import { syntheticOpenMeteo } from "./fixture-weather.js";
 
 export const FIXTURES_DIR = resolve(import.meta.dirname, "../../../tests/fixtures");
 
@@ -80,6 +81,9 @@ export function createFixtureFetch(
   return (input) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     onRequest?.(url);
+    if (new URL(url).hostname === "api.open-meteo.com") {
+      return Promise.resolve(syntheticOpenMeteo(url));
+    }
     const hit = fixturePathFor(url);
     const file = hit ? join(dir, hit.path) : null;
     if (!hit || file === null || !existsSync(file)) {

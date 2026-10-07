@@ -10,6 +10,7 @@ import { z } from "zod";
 import {
   getLeagueOverview,
   getMyTeam,
+  getAllTeamRosters,
   getStandings,
   getTeamDetail,
   searchPlayers,
@@ -208,5 +209,47 @@ describe("searchPlayers", () => {
     const h = setup();
     expect(ok(searchPlayers(h, "L1", "%_", 5))).toEqual([]);
     expect(searchPlayers(h, "nope", "ab", 5).ok).toBe(false);
+  });
+});
+
+describe("getAllTeamRosters", () => {
+  it("matches getStandings plus getTeamDetail per team, in standings order", () => {
+    const h = setup({ rosterCount: 4, rosterSize: 8 });
+    h.sqlite
+      .prepare(
+        "UPDATE rosters SET reserve_json = '[\"p1\"]', taxi_json = '[\"p2\"]' WHERE roster_id = 1",
+      )
+      .run();
+    const all = getAllTeamRosters(h, "L1", SEED_NOW);
+    if (!all.ok) throw new Error("expected ok");
+    const standings = getStandings(h, "L1", SEED_NOW);
+    if (!standings.ok) throw new Error("expected ok");
+    expect(all.data.teams.map((t) => t.rosterId)).toEqual(
+      standings.data.rows.map((r) => r.rosterId),
+    );
+    for (const row of standings.data.rows) {
+      const detail = getTeamDetail(h, "L1", row.rosterId, SEED_NOW);
+      if (!detail.ok) throw new Error("expected ok");
+      const team = all.data.teams.find((t) => t.rosterId === row.rosterId);
+      expect(team?.teamName).toBe(row.teamName);
+      expect(team?.isMine).toBe(row.isMine);
+      expect(team?.players).toEqual(
+        detail.data.players.map((p) => ({
+          playerId: p.playerId,
+          name: p.name,
+          position: p.position,
+          nflTeam: p.nflTeam,
+          slot: p.slot,
+        })),
+      );
+    }
+    expect(all.data.teams.some((t) => t.players.some((p) => p.slot === "ir"))).toBe(true);
+    expect(all.data.teams.some((t) => t.players.some((p) => p.slot === "taxi"))).toBe(true);
+    expect(all.data.freshness).toEqual(standings.data.freshness);
+  });
+
+  it("returns not_found for an unknown league", () => {
+    const h = setup();
+    expect(getAllTeamRosters(h, "nope", SEED_NOW)).toEqual({ ok: false, reason: "not_found" });
   });
 });

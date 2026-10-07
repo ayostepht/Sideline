@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { FreshnessSchema } from "./freshness.js";
+import { GameWeatherSchema } from "./weather.js";
 
 /**
  * SIM-1/SIM-2 (PLAN 5.7, T5.4b): request/response contracts for `GET /api/l/{leagueId}/matchup`.
@@ -31,6 +32,8 @@ export const MatchupSwingPlayerSchema = z.strictObject({
   /** P7.4 (optional in the type so existing literals compile; the server always sets both). */
   nflTeam: z.string().nullable().optional(),
   position: z.string().nullable().optional(),
+  /** P7b.9 (WX-4): this starter's game forecast, context only. Null on a bye or beyond 7 days. */
+  weather: GameWeatherSchema.nullable().optional(),
 });
 export type MatchupSwingPlayer = z.infer<typeof MatchupSwingPlayerSchema>;
 

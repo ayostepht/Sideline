@@ -12,6 +12,7 @@ import { resetDbForTests } from "../../apps/web/lib/server/db.js";
 import { createSleeperServer, recordedFixtureRoot } from "../msw/server.js";
 import {
   createNflverseMock,
+  createOpenMeteoMock,
   createSyncHarness,
   type SyncHarness,
 } from "../helpers/sync-harness.js";
@@ -28,7 +29,7 @@ const savedDataDir = process.env["DATA_DIR"];
 beforeAll(() => server.listen());
 beforeEach(() => {
   sleeperWire = [];
-  server.use(createNflverseMock().handler);
+  server.use(createNflverseMock().handler, createOpenMeteoMock().handler);
   h = createSyncHarness();
   process.env["DATA_DIR"] = h.tmp.dataDir;
   resetDbForTests();

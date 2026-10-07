@@ -127,6 +127,29 @@ export function createNflverseMock(): NflverseMock {
   };
 }
 
+/**
+ * MSW handler for Open-Meteo. Answers any requested date with 24 hourly rows of mild, dry
+ * weather, so the weather job (P7b.6) never reaches the real network in integration runs.
+ */
+export function createOpenMeteoMock(): { handler: ReturnType<typeof http.get> } {
+  const handler = http.get("https://api.open-meteo.com/v1/forecast", ({ request }) => {
+    const date = new URL(request.url).searchParams.get("start_date") ?? "2026-10-11";
+    const hours = Array.from({ length: 24 }, (_, h) => `${date}T${String(h).padStart(2, "0")}:00`);
+    const col = (v: number): number[] => hours.map(() => v);
+    return HttpResponse.json({
+      hourly: {
+        time: hours,
+        temperature_2m: col(60),
+        precipitation_probability: col(10),
+        wind_speed_10m: col(5),
+        wind_gusts_10m: col(9),
+        weather_code: col(0),
+      },
+    });
+  });
+  return { handler };
+}
+
 /** games.csv with `gametime` blanked (or kept) per game, to exercise the kickoff fallback. */
 export function gamesCsv(opts: { blankGametime: boolean }): string {
   const raw = readFileSync(path.join(fixturesRoot, "nflverse/schedules/games.csv"), "utf8");
@@ -199,7 +222,10 @@ export function createSyncHarness(env: Record<string, string> = {}): SyncHarness
       },
     },
   );
-  const registry = createJobRegistry(createAllJobs({}));
+  const registry = createJobRegistry(
+    // Instant limiter: tests that fake setTimeout (sync-failures) would otherwise hang on its sleep.
+    createAllJobs({ weather: { limiter: { acquire: () => Promise.resolve() } } }),
+  );
   const never = new AbortController().signal;
   const count = (table: string): number =>
     (tmp.handle.sqlite.prepare(`SELECT COUNT(*) AS n FROM "${table}"`).get() as { n: number }).n;

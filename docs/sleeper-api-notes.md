@@ -696,3 +696,27 @@ Failure modes and limits: the no-`playerId` fantasy call returns 500; the timeou
 ```json
 { "id": 64077928, "type": "Rotowire", "headline": "Mahomes completed 15 of 30 passes ...", "published": "2026-10-05T00:49:46Z", "playerId": 3139477 }
 ```
+
+## Open-Meteo forecast (not Sleeper)
+
+2026-10-07 (P7b.4). One live GET (Lambeau Field, 2026-10-11) to `https://api.open-meteo.com/v1/forecast`. No key, no account. Free tier is non-commercial use only and about 10,000 calls per day (also 600 per minute and 5,000 per hour); a self-hosted personal app is within terms. Forecast horizon is 16 days.
+
+Request params we send: `latitude`, `longitude`, `hourly=temperature_2m,precipitation_probability,wind_speed_10m,wind_gusts_10m,weather_code`, `temperature_unit=fahrenheit`, `wind_speed_unit=mph`, `timezone=UTC`, `start_date`, `end_date` (both the kickoff's UTC date). Hourly rows are parallel arrays; `hourly.time` entries look like `2026-10-11T17:00` (UTC, no offset suffix). Individual array values can be `null`. `hourly_units.wind_speed_10m` reads `mp/h` (not `mph`) and the temperature unit is `°F`. Response also returns a snapped `latitude`/`longitude` and `elevation`; extra fields are tolerated.
+
+We pick the row whose `time` equals the kickoff floored to the hour (a 20:30 UTC kickoff uses 20:00). Null temperature, wind or precipitation probability gives "No forecast"; a null gust falls back to sustained wind; a null weather code gives `none`.
+
+WMO `weather_code` to our `PrecipType`: 51,53,55 drizzle, 61,63,65 rain, 80,81,82 showers, 95,96,99 thunderstorm map to `rain`; 71,73,75 snow, 77 snow grains, 85,86 snow showers map to `snow`; 56,57 freezing drizzle and 66,67 freezing rain map to `mixed`; everything else (0 to 3, fog 45 and 48, unknown) maps to `none`.
+
+nflverse `stadium_id` caveats (games.csv checked 2026-10-07): international ids seen are LON00 Wembley, LON02 Tottenham, MAD01, MEL00, MEX00, MUN01, PAR00, RIO00, SAO00, GER00, FRA00. Some London games reuse the home team's id (2026 JAX games at Tottenham carry `JAX00`, and 2025 games show home ids), so they resolve to the home stadium and may get the wrong city's forecast. LAC and LAR share `LAX01`; NYG and NYJ share `NYC01`.
+
+```json
+{ "latitude": 44.50524, "longitude": -88.049416, "timezone": "GMT", "hourly_units": { "wind_speed_10m": "mp/h" }, "hourly": { "time": ["2026-10-11T00:00"], "temperature_2m": [72.0], "precipitation_probability": [0], "wind_speed_10m": [16.3], "wind_gusts_10m": [34.7], "weather_code": [0] } }
+```
+
+Fixture: `tests/fixtures/open-meteo/forecast.json` (48 hourly rows, real, no personal data).
+
+## 2026-10-07: Open-Meteo forecast range and the weather job (P7b.6)
+
+- Open-Meteo serves whole UTC days, today (day 0) through day 15. `fetchKickoffForecast` skips a kickoff outside that by UTC calendar day without fetching (`out_of_range`), and maps an HTTP 400 (what the API returns for an out-of-range date) to the same reason.
+- The `weather` job (every 3 h) covers games from football now to +7 days. `dome` and `closed` roofs are stored as `indoors` with no fetch; a failed fetch keeps any existing row, else writes `unavailable`. It stops after 3 consecutive failures.
+- Fixture DB: `apps/worker/src/fixture-weather.ts` serves synthetic Open-Meteo responses (wind at CHI, rain at BUF, cold at CIN, HTTP 500 at PHI, mild elsewhere). The seed pins the game clock to 2026-10-02T12:00:00Z.

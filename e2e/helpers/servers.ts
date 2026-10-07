@@ -16,10 +16,12 @@
  *   for it; it is a throwaway test credential, not a real secret.
  */
 const HOST = "127.0.0.1";
+const PORT = Number(process.env["E2E_PORT"] ?? "3000");
 
-export const seededBaseUrl = process.env["E2E_BASE_URL"] ?? `http://${HOST}:3000`;
-export const onboardingBaseUrl = process.env["E2E_ONBOARDING_URL"] ?? `http://${HOST}:3101`;
-export const authBaseUrl = process.env["E2E_AUTH_URL"] ?? `http://${HOST}:3102`;
+export const seededBaseUrl = process.env["E2E_BASE_URL"] ?? `http://${HOST}:${PORT}`;
+export const onboardingBaseUrl =
+  process.env["E2E_ONBOARDING_URL"] ?? `http://${HOST}:${PORT + 101}`;
+export const authBaseUrl = process.env["E2E_AUTH_URL"] ?? `http://${HOST}:${PORT + 102}`;
 export const AUTH_PASSWORD = process.env["E2E_AUTH_PASSWORD"] ?? "e2e-fixture-password-not-real";
 
 /** Fixture identifiers (tests/fixtures/README.md). All fake. */

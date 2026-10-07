@@ -23,3 +23,4 @@ export * from "./trends/momentum.js";
 export * from "./waiver/index.js";
 export * from "./sim/index.js";
 export * from "./league/index.js";
+export * from "./trade/index.js";

@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  ArrowLeftRight,
   ClipboardList,
   House,
   Settings,
@@ -18,6 +19,7 @@ export const NAV_ICONS: Record<NavKey, LucideIcon> = {
   waivers: UserPlus,
   players: Users,
   league: Trophy,
+  trades: ArrowLeftRight,
   team: Shield,
   settings: Settings,
 };

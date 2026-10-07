@@ -69,6 +69,7 @@ import {
   type ManagerTransactionInput,
   type PlayoffOddsMatchup,
   type PlayoffOddsTeamInput,
+  type SimulatePlayoffOddsInput,
   type PositionalStrengthEntry,
 } from "@sideline/core";
 import {
@@ -164,6 +165,113 @@ function deriveSeed(leagueId: string): number {
   return hash >>> 0;
 }
 
+/** Per-roster population sd of played-week point totals (0 with no played weeks). */
+function sdByRosterFrom(
+  rows: readonly { rosterId: number }[],
+  pointsByRosterWeek: ReadonlyMap<number, ReadonlyMap<number, number>>,
+): Map<number, number> {
+  return new Map<number, number>(
+    rows.map((row) => {
+      const weeksForRoster = pointsByRosterWeek.get(row.rosterId);
+      const values = weeksForRoster === undefined ? [] : [...weeksForRoster.values()];
+      return [row.rosterId, populationStandardDeviation(values)] as const;
+    }),
+  );
+}
+
+export interface PlayoffOddsContext {
+  rows: readonly { rosterId: number; wins: number; ties: number; pointsFor: number }[];
+  strengthByRoster: ReadonlyMap<number, { rosOptimalTotal: number }>;
+  sdByRoster: ReadonlyMap<number, number>;
+  currentWeek: number;
+}
+
+export interface PlayoffOddsBuild {
+  input: SimulatePlayoffOddsInput;
+  /** Weeks `rosOptimalTotal` spans; `meanWeeklyScore = rosOptimalTotal / weeksRemaining`. */
+  weeksRemaining: number;
+}
+
+/**
+ * Builds `simulatePlayoffOdds` input (LEAGUE-5; see the module doc). Caller must have checked
+ * `playoffTeams` is known and within `[0, numTeams]`. Exported so trades can rerun the same
+ * simulation (same seed) with some teams' `meanWeeklyScore` replaced.
+ */
+export function buildPlayoffOddsInput(
+  h: DbHandle,
+  leagueId: string,
+  ctx: PlayoffOddsContext,
+): PlayoffOddsBuild {
+  const playoffTeams = readLeaguePlayoffTeams(h, leagueId) ?? 0;
+  const playoffWeekStart = readLeaguePlayoffWeekStart(h, leagueId);
+  const regularSeasonEnd = playoffWeekStart !== null ? playoffWeekStart - 1 : DEFAULT_SEASON_WEEKS;
+  const rosterIds = new Set(ctx.rows.map((row) => row.rosterId));
+  const weeksRemaining = Math.max(1, DEFAULT_SEASON_WEEKS - ctx.currentWeek + 1);
+
+  const schedule: PlayoffOddsMatchup[] = readLeagueScheduleMatchups(h, leagueId, {
+    afterWeek: ctx.currentWeek - 1,
+  })
+    .filter((m) => m.week <= regularSeasonEnd)
+    // Defensive: a data anomaly (e.g. a roster id no longer in standings) is dropped rather than
+    // thrown, mirroring `readLeagueScheduleMatchups`'s own "skip anomalies" convention.
+    .filter((m) => rosterIds.has(m.rosterIdA) && rosterIds.has(m.rosterIdB))
+    .map((m) => ({ week: m.week, rosterIdA: m.rosterIdA, rosterIdB: m.rosterIdB }));
+
+  const teams: PlayoffOddsTeamInput[] = ctx.rows.map((row) => ({
+    rosterId: row.rosterId,
+    wins: row.wins,
+    ties: row.ties,
+    pointsFor: row.pointsFor,
+    meanWeeklyScore:
+      (ctx.strengthByRoster.get(row.rosterId)?.rosOptimalTotal ?? 0) / weeksRemaining,
+    sd: ctx.sdByRoster.get(row.rosterId) ?? 0,
+  }));
+
+  return {
+    input: {
+      teams,
+      schedule,
+      playoffTeams,
+      firstRoundByeCount: 0,
+      seed: deriveSeed(leagueId),
+    },
+    weeksRemaining,
+  };
+}
+
+/**
+ * Standalone loader for callers outside `getLeagueIntelligence` (trades): standings, roster
+ * strength and played-week sd, then {@link buildPlayoffOddsInput}. `null` when the league's
+ * `playoffTeams` setting is unknown or out of range (same rule as league-intelligence).
+ */
+export function loadPlayoffOddsBuild(
+  h: DbHandle,
+  leagueId: string,
+  now: Date,
+): PlayoffOddsBuild | null {
+  const standings = getStandings(h, leagueId, now);
+  if (!standings.ok) return null;
+  const rows = standings.data.rows;
+  const strength = getRosterStrength(h, leagueId, now);
+  if (!strength.ok) return null;
+  const playoffTeams = readLeaguePlayoffTeams(h, leagueId);
+  if (playoffTeams === null || playoffTeams < 0 || playoffTeams > rows.length) return null;
+  const currentWeek = Math.min(Math.max(readNflState(h)?.week ?? 1, 1), DEFAULT_SEASON_WEEKS);
+  const pointsByRosterWeek = new Map<number, Map<number, number>>();
+  for (const r of readLeagueWeeklyScores(h, leagueId)) {
+    if (r.week >= currentWeek) continue;
+    const m = pointsByRosterWeek.get(r.rosterId) ?? new Map<number, number>();
+    m.set(r.week, r.points);
+    pointsByRosterWeek.set(r.rosterId, m);
+  }
+  return buildPlayoffOddsInput(h, leagueId, {
+    rows,
+    strengthByRoster: new Map(strength.data.map((r) => [r.rosterId, r] as const)),
+    sdByRoster: sdByRosterFrom(rows, pointsByRosterWeek),
+    currentWeek,
+  });
+}
+
 function inputsHashFor(h: DbHandle): string {
   const payload = JSON.stringify({
     rosters: lastSuccessAt(h, "rosters"),
@@ -244,13 +352,7 @@ export function getLeagueIntelligence(
   );
   const rosterStrengthNormalized = minMaxNormalize(rosterStrengthRaw);
 
-  const sdByRoster = new Map<number, number>(
-    rows.map((row) => {
-      const weeksForRoster = pointsByRosterWeek.get(row.rosterId);
-      const values = weeksForRoster === undefined ? [] : [...weeksForRoster.values()];
-      return [row.rosterId, populationStandardDeviation(values)] as const;
-    }),
-  );
+  const sdByRoster = sdByRosterFrom(rows, pointsByRosterWeek);
 
   // ---- Playoff odds (LEAGUE-5) ----
   const playoffTeamsSetting = readLeaguePlayoffTeams(h, leagueId);
@@ -263,37 +365,13 @@ export function getLeagueIntelligence(
   // for every team in a given call -- not per-team. See `LeagueIntelligencePlayoffOddsSchema`'s doc.
   let playoffOddsReasons: Reason[] = [];
   if (playoffTeamsSetting !== null && playoffTeamsSetting >= 0 && playoffTeamsSetting <= numTeams) {
-    const playoffWeekStart = readLeaguePlayoffWeekStart(h, leagueId);
-    const regularSeasonEnd =
-      playoffWeekStart !== null ? playoffWeekStart - 1 : DEFAULT_SEASON_WEEKS;
-    const rosterIds = new Set(rows.map((row) => row.rosterId));
-    const weeksRemaining = Math.max(1, DEFAULT_SEASON_WEEKS - currentWeek + 1);
-
-    const schedule: PlayoffOddsMatchup[] = readLeagueScheduleMatchups(h, leagueId, {
-      afterWeek: currentWeek - 1,
-    })
-      .filter((m) => m.week <= regularSeasonEnd)
-      // Defensive: a data anomaly (e.g. a roster id no longer in standings) is dropped rather than
-      // thrown, mirroring `readLeagueScheduleMatchups`'s own "skip anomalies" convention.
-      .filter((m) => rosterIds.has(m.rosterIdA) && rosterIds.has(m.rosterIdB))
-      .map((m) => ({ week: m.week, rosterIdA: m.rosterIdA, rosterIdB: m.rosterIdB }));
-
-    const teamsInput: PlayoffOddsTeamInput[] = rows.map((row) => ({
-      rosterId: row.rosterId,
-      wins: row.wins,
-      ties: row.ties,
-      pointsFor: row.pointsFor,
-      meanWeeklyScore: (strengthByRoster.get(row.rosterId)?.rosOptimalTotal ?? 0) / weeksRemaining,
-      sd: sdByRoster.get(row.rosterId) ?? 0,
-    }));
-
-    const sim = simulatePlayoffOdds({
-      teams: teamsInput,
-      schedule,
-      playoffTeams: playoffTeamsSetting,
-      firstRoundByeCount: 0,
-      seed: deriveSeed(leagueId),
+    const built = buildPlayoffOddsInput(h, leagueId, {
+      rows,
+      strengthByRoster,
+      sdByRoster,
+      currentWeek,
     });
+    const sim = simulatePlayoffOdds(built.input);
     playoffOddsByRoster = new Map(sim.teams.map((t) => [t.rosterId, t] as const));
     playoffOddsReasons = sim.reasons;
   }

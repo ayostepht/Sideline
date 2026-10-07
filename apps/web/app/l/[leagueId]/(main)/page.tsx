@@ -79,7 +79,7 @@ export default async function HomePage({
       lineup: getLineup(
         h,
         leagueId,
-        requestedWeek === null ? { mode: "projected" } : { week: requestedWeek, mode: "projected" },
+        requestedWeek === null ? { mode: "auto" } : { week: requestedWeek, mode: "auto" },
         now,
       ),
       waivers,

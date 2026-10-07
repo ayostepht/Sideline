@@ -1,5 +1,5 @@
 import type { PlayerWeekRow } from "@sideline/shared";
-import { Tooltip } from "../../../../../components/ui/tooltip";
+import { LazyTooltip as Tooltip } from "../../../../../components/ui/lazy-tooltip";
 import {
   formatOpponent,
   formatWeekProj,

@@ -1,4 +1,5 @@
 import type { ScheduleGame, UsageWeek } from "@sideline/shared";
+import type { ScheduleGameRow } from "./schedule.js";
 
 export interface ResultMeta {
   source: string;
@@ -42,7 +43,7 @@ export interface UsageProvider {
 
 /** A schedule plus each game's calendar date, so a caller can build a fallback kickoff. */
 export interface ScheduleWithDates {
-  games: ScheduleGame[];
+  games: ScheduleGameRow[];
   /** gameId to YYYY-MM-DD (America/New_York). Games without a valid date are absent. */
   gamedays: ReadonlyMap<string, string>;
 }

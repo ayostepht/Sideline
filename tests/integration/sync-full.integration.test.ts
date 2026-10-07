@@ -3,6 +3,7 @@ import { ALL_ORDER } from "../../apps/worker/src/registry.js";
 import { createSleeperServer, recordedFixtureRoot } from "../msw/server.js";
 import {
   createNflverseMock,
+  createOpenMeteoMock,
   createSyncHarness,
   EXPECTED_COUNTS,
   type NflverseMock,
@@ -16,7 +17,7 @@ let h: SyncHarness;
 beforeAll(() => server.listen());
 beforeEach(() => {
   nfl = createNflverseMock();
-  server.use(nfl.handler);
+  server.use(nfl.handler, createOpenMeteoMock().handler);
   h = createSyncHarness();
 });
 afterEach(() => {

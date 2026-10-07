@@ -1,6 +1,6 @@
 "use client";
 
-import { ErrorState } from "../../../components/empty-state";
+import { ErrorStateLite } from "../../../components/error-state-lite";
 
 export default function LeagueError({
   retry,
@@ -9,7 +9,7 @@ export default function LeagueError({
   retry: () => void;
 }) {
   return (
-    <ErrorState
+    <ErrorStateLite
       title="This page could not load"
       detail="Something went wrong on our side. Try again."
       onRetry={retry}

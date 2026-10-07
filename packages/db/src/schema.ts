@@ -302,12 +302,39 @@ export const schedule = sqliteTable(
     totalLine: real("total_line"),
     homeScore: real("home_score"),
     awayScore: real("away_score"),
+    /** nflverse `stadium_id`; identifies neutral and international sites. */
+    stadiumId: text("stadium_id"),
   },
   (t) => [
     primaryKey({ columns: [t.season, t.gameId] }),
     index("schedule_season_week_idx").on(t.season, t.week),
     index("schedule_home_idx").on(t.season, t.home),
     index("schedule_away_idx").on(t.season, t.away),
+  ],
+);
+
+/** Per-game forecast (ADR-022 item 8). Flags are derived on read, never stored. */
+export const gameWeather = sqliteTable(
+  "game_weather",
+  {
+    season: integer("season").notNull(),
+    gameId: text("game_id").notNull(),
+    week: integer("week").notNull(),
+    /** ISO 8601 UTC. */
+    kickoffUtc: text("kickoff_utc").notNull(),
+    /** `forecast`, `indoors` or `unavailable`. */
+    status: text("status").notNull(),
+    temperatureF: real("temperature_f"),
+    windMph: real("wind_mph"),
+    gustMph: real("gust_mph"),
+    precipProbability: real("precip_probability"),
+    precipType: text("precip_type"),
+    fetchedAt: text("fetched_at"),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.season, t.gameId] }),
+    index("game_weather_week_idx").on(t.season, t.week),
   ],
 );
 

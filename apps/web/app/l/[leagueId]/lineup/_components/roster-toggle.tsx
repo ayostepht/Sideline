@@ -1,4 +1,4 @@
-import type { LineupMode } from "@sideline/shared";
+import type { LineupModeChoice } from "@sideline/shared";
 import { ArrowLeftRight } from "lucide-react";
 import Link from "next/link";
 import { buildLineupHref } from "./format";
@@ -17,7 +17,7 @@ export function RosterToggle({
 }: {
   leagueId: string;
   week: number | null;
-  mode: LineupMode;
+  mode: LineupModeChoice;
   mine: boolean;
   opponentRosterId: number | null;
   opponentName: string | null;

@@ -1,3 +1,6 @@
+// Usage: pnpm screens [--routes=/a,/b] [--data-dir=...] [--unverified]
+// Pins SIDELINE_GAME_CLOCK (override: SCREENS_GAME_CLOCK). Fails if the build is older than the source;
+// run "pnpm build" first.
 import { mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -7,7 +10,14 @@ import { z } from "zod";
 import { createSeededDataDir, type SeededDataDir } from "./lib/seed.js";
 import { redactHome } from "./lib/paths.js";
 import { planDataDir, type DataDirPlan } from "./screens/datadir.js";
-import { standaloneBuildExists, startStandaloneServer, type RunningServer } from "./lib/server.js";
+import {
+  standaloneBuildExists,
+  standaloneServerJs,
+  startStandaloneServer,
+  type RunningServer,
+} from "./lib/server.js";
+import { resolveScreensGameClock } from "./lib/game-clock.js";
+import { staleBuildMessage } from "./lib/stale-build.js";
 import {
   assertRoute,
   parseScreensArgs,
@@ -64,6 +74,12 @@ async function main(): Promise<number> {
       );
       return 1;
     }
+    // Fail (do not rebuild) when source is newer than the build, so reviews never see stale output.
+    const stale = staleBuildMessage(root, standaloneServerJs(root));
+    if (stale !== undefined) {
+      process.stderr.write(`screens: ${stale}\n`);
+      return 1;
+    }
     let dataDir: string;
     if (plan.kind === "given") {
       dataDir = plan.dataDir;
@@ -72,7 +88,11 @@ async function main(): Promise<number> {
       dataDir = seeded.dataDir;
     }
     process.stdout.write(`screens: DATA_DIR ${redactHome(dataDir)} (seeded fixture)\n`);
-    server = await startStandaloneServer({ root, dataDir, env: { SIDELINE_GALLERY: "1" } });
+    server = await startStandaloneServer({
+      root,
+      dataDir,
+      env: { SIDELINE_GALLERY: "1", SIDELINE_GAME_CLOCK: resolveScreensGameClock(process.env) },
+    });
     baseUrl = server.baseUrl;
     process.stdout.write(`screens: started the standalone server at ${baseUrl}\n`);
   } else {

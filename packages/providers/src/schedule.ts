@@ -94,6 +94,9 @@ export function byeWeeks(schedule: readonly ScheduleGame[]): Map<string, number>
   return byes;
 }
 
+/** A schedule game plus nflverse `stadium_id` (null when the column or value is missing). */
+export type ScheduleGameRow = ScheduleGame & { stadiumId: string | null };
+
 export const SCHEDULE_COLUMNS = [
   "game_id",
   "season",
@@ -118,13 +121,14 @@ export function mapSchedule(
   table: CsvTable,
   season: number,
 ):
-  { games: ScheduleGame[]; warnings: string[]; gamedays: Map<string, string> } | { error: string } {
+  | { games: ScheduleGameRow[]; warnings: string[]; gamedays: Map<string, string> }
+  | { error: string } {
   const missing = missingColumns(table, SCHEDULE_COLUMNS);
   if (missing.length > 0) return { error: `games.csv missing columns: ${missing.join(", ")}` };
   const warnings: string[] = [];
   if (table.raggedRows > 0) warnings.push(`schedule: ${table.raggedRows} ragged rows rejected`);
   const unknownTeams = new Set<string>();
-  const games: ScheduleGame[] = [];
+  const games: ScheduleGameRow[] = [];
   /** gameId to calendar date (YYYY-MM-DD, America/New_York), for the worker's fallback kickoff. */
   const gamedays = new Map<string, string>();
   let invalid = 0;
@@ -150,7 +154,9 @@ export function mapSchedule(
       awayScore: numOrNull(r["away_score"]),
     });
     if (parsed.success) {
-      games.push(parsed.data);
+      // `stadium_id` is optional upstream: a missing column or blank value gives null.
+      const stadiumId = (r["stadium_id"] ?? "").trim() || null;
+      games.push({ ...parsed.data, stadiumId });
       const day = (r["gameday"] ?? "").trim();
       if (/^\d{4}-\d{2}-\d{2}$/.test(day)) gamedays.set(parsed.data.gameId, day);
     } else invalid += 1;

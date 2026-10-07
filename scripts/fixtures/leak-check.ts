@@ -63,10 +63,49 @@ function leavesOf(file: FixtureFile): Leaf[] {
   }
 }
 
-export function findLeaks(files: readonly FixtureFile[], ids: IdentifierSet): Leak[] {
+/**
+ * Binary images are matched by path only. Their bytes are decoded as utf8 and compressed data
+ * produces random byte runs that word-match short names (byte-level false positives, ADR-018).
+ */
+const IMAGE_EXT = /\.(png|jpe?g|webp|gif|ico)$/i;
+
+export interface FindLeaksOptions {
+  /**
+   * Handles allowed inside github.com, raw.githubusercontent.com and ghcr.io URLs (ADR-018, same
+   * rule as the commit-time scan). Those URL forms are stripped from text before name matching.
+   */
+  urlHandles?: readonly string[];
+}
+
+function stripAllowedUrls(text: string, handles: readonly string[]): string {
+  let out = text;
+  for (const h of handles) {
+    if (h.length === 0) continue;
+    const escaped = h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(
+      new RegExp(
+        `(?<![A-Za-z0-9_.-])(github\\.com|raw\\.githubusercontent\\.com|ghcr\\.io)/${escaped}(?![A-Za-z0-9_.-])`,
+        "gi",
+      ),
+      " ",
+    );
+  }
+  return out;
+}
+
+export function findLeaks(
+  files: readonly FixtureFile[],
+  ids: IdentifierSet,
+  opts: FindLeaksOptions = {},
+): Leak[] {
   const leaks: Leak[] = [];
   const names = ids.names.map((n) => n.toLowerCase());
-  for (const file of files) {
+  const handles = opts.urlHandles ?? [];
+  for (const original of files) {
+    const isImage = IMAGE_EXT.test(original.path);
+    const file: FixtureFile = isImage
+      ? { path: original.path, text: "" }
+      : { path: original.path, text: stripAllowedUrls(original.text, handles) };
     const hay = `${file.path}\n${file.text}`;
     ids.ids.forEach((id, index) => {
       if (id.length > 0 && hay.includes(id)) leaks.push({ file: file.path, category: "id", index });

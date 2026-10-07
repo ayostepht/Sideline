@@ -41,6 +41,7 @@ import {
   computeFreshness,
   MatchupResponseSchema,
   SYNC_CADENCE_MS,
+  type GameWeather,
   type MatchupResponse,
 } from "@sideline/shared";
 import { z } from "zod";
@@ -51,7 +52,9 @@ import {
   readHistory,
   readPositionCv,
   readProjections,
-} from "./lineup.js";
+  toNflverseTeam,
+} from "./lineup-inputs.js";
+import { weatherByGame, type WeatherGameRef } from "./weather.js";
 
 export type Lookup<T> =
   { ok: true; data: T } | { ok: false; reason: "not_found" | "no_team" | "no_opponent" };
@@ -126,11 +129,14 @@ function readWeekActuals(
   return out;
 }
 
-function inputsHashFor(h: DbHandle): string {
+function inputsHashFor(h: DbHandle, now: Date): string {
   const payload = JSON.stringify({
     rosters: lastSuccessAt(h, "rosters"),
     stats: lastSuccessAt(h, "stats"),
     projections: lastSuccessAt(h, "projections"),
+    weather: lastSuccessAt(h, "weather"),
+    // The synthesized "No forecast" window moves with time; re-evaluate every 3 hours.
+    weatherWindow: Math.floor(now.getTime() / (3 * 60 * 60 * 1000)),
   });
   // A cheap, stable digest; cryptographic strength is not needed, only determinism.
   return createHash("sha256").update(payload).digest("hex").slice(0, 16);
@@ -187,6 +193,28 @@ function buildStarter(
   return { playerId, mean: proj, sd, status: "not_started" };
 }
 
+/** This week's games keyed by nflverse team code (both sides point at the same game). */
+function readWeekGames(h: DbHandle, season: number, week: number): Map<string, WeatherGameRef> {
+  const rows = h.sqlite
+    .prepare(
+      `SELECT game_id AS gameId, home, away, kickoff_utc AS kickoffUtc
+       FROM schedule WHERE season = ? AND week = ?`,
+    )
+    .all(season, week) as {
+    gameId: string;
+    home: string;
+    away: string;
+    kickoffUtc: string | null;
+  }[];
+  const out = new Map<string, WeatherGameRef>();
+  for (const r of rows) {
+    const ref = { gameId: r.gameId, week, kickoffUtc: r.kickoffUtc };
+    out.set(r.home, ref);
+    out.set(r.away, ref);
+  }
+  return out;
+}
+
 /**
  * SIM-1/SIM-2: this week's simulated head-to-head matchup for one roster. `now` is injected for
  * freshness and test determinism, matching `getLineup`'s convention.
@@ -219,7 +247,7 @@ export function getMatchup(
   }
 
   const kind = `matchup-sim:${rosterId}`;
-  const inputsHash = inputsHashFor(h);
+  const inputsHash = inputsHashFor(h, now);
   const cached = getComputed(h, { leagueId, week, kind, inputsHash });
   if (cached !== null) {
     const parsed = MatchupResponseSchema.safeParse(cached);
@@ -265,6 +293,16 @@ export function getMatchup(
     starters: oppStarters.map(toStarter),
   };
 
+  // WX-4: forecast per starter's game, context only (never enters the sim). One batched read.
+  const gameOfTeam = readWeekGames(h, league.season, week);
+  const weather = weatherByGame(h, league.season, [...gameOfTeam.values()], now);
+  const weatherOf = (playerId: string): GameWeather | null => {
+    const team = teamOf.get(playerId) ?? null;
+    if (team === null) return null;
+    const game = gameOfTeam.get(toNflverseTeam(team));
+    return game === undefined ? null : (weather.get(game.gameId) ?? null);
+  };
+
   const seed = deriveSeed(leagueId, week, rosterId);
   const sim = simulateMatchup({ teamA, teamB, seed });
 
@@ -295,6 +333,7 @@ export function getMatchup(
       varianceContribution: s.varianceContribution,
       nflTeam: teamOf.get(s.playerId) ?? null,
       position: positionOf.get(s.playerId) ?? null,
+      weather: weatherOf(s.playerId),
     })),
     freshness: computeFreshness(
       lastSuccessAt(h, "rosters"),
