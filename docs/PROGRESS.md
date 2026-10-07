@@ -27,6 +27,8 @@ Remove an item when it is done; the archive keeps history.
 
 ### Found during Phase 7a
 
+- CI flake (qa): `e2e/players.spec.ts` PLAYERS-FLOW-4 failed once on mobile-iphone in CI run 37559296289 (main, 42cb650) while the same commit passed in the v1.1.0 tag run. Same WebKit pattern seen during P7.3: `fill` sometimes doesn't filter before the assertion polls. Make the spec wait for the filtered request or URL `?q=` before asserting.
+
 - P7.4 left the new `PlayerDetailResponse`/`MatchupSwingPlayer` fields optional (server always sets them) so existing UI test literals compile; tighten to required once P7.6 updates those literals (backend).
 - `projectedPts` in weekly rows comes from `league_player_week_points.proj_pts` (stored projection scored by the recompute hook), not strictly the last pre-kickoff snapshot.
 - No persisted "fetched, no news" marker: players with zero ESPN news re-queue a refresh on each pop-up open (bounded by dedupe and the 20-pending cap).
