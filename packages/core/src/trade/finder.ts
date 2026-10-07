@@ -30,6 +30,10 @@ import { rosLineup, type TradePlayer, type TradeTeam } from "./lineup.js";
 export const MIN_TRADE_GAIN = 0.01;
 export const DEFAULT_TRADE_FINDER_LIMIT = 25;
 export const DEFAULT_MAX_CANDIDATES_PER_SIDE = 6;
+/** Variety cap (TRADE-2): max ranked suggestions sharing an identical give set (sorted ids). */
+export const MAX_SUGGESTIONS_PER_GIVE_SET = 2;
+/** Variety cap (TRADE-2): max ranked suggestions sharing an identical get set (sorted ids). */
+export const MAX_SUGGESTIONS_PER_GET_SET = 2;
 
 export interface FindTradesInput {
   rosterPositions: readonly string[];
@@ -38,6 +42,10 @@ export interface FindTradesInput {
   heatmap: readonly PositionalStrengthResult[];
   limit?: number;
   maxCandidatesPerSide?: number;
+  /** Defaults to {@link MAX_SUGGESTIONS_PER_GIVE_SET}. */
+  maxPerGiveSet?: number;
+  /** Defaults to {@link MAX_SUGGESTIONS_PER_GET_SET}. */
+  maxPerGetSet?: number;
 }
 
 export interface FoundTrade extends EvaluatedTrade {
@@ -116,6 +124,31 @@ function key(t: FoundTrade): string {
   return `${t.otherRosterId}|${[...t.give].sort().join(",")}|${[...t.get].sort().join(",")}`;
 }
 
+/**
+ * Walks an already ranked list and drops suggestions whose give set (or get set) has already
+ * appeared `maxGive` (or `maxGet`) times among kept ones, so lower-ranked trades move up.
+ * Sets are compared as sorted player ids. A skipped suggestion does not use up cap on the
+ * other side.
+ */
+export function capBySets<T extends { give: readonly string[]; get: readonly string[] }>(
+  ranked: readonly T[],
+  maxGive: number,
+  maxGet: number,
+): T[] {
+  const gives = new Map<string, number>();
+  const gets = new Map<string, number>();
+  const out: T[] = [];
+  for (const t of ranked) {
+    const g = [...t.give].sort().join(",");
+    const r = [...t.get].sort().join(",");
+    if ((gives.get(g) ?? 0) >= maxGive || (gets.get(r) ?? 0) >= maxGet) continue;
+    gives.set(g, (gives.get(g) ?? 0) + 1);
+    gets.set(r, (gets.get(r) ?? 0) + 1);
+    out.push(t);
+  }
+  return out;
+}
+
 export function findTrades(input: FindTradesInput): FindTradesResult {
   const limit = input.limit ?? DEFAULT_TRADE_FINDER_LIMIT;
   const maxC = input.maxCandidatesPerSide ?? DEFAULT_MAX_CANDIDATES_PER_SIDE;
@@ -175,5 +208,10 @@ export function findTrades(input: FindTradesInput): FindTradesResult {
       b.mine.rosLineupDelta - a.mine.rosLineupDelta ||
       (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0),
   );
-  return { suggestions: found.slice(0, Math.max(0, limit)), evaluatedCount };
+  const capped = capBySets(
+    found,
+    input.maxPerGiveSet ?? MAX_SUGGESTIONS_PER_GIVE_SET,
+    input.maxPerGetSet ?? MAX_SUGGESTIONS_PER_GET_SET,
+  );
+  return { suggestions: capped.slice(0, Math.max(0, limit)), evaluatedCount };
 }

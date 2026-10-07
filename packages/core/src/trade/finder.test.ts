@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { computePositionalHeatmap } from "../league/positional-heatmap.js";
 import { evaluateWithBaselines } from "./evaluate.js";
-import { findTrades } from "./finder.js";
+import { capBySets, findTrades } from "./finder.js";
 import { pl, simpleHeatmapEntries } from "./fixtures.js";
 import type { TradeTeam } from "./lineup.js";
 
@@ -154,5 +154,43 @@ describe("findTrades (TRADE-2)", () => {
   it("returns nothing without complementary needs", () => {
     const r = findTrades({ rosterPositions: POS, me, others: [filler(3)], heatmap: [] });
     expect(r).toEqual({ suggestions: [], evaluatedCount: 0 });
+  });
+});
+
+describe("capBySets (TRADE-2 variety)", () => {
+  const mk = (give: string[], get: string[]) => ({ give, get });
+  it("keeps the top 2 per give set and lets the next distinct one move up", () => {
+    const ranked = [
+      mk(["a"], ["1"]),
+      mk(["a"], ["2"]),
+      mk(["a"], ["3"]),
+      mk(["a"], ["4"]),
+      mk(["a"], ["5"]),
+      mk(["b"], ["6"]),
+    ];
+    expect(capBySets(ranked, 2, 2)).toEqual([ranked[0], ranked[1], ranked[5]]);
+  });
+  it("caps get sets, comparing sorted ids", () => {
+    const ranked = [
+      mk(["a"], ["y", "x"]),
+      mk(["b"], ["x", "y"]),
+      mk(["c"], ["x", "y"]),
+      mk(["d"], ["z"]),
+    ];
+    expect(capBySets(ranked, 2, 2)).toEqual([ranked[0], ranked[1], ranked[3]]);
+    expect(capBySets(ranked, 2, 1)).toEqual([ranked[0], ranked[3]]);
+  });
+  it("is deterministic and findTrades accepts overrides", () => {
+    const base = run().suggestions;
+    const open = findTrades({
+      rosterPositions: POS,
+      me,
+      others: teams,
+      heatmap,
+      maxPerGiveSet: 99,
+      maxPerGetSet: 99,
+    }).suggestions;
+    expect(open.length).toBeGreaterThanOrEqual(base.length);
+    expect(run().suggestions).toEqual(base);
   });
 });
