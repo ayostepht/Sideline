@@ -73,6 +73,7 @@ Remove an item when it is done; the archive keeps history.
 - **Soft navigation before hydration wipes `<head>`** (P7b.10g diagnosis, pre-existing): Trades works around it with `PageTitle`; other routes lack per-page titles but kept "Sideline" in 28/28 checks. Root cause not found.
 - **Weather chip icon still comes from label text** (Batch 5 review m2): add an optional structured `kind` to the WEATHER reason (backend-engineer, `ReasonSchema`), then drop `kindFromLabel` (frontend).
 - **Root cause of the blank Lineup 404 with a lazy WhySheet is unknown** (P7b.14f): Lineup uses `WhySheetEager` (+14 KB, 187,330 B). The lazy WhySheet could still race on other 404 routes; none has blanked so far.
+- **Batch 5 UX minors and nits** (`docs/reviews/2026-10-07-p7b-batch5-ux.md`): Trades `networkidle` timeout in screens at 1280 dark; Wind and Gusts share an icon; weather chips make Lineup rows uneven at 390; blank photo box in the pop-up; the forecast line's flag is only bold.
 - **Batch 1-2 review minors m4, m5** (`docs/reviews/2026-10-07-p7b-batch12-code.md`): the finder's give pool favors my top players over surplus-position players (tuning); the duplicate perf assertion in `finder.perf.test.ts`.
 - **`fast-check` is a root devDependency but not a `packages/core` one**; P7b.3 used a seeded loop instead. Add it to core if property tests there are wanted (devops-engineer).
 
