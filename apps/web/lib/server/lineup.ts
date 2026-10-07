@@ -32,6 +32,8 @@ import {
 } from "@sideline/db";
 import type { DbHandle } from "@sideline/db";
 import {
+  AUTO_SAFE_ABOVE,
+  AUTO_UPSIDE_BELOW,
   computeFreshness,
   LineupResponseSchema,
   SYNC_CADENCE_MS,
@@ -42,6 +44,7 @@ import {
   type Reason,
 } from "@sideline/shared";
 import { z } from "zod";
+import { getMatchup } from "./matchup.js";
 
 export type Lookup<T> = { ok: true; data: T } | { ok: false; reason: "not_found" | "no_team" };
 
@@ -427,6 +430,48 @@ function inputsHashFor(h: DbHandle): string {
   return createHash("sha256").update(payload).digest("hex").slice(0, 16);
 }
 
+/** Test seam: the win-probability source Auto reads. Defaults to the cached `getMatchup` sim. */
+export interface LineupDeps {
+  getMatchup?: typeof getMatchup;
+}
+
+/**
+ * AUTO-1 / ADR-022: pick the concrete mode from the roster's current-starters median win
+ * probability. Falls back to `projected` (with `AUTO_FALLBACK`) when there is no usable sim.
+ * Reads `getMatchup` only, so the Auto lineup never feeds back into the sim.
+ */
+function resolveAutoMode(
+  h: DbHandle,
+  leagueId: string,
+  week: number,
+  rosterId: number,
+  now: Date,
+  deps: LineupDeps,
+): { mode: LineupMode; reason: Reason } {
+  const fallback = (why: string): { mode: LineupMode; reason: Reason } => ({
+    mode: "projected",
+    reason: { code: "AUTO_FALLBACK", label: `Auto used Projected: ${why}` },
+  });
+  // getMatchup sims the roster's current Sleeper starters, so only this week is meaningful.
+  if (week !== readNflState(h)?.week) return fallback("not the current week");
+  const sim = (deps.getMatchup ?? getMatchup)(h, leagueId, { week, rosterId }, now);
+  if (!sim.ok) {
+    return fallback(sim.reason === "no_opponent" ? "no matchup this week" : "no forecast yet");
+  }
+  const p = sim.data.winProbability;
+  const mode: LineupMode =
+    p < AUTO_UPSIDE_BELOW ? "upside" : p > AUTO_SAFE_ABOVE ? "safe" : "projected";
+  const name = mode === "upside" ? "Upside" : mode === "safe" ? "Safe" : "Projected";
+  return {
+    mode,
+    reason: {
+      code: "AUTO_MODE",
+      label: `Auto picked ${name}: ${Math.round(p * 100)}% to win`,
+      value: p,
+    },
+  };
+}
+
 export interface LineupRequest {
   week?: number;
   mode: LineupModeChoice;
@@ -442,6 +487,7 @@ export function getLineup(
   leagueId: string,
   request: LineupRequest,
   now: Date,
+  deps: LineupDeps = {},
 ): Lookup<LineupResponse> {
   const league = readLeague(h, leagueId);
   if (league === null) return { ok: false, reason: "not_found" };
@@ -465,10 +511,19 @@ export function getLineup(
   }
 
   const requestedMode = request.mode;
-  // P7b.5 implements Auto: until then `auto` computes as projected.
-  const mode: LineupMode = requestedMode === "auto" ? "projected" : requestedMode;
+  if (requestedMode === "auto") {
+    const auto = resolveAutoMode(h, leagueId, week, rosterId, now, deps);
+    // Reuse the concrete mode's cached entry; `auto` itself is never cached, so a changed win
+    // probability resolves differently on the next request.
+    const concrete = getLineup(h, leagueId, { week, mode: auto.mode, rosterId }, now, deps);
+    if (!concrete.ok) return concrete;
+    return {
+      ok: true,
+      data: { ...concrete.data, mode: "auto", resolvedMode: auto.mode, modeReason: auto.reason },
+    };
+  }
+  const mode: LineupMode = requestedMode;
   const modeReason: Reason | null = null;
-  // Keyed by the requested mode so `auto` never shares an entry with `projected`.
   const kind = `lineup:${requestedMode}:${rosterId}`;
   const inputsHash = inputsHashFor(h);
   const cached = getComputed(h, { leagueId, week, kind, inputsHash });

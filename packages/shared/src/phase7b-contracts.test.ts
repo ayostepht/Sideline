@@ -25,9 +25,9 @@ describe("lineup mode contracts", () => {
     expect(LineupModeChoiceSchema.options).toEqual(["projected", "safe", "upside", "auto"]);
     expect(LineupModeSchema.safeParse("auto").success).toBe(false);
   });
-  it("request accepts auto and defaults to projected", () => {
+  it("request accepts auto and defaults to auto", () => {
     expect(LineupRequestSchema.parse({ mode: "auto" }).mode).toBe("auto");
-    expect(LineupRequestSchema.parse({}).mode).toBe("projected");
+    expect(LineupRequestSchema.parse({}).mode).toBe("auto");
   });
   it("exports Auto thresholds", () => {
     expect(AUTO_UPSIDE_BELOW).toBe(0.35);

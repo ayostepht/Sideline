@@ -72,7 +72,7 @@ export type LineupResponse = z.infer<typeof LineupResponseSchema>;
 
 export const LineupRequestSchema = z.strictObject({
   week: z.coerce.number().int().min(1).max(18).optional(),
-  mode: LineupModeChoiceSchema.default("projected"),
+  mode: LineupModeChoiceSchema.default("auto"),
   roster: z.coerce.number().int().optional(),
 });
 export type LineupRequest = z.infer<typeof LineupRequestSchema>;
