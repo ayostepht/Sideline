@@ -129,13 +129,13 @@ export default async function LineupPage({
         <ModeToggle
           leagueId={leagueId}
           week={data.week}
-          mode={data.mode}
+          mode={data.resolvedMode}
           {...(toggleRoster !== undefined ? { roster: toggleRoster } : {})}
         />
         <RosterToggle
           leagueId={leagueId}
           week={data.week}
-          mode={data.mode}
+          mode={data.resolvedMode}
           mine={mine}
           opponentRosterId={data.opponentRosterId}
           opponentName={opponentName}
@@ -148,7 +148,7 @@ export default async function LineupPage({
           title="Current"
           assignment={data.currentAssignment}
           players={data.players}
-          mode={data.mode}
+          mode={data.resolvedMode}
           week={data.week}
           showReasons={false}
           testid="lineup-current"
@@ -157,7 +157,7 @@ export default async function LineupPage({
           title="Optimal"
           assignment={data.optimalAssignment}
           players={data.players}
-          mode={data.mode}
+          mode={data.resolvedMode}
           week={data.week}
           showReasons
           testid="lineup-optimal"

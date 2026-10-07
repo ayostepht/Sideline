@@ -183,6 +183,16 @@ describe("GET /api/l/[leagueId]/lineup", () => {
     expect(r.status).toBe(200);
     expect(LineupResponseSchema.safeParse(await r.json()).success).toBe(true);
   });
+  it("accepts mode=auto and resolves to projected for now", async () => {
+    const h = setup();
+    seedLeague(h, { rosterCount: 2 });
+    const r = await lineup("?roster=1&mode=auto");
+    expect(r.status).toBe(200);
+    const body = LineupResponseSchema.parse(await r.json());
+    expect(body.mode).toBe("auto");
+    expect(body.resolvedMode).toBe("projected");
+    expect(body.modeReason).toBeNull();
+  });
   it("400 for an invalid mode", async () => {
     const h = setup();
     seedLeague(h);

@@ -36,8 +36,10 @@ import {
   LineupResponseSchema,
   SYNC_CADENCE_MS,
   type LineupMode,
+  type LineupModeChoice,
   type LineupPlayer,
   type LineupResponse,
+  type Reason,
 } from "@sideline/shared";
 import { z } from "zod";
 
@@ -427,7 +429,7 @@ function inputsHashFor(h: DbHandle): string {
 
 export interface LineupRequest {
   week?: number;
-  mode: LineupMode;
+  mode: LineupModeChoice;
   rosterId?: number;
 }
 
@@ -462,8 +464,12 @@ export function getLineup(
     rosterId = mine.id;
   }
 
-  const mode = request.mode;
-  const kind = `lineup:${mode}:${rosterId}`;
+  const requestedMode = request.mode;
+  // P7b.5 implements Auto: until then `auto` computes as projected.
+  const mode: LineupMode = requestedMode === "auto" ? "projected" : requestedMode;
+  const modeReason: Reason | null = null;
+  // Keyed by the requested mode so `auto` never shares an entry with `projected`.
+  const kind = `lineup:${requestedMode}:${rosterId}`;
   const inputsHash = inputsHashFor(h);
   const cached = getComputed(h, { leagueId, week, kind, inputsHash });
   if (cached !== null) {
@@ -602,7 +608,9 @@ export function getLineup(
     leagueId,
     rosterId,
     week,
-    mode,
+    mode: requestedMode,
+    resolvedMode: mode,
+    modeReason,
     optimalAssignment: recommendResult.optimalAssignment,
     currentAssignment: recommendResult.currentAssignment,
     swaps: recommendResult.swaps,

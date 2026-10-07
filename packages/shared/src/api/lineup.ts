@@ -6,6 +6,17 @@ import { ReasonSchema } from "../reason.js";
 export const LineupModeSchema = z.enum(["projected", "safe", "upside"]);
 export type LineupMode = z.infer<typeof LineupModeSchema>;
 
+/** AUTO-1: what a caller may request. `auto` resolves server-side to one concrete `LineupMode`. */
+export const LineupModeChoiceSchema = z.enum(["projected", "safe", "upside", "auto"]);
+export type LineupModeChoice = z.infer<typeof LineupModeChoiceSchema>;
+
+/**
+ * ADR-022 item 1: Auto resolves from the current-starters median win probability. Below
+ * `AUTO_UPSIDE_BELOW` picks Upside, above `AUTO_SAFE_ABOVE` picks Safe, otherwise Projected.
+ */
+export const AUTO_UPSIDE_BELOW = 0.35;
+export const AUTO_SAFE_ABOVE = 0.65;
+
 export const LineupSlotAssignmentSchema = z.strictObject({
   slotType: z.string(),
   playerId: z.string().nullable(),
@@ -42,7 +53,12 @@ export const LineupResponseSchema = z.strictObject({
   leagueId: z.string(),
   rosterId: z.number().int(),
   week: z.number().int(),
-  mode: LineupModeSchema,
+  /** The mode the caller requested (may be `auto`). */
+  mode: LineupModeChoiceSchema,
+  /** The concrete mode actually computed. Equals `mode` unless `mode` is `auto`. */
+  resolvedMode: LineupModeSchema,
+  /** Why Auto chose `resolvedMode`; null when a concrete mode was requested. */
+  modeReason: ReasonSchema.nullable(),
   optimalAssignment: z.array(LineupSlotAssignmentSchema),
   currentAssignment: z.array(LineupSlotAssignmentSchema),
   swaps: z.array(LineupSwapSchema),
@@ -56,7 +72,7 @@ export type LineupResponse = z.infer<typeof LineupResponseSchema>;
 
 export const LineupRequestSchema = z.strictObject({
   week: z.coerce.number().int().min(1).max(18).optional(),
-  mode: LineupModeSchema.default("projected"),
+  mode: LineupModeChoiceSchema.default("projected"),
   roster: z.coerce.number().int().optional(),
 });
 export type LineupRequest = z.infer<typeof LineupRequestSchema>;

@@ -44,6 +44,27 @@ function insertPoints(
 }
 
 describe("getLineup", () => {
+  it("echoes the concrete mode as resolvedMode with a null modeReason", () => {
+    const h = setup({ rosterCount: 2 });
+    for (const mode of ["projected", "safe", "upside"] as const) {
+      const d = ok(getLineup(h, "L1", { mode, rosterId: 1 }, SEED_NOW));
+      expect(d.mode).toBe(mode);
+      expect(d.resolvedMode).toBe(mode);
+      expect(d.modeReason).toBeNull();
+    }
+  });
+
+  it("auto computes as projected (P7b.5 shim) without sharing a cache entry", () => {
+    const h = setup({ rosterCount: 2 });
+    const auto = ok(getLineup(h, "L1", { mode: "auto", rosterId: 1 }, SEED_NOW));
+    expect(auto.mode).toBe("auto");
+    expect(auto.resolvedMode).toBe("projected");
+    expect(auto.modeReason).toBeNull();
+    const projected = ok(getLineup(h, "L1", { mode: "projected", rosterId: 1 }, SEED_NOW));
+    expect(projected.mode).toBe("projected");
+    expect(ok(getLineup(h, "L1", { mode: "auto", rosterId: 1 }, SEED_NOW)).mode).toBe("auto");
+  });
+
   it("assembles a full realistic roster into a valid response", () => {
     const h = setup({ rosterCount: 4, rosterSize: 8, playerCount: 60 });
     insertPoints(
