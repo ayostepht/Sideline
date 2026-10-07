@@ -164,7 +164,14 @@ export class Worker {
         } else if (req.job === "all" || parsed.success) {
           const names = parsed.success ? [parsed.data] : this.d.registry.allInOrder();
           if (req.job === "all") if (this.userIdMissing()) await this.ensureUserId();
-          const outcomes = await runJobs(this.runnerDeps(), this.d.registry, names);
+          const outcomes = await runJobs(
+            this.runnerDeps(),
+            this.d.registry,
+            names,
+            req.job === "player_news" && typeof req.target === "string" && req.target !== ""
+              ? { job: "player_news", id: req.target }
+              : null,
+          );
           error = summarizeFailures(outcomes);
         } else {
           error = `unknown job: ${String(req.job)}`;

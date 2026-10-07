@@ -24,7 +24,11 @@ function errMessage(e: unknown): string {
 }
 
 /** Runs one job and records a sync_runs row. Never throws. */
-export async function runJob(deps: RunnerDeps, job: Job): Promise<RunOutcome> {
+export async function runJob(
+  deps: RunnerDeps,
+  job: Job,
+  target: string | null = null,
+): Promise<RunOutcome> {
   const logger = deps.logger.child({ job: job.name });
   const counter = createCallCounter();
   let runId: number | null = null;
@@ -41,6 +45,7 @@ export async function runJob(deps: RunnerDeps, job: Job): Promise<RunOutcome> {
     logger,
     config: deps.config,
     signal: deps.signal(),
+    target,
   };
   let outcome: RunOutcome;
   try {
@@ -91,6 +96,7 @@ export async function runJobs(
   deps: RunnerDeps,
   registry: JobRegistry,
   names: readonly SyncJobName[],
+  target: { job: SyncJobName; id: string } | null = null,
 ): Promise<RunOutcome[]> {
   const out: RunOutcome[] = [];
   for (const name of names) {
@@ -106,7 +112,7 @@ export async function runJobs(
       });
       continue;
     }
-    out.push(await runJob(deps, job));
+    out.push(await runJob(deps, job, target !== null && target.job === name ? target.id : null));
   }
   const changed = new Set<string>();
   for (const o of out) {

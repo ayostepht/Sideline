@@ -150,6 +150,8 @@ export const RawPlayerSchema = z.object({
   depth_chart_order: z.number().nullish(),
   search_rank: z.number().nullish(),
   gsis_id: z.string().nullish(),
+  /** ESPN athlete id; Sleeper sends a number for some players and a string for others. */
+  espn_id: z.union([z.string(), z.number()]).nullish(),
 });
 export type RawPlayer = z.infer<typeof RawPlayerSchema>;
 

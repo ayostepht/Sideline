@@ -121,7 +121,11 @@ export async function runSeed(deps: SeedDeps): Promise<number> {
       code = await runSyncCli(["--once", "--job=all"], {
         config,
         registry: createJobRegistry(
-          createAllJobs({ sleeper: { fetch: fixtureFetch }, nflverse: { fetch: fixtureFetch } }),
+          createAllJobs({
+            sleeper: { fetch: fixtureFetch },
+            nflverse: { fetch: fixtureFetch },
+            espn: { fetch: fixtureFetch },
+          }),
         ),
         limiter: deps.limiter ?? new RateLimiter(),
         logger: deps.logger ?? pino({ level: "silent" }),

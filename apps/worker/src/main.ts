@@ -33,7 +33,11 @@ const worker = new Worker({
   registry: createJobRegistry(
     fixtureFetch === null
       ? registeredJobs
-      : createAllJobs({ sleeper: { fetch: fixtureFetch }, nflverse: { fetch: fixtureFetch } }),
+      : createAllJobs({
+          sleeper: { fetch: fixtureFetch },
+          nflverse: { fetch: fixtureFetch },
+          espn: { fetch: fixtureFetch },
+        }),
   ),
   ...(fixtureFetch === null ? {} : { sleeper: { fetch: fixtureFetch } }),
   limiter: new RateLimiter(),
